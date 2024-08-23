@@ -11,54 +11,42 @@ String customersLoginPostResponseToJson(CustomersLoginPostResponse data) =>
     json.encode(data.toJson());
 
 class CustomersLoginPostResponse {
-  String message;
-  Customer customer;
+  int uid;
+  String email;
+  String username;
+  String password;
+  int wallet;
+  int typeId;
+  String image;
 
   CustomersLoginPostResponse({
-    required this.message,
-    required this.customer,
+    required this.uid,
+    required this.email,
+    required this.username,
+    required this.password,
+    required this.wallet,
+    required this.typeId,
+    required this.image,
   });
 
   factory CustomersLoginPostResponse.fromJson(Map<String, dynamic> json) =>
       CustomersLoginPostResponse(
-        message: json["message"],
-        customer: Customer.fromJson(json["customer"]),
-      );
-
-  Map<String, dynamic> toJson() => {
-        "message": message,
-        "customer": customer.toJson(),
-      };
-}
-
-class Customer {
-  int idx;
-  String fullname;
-  String phone;
-  String email;
-  String image;
-
-  Customer({
-    required this.idx,
-    required this.fullname,
-    required this.phone,
-    required this.email,
-    required this.image,
-  });
-
-  factory Customer.fromJson(Map<String, dynamic> json) => Customer(
-        idx: json["idx"],
-        fullname: json["fullname"],
-        phone: json["phone"],
-        email: json["email"],
+        uid: json["uid"],
+        email: json["Email"],
+        username: json["Username"],
+        password: json["Password"],
+        wallet: json["Wallet"],
+        typeId: json["TypeID"],
         image: json["image"],
       );
 
   Map<String, dynamic> toJson() => {
-        "idx": idx,
-        "fullname": fullname,
-        "phone": phone,
-        "email": email,
+        "uid": uid,
+        "Email": email,
+        "Username": username,
+        "Password": password,
+        "Wallet": wallet,
+        "TypeID": typeId,
         "image": image,
       };
 }

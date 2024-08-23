@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:math' hide log;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_miniproject_app/config/config.dart';
@@ -25,6 +26,7 @@ class _ShowtripPracticePageState extends State<ShowtripPracticePage> {
   void initState() {
     super.initState();
     //4.Create object loadData
+    randomNumbers();
     loadData = loadDataAsync();
     // getTrips();
   }
@@ -233,278 +235,6 @@ class _ShowtripPracticePageState extends State<ShowtripPracticePage> {
                                 // ),
                               )
                               .toList(),
-                          // children: [
-                          //   Card(
-                          //     child: Padding(
-                          //       padding: const EdgeInsets.all(9.0),
-                          //       child: Column(
-                          //         children: [
-                          //           const Row(
-                          //             mainAxisAlignment: MainAxisAlignment.start,
-                          //             children: [
-                          //               Text(
-                          //                 'อันซีนสวิตเซอร์แลนด์',
-                          //                 style: TextStyle(
-                          //                     fontSize: 20,
-                          //                     fontWeight: FontWeight.bold),
-                          //               ),
-                          //             ],
-                          //           ),
-                          //           Row(
-                          //             children: [
-                          //               Column(
-                          //                 crossAxisAlignment:
-                          //                     CrossAxisAlignment.start,
-                          //                 children: [
-                          //                   SizedBox(
-                          //                     width: 160,
-                          //                     height: 150,
-                          //                     child: Image.asset(
-                          //                       'assets/images/Unseen.jpg',
-                          //                     ),
-                          //                   ),
-                          //                 ],
-                          //               ),
-                          //               Padding(
-                          //                 padding: const EdgeInsets.all(8.0),
-                          //                 child: Column(
-                          //                   crossAxisAlignment:
-                          //                       CrossAxisAlignment.start,
-                          //                   children: [
-                          //                     const Text('ประเทศสวิตเซอร์แลนด์'),
-                          //                     const Text('ระยะเวลา 10 วัน'),
-                          //                     const Text('ราคา 119900 บาท'),
-                          //                     FilledButton(
-                          //                       onPressed: () {},
-                          //                       child:
-                          //                           const Text('รายละเอียดเพิ่มเติม'),
-                          //                     ),
-                          //                   ],
-                          //                 ),
-                          //               ),
-                          //             ],
-                          //           ),
-                          //         ],
-                          //       ),
-                          //     ),
-                          //   ),
-                          //   Card(
-                          //     child: Padding(
-                          //       padding: const EdgeInsets.all(9.0),
-                          //       child: Column(
-                          //         children: [
-                          //           const Row(
-                          //             mainAxisAlignment: MainAxisAlignment.start,
-                          //             children: [
-                          //               Text(
-                          //                 'Three Natural Bridges',
-                          //                 style: TextStyle(
-                          //                     fontSize: 20,
-                          //                     fontWeight: FontWeight.bold),
-                          //               ),
-                          //             ],
-                          //           ),
-                          //           Row(
-                          //             children: [
-                          //               Column(
-                          //                 crossAxisAlignment:
-                          //                     CrossAxisAlignment.start,
-                          //                 children: [
-                          //                   SizedBox(
-                          //                     width: 160,
-                          //                     height: 150,
-                          //                     child: Image.asset(
-                          //                       'assets/images/ThreeNatural.jpg',
-                          //                     ),
-                          //                   ),
-                          //                 ],
-                          //               ),
-                          //               Padding(
-                          //                 padding: const EdgeInsets.all(8.0),
-                          //                 child: Column(
-                          //                   crossAxisAlignment:
-                          //                       CrossAxisAlignment.start,
-                          //                   children: [
-                          //                     const Text('ประเทศจีน'),
-                          //                     const Text('ระยะเวลา 10 วัน'),
-                          //                     const Text('ราคา 119900 บาท'),
-                          //                     FilledButton(
-                          //                       onPressed: () {},
-                          //                       child:
-                          //                           const Text('รายละเอียดเพิ่มเติม'),
-                          //                     ),
-                          //                   ],
-                          //                 ),
-                          //               ),
-                          //             ],
-                          //           ),
-                          //         ],
-                          //       ),
-                          //     ),
-                          //   ),
-                          //   Card(
-                          //     child: Padding(
-                          //       padding: const EdgeInsets.all(9.0),
-                          //       child: Column(
-                          //         children: [
-                          //           const Row(
-                          //             mainAxisAlignment: MainAxisAlignment.start,
-                          //             children: [
-                          //               Text(
-                          //                 'Petra',
-                          //                 style: TextStyle(
-                          //                     fontSize: 20,
-                          //                     fontWeight: FontWeight.bold),
-                          //               ),
-                          //             ],
-                          //           ),
-                          //           Row(
-                          //             children: [
-                          //               Column(
-                          //                 crossAxisAlignment:
-                          //                     CrossAxisAlignment.start,
-                          //                 children: [
-                          //                   SizedBox(
-                          //                     width: 160,
-                          //                     height: 150,
-                          //                     child: Image.asset(
-                          //                       'assets/images/Petra.jpg',
-                          //                     ),
-                          //                   ),
-                          //                 ],
-                          //               ),
-                          //               Padding(
-                          //                 padding: const EdgeInsets.all(8.0),
-                          //                 child: Column(
-                          //                   crossAxisAlignment:
-                          //                       CrossAxisAlignment.start,
-                          //                   children: [
-                          //                     const Text('ประเทศจอร์แดน'),
-                          //                     const Text('ระยะเวลา 10 วัน'),
-                          //                     const Text('ราคา 119900 บาท'),
-                          //                     FilledButton(
-                          //                       onPressed: () {},
-                          //                       child:
-                          //                           const Text('รายละเอียดเพิ่มเติม'),
-                          //                     ),
-                          //                   ],
-                          //                 ),
-                          //               ),
-                          //             ],
-                          //           ),
-                          //         ],
-                          //       ),
-                          //     ),
-                          //   ),
-                          //   Card(
-                          //     child: Padding(
-                          //       padding: const EdgeInsets.all(9.0),
-                          //       child: Column(
-                          //         children: [
-                          //           const Row(
-                          //             mainAxisAlignment: MainAxisAlignment.start,
-                          //             children: [
-                          //               Text(
-                          //                 'Cinque Terre',
-                          //                 style: TextStyle(
-                          //                     fontSize: 20,
-                          //                     fontWeight: FontWeight.bold),
-                          //               ),
-                          //             ],
-                          //           ),
-                          //           Row(
-                          //             children: [
-                          //               Column(
-                          //                 crossAxisAlignment:
-                          //                     CrossAxisAlignment.start,
-                          //                 children: [
-                          //                   SizedBox(
-                          //                     width: 160,
-                          //                     height: 150,
-                          //                     child: Image.asset(
-                          //                       'assets/images/Cinque.jpg',
-                          //                     ),
-                          //                   ),
-                          //                 ],
-                          //               ),
-                          //               Padding(
-                          //                 padding: const EdgeInsets.all(8.0),
-                          //                 child: Column(
-                          //                   crossAxisAlignment:
-                          //                       CrossAxisAlignment.start,
-                          //                   children: [
-                          //                     const Text('ประเทศอิตาลี'),
-                          //                     const Text('ระยะเวลา 10 วัน'),
-                          //                     const Text('ราคา 119900 บาท'),
-                          //                     FilledButton(
-                          //                       onPressed: () {},
-                          //                       child:
-                          //                           const Text('รายละเอียดเพิ่มเติม'),
-                          //                     ),
-                          //                   ],
-                          //                 ),
-                          //               ),
-                          //             ],
-                          //           ),
-                          //         ],
-                          //       ),
-                          //     ),
-                          //   ),
-                          //   Card(
-                          //     child: Padding(
-                          //       padding: const EdgeInsets.all(9.0),
-                          //       child: Column(
-                          //         children: [
-                          //           const Row(
-                          //             mainAxisAlignment: MainAxisAlignment.start,
-                          //             children: [
-                          //               Text(
-                          //                 'Glass Beach',
-                          //                 style: TextStyle(
-                          //                     fontSize: 20,
-                          //                     fontWeight: FontWeight.bold),
-                          //               ),
-                          //             ],
-                          //           ),
-                          //           Row(
-                          //             children: [
-                          //               Column(
-                          //                 crossAxisAlignment:
-                          //                     CrossAxisAlignment.start,
-                          //                 children: [
-                          //                   SizedBox(
-                          //                     width: 160,
-                          //                     height: 150,
-                          //                     child: Image.asset(
-                          //                       'assets/images/GlassBeach.jpg',
-                          //                     ),
-                          //                   ),
-                          //                 ],
-                          //               ),
-                          //               Padding(
-                          //                 padding: const EdgeInsets.all(8.0),
-                          //                 child: Column(
-                          //                   crossAxisAlignment:
-                          //                       CrossAxisAlignment.start,
-                          //                   children: [
-                          //                     const Text('แคลิฟอร์เนีย สหรัฐอเมริกา'),
-                          //                     const Text('ระยะเวลา 10 วัน'),
-                          //                     const Text('ราคา 119900 บาท'),
-                          //                     FilledButton(
-                          //                       onPressed: () {},
-                          //                       child:
-                          //                           const Text('รายละเอียดเพิ่มเติม'),
-                          //                     ),
-                          //                   ],
-                          //                 ),
-                          //               ),
-                          //             ],
-                          //           ),
-                          //         ],
-                          //       ),
-                          //     ),
-                          //   ),
-                          // ],
                         ),
                       );
                     }),
@@ -524,6 +254,37 @@ class _ShowtripPracticePageState extends State<ShowtripPracticePage> {
 
     var json = await http.get(Uri.parse("$url/trips"));
     trips = tripsGetResponesFromJson(json.body);
+  }
+
+  void randomNumbers() async {
+    Set<String> uniqueNumbers = Set();
+
+    // สุ่มตัวเลข 6 หลัก 100 ชุดที่ไม่ซ้ำกัน
+    while (uniqueNumbers.length < 10) {
+      String number = Random().nextInt(999999).toString().padLeft(6, '0');
+      uniqueNumbers.add(number);
+    }
+
+    // แปลงเป็น List เพื่อใช้งานต่อ
+    List<String> numbers = uniqueNumbers.toList();
+
+    // เตรียมข้อมูลสำหรับการส่งไปยังฐานข้อมูลผ่าน API
+    var url = Uri.parse(
+        'http://192.168.1.8:3004/db/random'); // เปลี่ยน URL ให้ตรงกับ API ที่คุณใช้
+    var headers = {'Content-Type': 'application/json'};
+    var body = jsonEncode({'numbers': numbers});
+
+    try {
+      var response = await http.post(url, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        print('Insert success');
+      } else {
+        print('Failed to insert. Status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
   }
 
   void getTrips(String? zone) async {
