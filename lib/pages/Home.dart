@@ -3,38 +3,69 @@ import 'dart:developer';
 import 'dart:math' hide log;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/get_trips_res.dart';
 import 'package:mobile_miniproject_app/pages/profile.dart';
 import 'package:mobile_miniproject_app/pages/trip.dart';
 
-class ShowtripPracticePage extends StatefulWidget {
+class Home extends StatefulWidget {
   int idx = 0;
-  ShowtripPracticePage({super.key, required this.idx});
+  Home({super.key, required this.idx});
 
   @override
-  State<ShowtripPracticePage> createState() => _ShowtripPracticePageState();
+  State<Home> createState() => _HomeState();
 }
 
-class _ShowtripPracticePageState extends State<ShowtripPracticePage> {
+class _HomeState extends State<Home> {
   String url = '';
   List<TripsGetRespones> trips = [];
-//3. dclare async object
   late Future<void> loadData;
+  int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    //4.Create object loadData
     randomNumbers();
     loadData = loadDataAsync();
-    // getTrips();
   }
 
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('รายการทริป'),
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 5),
+              child: Text(
+                'Welcome',
+                style: TextStyle(fontSize: 20),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 10, left: 1.5),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.account_balance_wallet,
+                    size: 20,
+                    color: Color.fromARGB(255, 254, 137, 69),
+                  ),
+                  SizedBox(width: 5),
+                  Text(
+                    'Wallet :      THB',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Color.fromARGB(255, 131, 130, 130),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          ],
+        ),
         automaticallyImplyLeading: false,
         actions: [
           PopupMenuButton<String>(
@@ -67,12 +98,15 @@ class _ShowtripPracticePageState extends State<ShowtripPracticePage> {
         padding: const EdgeInsets.all(10.0),
         child: Column(
           children: [
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 Padding(
-                  padding: EdgeInsets.only(top: 16, bottom: 2.0, left: 16.0),
-                  child: Text('ปลายทาง'),
+                  padding: EdgeInsets.only(top: 20, bottom: 20.0, left: 10.0),
+                  child: Text(
+                    'Today Reward : ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
+                    style: TextStyle(fontSize: 15),
+                  ),
                 ),
               ],
             ),
@@ -148,7 +182,6 @@ class _ShowtripPracticePageState extends State<ShowtripPracticePage> {
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: FutureBuilder(
-                    //5.call function
                     future: loadData,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState != ConnectionState.done) {
@@ -229,24 +262,63 @@ class _ShowtripPracticePageState extends State<ShowtripPracticePage> {
                                     ),
                                   ),
                                 ),
-
-                                // Card(
-                                //   child: Text(trip.name),
-                                // ),
                               )
                               .toList(),
                         ),
                       );
                     }),
               ),
-            )
+            ),
           ],
         ),
       ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+
+          switch (index) {
+            case 0:
+              Navigator.pushNamed(context, '/Home');
+              break;
+            case 1:
+              Navigator.pushNamed(context, '/Shop');
+              break;
+            case 2:
+              Navigator.pushNamed(context, '/Ticket');
+              break;
+            case 3:
+              Navigator.pushNamed(context, '/More');
+              break;
+          }
+        },
+        selectedItemColor:
+            Color.fromARGB(255, 250, 150, 44), // สีของไอคอนที่เลือก
+        unselectedItemColor: Colors.grey, // สีของไอคอนที่ไม่เลือก
+        backgroundColor: Colors.white, // สีพื้นหลังของแถบเมนู
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_cart),
+            label: 'Shop',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.card_giftcard),
+            label: 'Ticket',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.more_horiz),
+            label: 'More',
+          ),
+        ],
+      ),
     );
   }
-
-  //declare (async) function for loading  data from api
 
   Future<void> loadDataAsync() async {
     var value = await Configuration.getConfig();
@@ -259,18 +331,14 @@ class _ShowtripPracticePageState extends State<ShowtripPracticePage> {
   void randomNumbers() async {
     Set<String> uniqueNumbers = Set();
 
-    // สุ่มตัวเลข 6 หลัก 100 ชุดที่ไม่ซ้ำกัน
     while (uniqueNumbers.length < 10) {
       String number = Random().nextInt(999999).toString().padLeft(6, '0');
       uniqueNumbers.add(number);
     }
 
-    // แปลงเป็น List เพื่อใช้งานต่อ
     List<String> numbers = uniqueNumbers.toList();
 
-    // เตรียมข้อมูลสำหรับการส่งไปยังฐานข้อมูลผ่าน API
-    var url = Uri.parse(
-        'http://192.168.1.8:3004/db/random'); // เปลี่ยน URL ให้ตรงกับ API ที่คุณใช้
+    var url = Uri.parse('http://192.168.1.8:3004/db/random');
     var headers = {'Content-Type': 'application/json'};
     var body = jsonEncode({'numbers': numbers});
 

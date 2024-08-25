@@ -7,7 +7,7 @@ import 'package:mobile_miniproject_app/models/response/customersLoginPostRes.dar
 import 'package:mobile_miniproject_app/pages/TEST.dart';
 import 'package:mobile_miniproject_app/pages/register.dart';
 import 'package:http/http.dart' as http;
-import 'package:mobile_miniproject_app/pages/showtrip_practice.dart';
+import 'package:mobile_miniproject_app/pages/Home.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -192,7 +192,7 @@ class _LoginPageState extends State<LoginPage> {
       Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ShowtripPracticePage(idx: res.uid),
+            builder: (context) => Home(idx: res.uid),
           ));
     } catch (err) {
       log(err.toString());
