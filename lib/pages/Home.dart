@@ -1,32 +1,47 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:ffi';
 import 'dart:math' hide log;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
-import 'package:mobile_miniproject_app/models/response/get_trips_res.dart';
+import 'package:mobile_miniproject_app/models/response/GetLotteryNumbers_Res.dart';
+import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
+import 'package:mobile_miniproject_app/pages/Shop.dart';
+import 'package:mobile_miniproject_app/pages/TEST.dart';
+import 'package:mobile_miniproject_app/pages/Ticket.dart';
 import 'package:mobile_miniproject_app/pages/profile.dart';
 import 'package:mobile_miniproject_app/pages/trip.dart';
 
-class Home extends StatefulWidget {
-  int idx = 0;
-  Home({super.key, required this.idx});
+class HomePage extends StatefulWidget {
+  int uid = 0;
+  int wallet = 0;
+  String username = '';
+  int selectedIndex = 0;
+  HomePage(
+      {super.key,
+      required this.uid,
+      required this.wallet,
+      required this.username,
+      required this.selectedIndex});
 
   @override
-  State<Home> createState() => _HomeState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _HomeState extends State<Home> {
+class _HomePageState extends State<HomePage> {
   String url = '';
-  List<TripsGetRespones> trips = [];
+
+  List<GetLotteryNumbers> win_lotterys = [];
   late Future<void> loadData;
   int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    randomNumbers();
+    // randomNumbers();
+    _selectedIndex = widget.selectedIndex;
     loadData = loadDataAsync();
   }
 
@@ -34,29 +49,45 @@ class _HomeState extends State<Home> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
               padding: const EdgeInsets.only(top: 5),
-              child: Text(
-                'Welcome',
-                style: TextStyle(fontSize: 20),
+              child: RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'Welcome ',
+                      style: const TextStyle(
+                          fontSize: 20,
+                          color: Colors.black), // สีของข้อความที่เหลือ
+                    ),
+                    TextSpan(
+                      text: widget.username,
+                      style: const TextStyle(
+                          fontSize: 20,
+                          color: Colors.blue,
+                          fontWeight:
+                              FontWeight.bold), // สีของ ${widget.username}
+                    ),
+                  ],
+                ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.only(top: 10, left: 1.5),
               child: Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.account_balance_wallet,
                     size: 20,
                     color: Color.fromARGB(255, 254, 137, 69),
                   ),
                   SizedBox(width: 5),
                   Text(
-                    'Wallet :      THB',
-                    style: TextStyle(
+                    'Wallet :  ${widget.wallet}  THB',
+                    style: const TextStyle(
                       fontSize: 15,
                       color: Color.fromARGB(255, 131, 130, 130),
                     ),
@@ -67,32 +98,6 @@ class _HomeState extends State<Home> {
           ],
         ),
         automaticallyImplyLeading: false,
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              log(value);
-              if (value == 'profile') {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProfilePage(idx: widget.idx),
-                    ));
-              } else if (value == 'logout') {
-                Navigator.of(context).popUntil((route) => route.isFirst);
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem<String>(
-                value: 'profile',
-                child: Text('ข้อมูลส่วนตัว'),
-              ),
-              const PopupMenuItem<String>(
-                value: 'logout',
-                child: Text('ออกจากระบบ'),
-              ),
-            ],
-          ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(10.0),
@@ -102,85 +107,18 @@ class _HomeState extends State<Home> {
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 Padding(
-                  padding: EdgeInsets.only(top: 20, bottom: 20.0, left: 10.0),
+                  padding:
+                      const EdgeInsets.only(top: 20, bottom: 25.0, left: 10.0),
                   child: Text(
                     'Today Reward : ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
-                    style: TextStyle(fontSize: 15),
+                    style: const TextStyle(fontSize: 15),
                   ),
                 ),
               ],
             ),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(mainAxisAlignment: MainAxisAlignment.start, children: [
-                Padding(
-                  padding: const EdgeInsets.all(2.0),
-                  child: FilledButton(
-                    onPressed: () => getTrips(null),
-                    child: const Text('ทั้งหมด'),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(2.0),
-                  child: FilledButton(
-                    onPressed: () => getTrips("เอเชีย"),
-                    child: const Text('เอเชีย'),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(2.0),
-                  child: FilledButton(
-                    onPressed: () => getTrips("ยุโรป"),
-                    child: const Text('ยุโรป'),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(2.0),
-                  child: FilledButton(
-                    onPressed: () => getTrips("เอเชียตะวันออกเฉียงใต้"),
-                    child: const Text('อาเซียน'),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(2.0),
-                  child: FilledButton(
-                    onPressed: () => getTrips("อเมริกาเหนือ"),
-                    child: const Text('อเมริกาเหนือ'),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(2.0),
-                  child: FilledButton(
-                    onPressed: () => getTrips("อเมริกาใต้"),
-                    child: const Text('อเมริกาใต้'),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(2.0),
-                  child: FilledButton(
-                    onPressed: () => getTrips("แอฟริกา"),
-                    child: const Text('แอฟริกา'),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(2.0),
-                  child: FilledButton(
-                    onPressed: () => getTrips("แอนตาร์กติกา"),
-                    child: const Text('แอนตาร์กติกา'),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(2.0),
-                  child: FilledButton(
-                    onPressed: () => getTrips("ประเทศไทย"),
-                    child: const Text('ประเทศไทย'),
-                  ),
-                ),
-              ]),
-            ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(20.0),
+                padding: const EdgeInsets.all(5.0),
                 child: FutureBuilder(
                     future: loadData,
                     builder: (context, snapshot) {
@@ -190,80 +128,185 @@ class _HomeState extends State<Home> {
                         );
                       }
                       return SingleChildScrollView(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: trips
-                              .map(
-                                (trip) => Card(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(9.0),
-                                    child: Column(
+                        child: Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(5.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: win_lotterys.map((lottery) {
+                                List<String> numberList =
+                                    lottery.numbers.toString().split('');
+                                return Column(
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              trip.name,
-                                              style: const TextStyle(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.bold),
-                                            ),
-                                          ],
-                                        ),
-                                        Row(
-                                          children: [
-                                            Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
+                                        Builder(
+                                          builder: (context) {
+                                            String status;
+                                            double fontSize;
+                                            Icon? icon;
+                                            Color textColor = Colors
+                                                .black; // สีเริ่มต้นของตัวหนังสือ
+                                            Color iconColor = Colors
+                                                .black; // สีเริ่มต้นของไอคอน
+
+                                            if (lottery.status == 1) {
+                                              status = 'st';
+                                              fontSize = 21;
+                                              iconColor = Colors.blue;
+                                              icon = Icon(
+                                                Icons.local_fire_department,
+                                                color: iconColor,
+                                                size: 40,
+                                              );
+                                              textColor = Colors.blue;
+                                            } else if (lottery.status == 2) {
+                                              status = 'nd';
+                                              fontSize = 19;
+                                            } else if (lottery.status == 3) {
+                                              status = 'rd';
+                                              fontSize = 17;
+                                            } else if (lottery.status >= 4) {
+                                              status = 'th';
+                                              fontSize = 15;
+                                            } else {
+                                              status = 'unknown';
+                                              fontSize =
+                                                  15; // หรือค่าอื่น ๆ หาก status ไม่ตรงตามที่ระบุ
+                                            }
+
+                                            return Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
                                               children: [
-                                                SizedBox(
-                                                  width: 95,
-                                                  height: 100,
-                                                  child: Image.network(
-                                                    trip.coverimage,
+                                                // แสดงไอคอนเฉพาะเมื่อไม่เป็น null
+                                                Text(
+                                                  "${lottery.status}${status}",
+                                                  style: TextStyle(
+                                                    fontSize: fontSize,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: textColor,
                                                   ),
                                                 ),
-                                              ],
-                                            ),
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.all(8.0),
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                      'ประเทศ ${trip.country}'),
-                                                  Text(
-                                                      'ระยะเวลา ${trip.duration} วัน'),
-                                                  Text(
-                                                      'ราคา ${trip.price} บาท'),
-                                                  FilledButton(
-                                                    onPressed: () {
-                                                      Navigator.push(
-                                                          context,
-                                                          MaterialPageRoute(
-                                                            builder: (context) =>
-                                                                TripPage(
-                                                                    idx: trip
-                                                                        .idx),
-                                                          ));
-                                                    },
-                                                    child: const Text(
-                                                        'รายละเอียดเพิ่มเติม'),
+                                                if (icon != null)
+                                                  Padding(
+                                                    padding: const EdgeInsets
+                                                        .only(
+                                                        right:
+                                                            8.0), // เว้นระยะห่างระหว่างไอคอนกับข้อความ
+                                                    child: icon,
                                                   ),
-                                                ],
+                                              ],
+                                            );
+                                          },
+                                        ),
+                                        Builder(
+                                          builder: (context) {
+                                            // กำหนดตัวแปร status ตามค่า lottery.status
+                                            String prize;
+                                            if (lottery.status == 1) {
+                                              prize = '10,000';
+                                            } else if (lottery.status == 2) {
+                                              prize = '5,000';
+                                            } else if (lottery.status == 3) {
+                                              prize = '1,000';
+                                            } else if (lottery.status == 4) {
+                                              prize = '500';
+                                            } else if (lottery.status == 5) {
+                                              prize = '150';
+                                            } else {
+                                              prize =
+                                                  'unknown'; // หรือค่าอื่น ๆ หาก status ไม่ตรงตามที่ระบุ
+                                            }
+
+                                            return Text(
+                                              "เงินรางวัล $prize  บาท",
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
                                               ),
-                                            ),
-                                          ],
+                                            );
+                                          },
                                         ),
                                       ],
                                     ),
-                                  ),
-                                ),
-                              )
-                              .toList(),
+                                    Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 10),
+                                      child: IntrinsicWidth(
+                                        child: Card(
+                                          color: const Color.fromARGB(
+                                              255, 254, 137, 69),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(30.0),
+                                          ),
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 2),
+                                            child: SingleChildScrollView(
+                                              scrollDirection: Axis.horizontal,
+                                              child: Row(
+                                                children: numberList
+                                                    .map((number) => Padding(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  horizontal: 5,
+                                                                  vertical: 5),
+                                                          child: Card(
+                                                            color: const Color
+                                                                .fromARGB(255,
+                                                                255, 255, 255),
+                                                            shape:
+                                                                RoundedRectangleBorder(
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          50.0),
+                                                            ),
+                                                            child: Padding(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .symmetric(
+                                                                      horizontal:
+                                                                          10.0,
+                                                                      vertical:
+                                                                          2),
+                                                              child: Center(
+                                                                child: Text(
+                                                                  number,
+                                                                  style:
+                                                                      const TextStyle(
+                                                                    fontSize:
+                                                                        21,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                    color: Colors
+                                                                        .black,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ))
+                                                    .toList(),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    )
+
+                                    // คุณสามารถเพิ่มเนื้อหาหรือวิดเจ็ตเพิ่มเติมที่นี่ตามที่ต้องการ
+                                  ],
+                                );
+                              }).toList(),
+                            ),
+                          ),
                         ),
                       );
                     }),
@@ -281,23 +324,75 @@ class _HomeState extends State<Home> {
 
           switch (index) {
             case 0:
-              Navigator.pushNamed(context, '/Home');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => HomePage(
+                          uid: widget.uid,
+                          wallet: widget.wallet,
+                          username: widget.username,
+                          selectedIndex: _selectedIndex,
+                        )),
+              );
               break;
             case 1:
-              Navigator.pushNamed(context, '/Shop');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => ShopPage(
+                          uid: widget.uid,
+                          wallet: widget.wallet,
+                          username: widget.username,
+                          selectedIndex: _selectedIndex,
+                        )),
+              );
               break;
             case 2:
-              Navigator.pushNamed(context, '/Ticket');
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => TicketPage()),
+              );
               break;
             case 3:
-              Navigator.pushNamed(context, '/More');
+              showModalBottomSheet(
+                context: context,
+                builder: (context) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        leading: Icon(Icons.account_circle),
+                        title: Text('Profile'),
+                        onTap: () {
+                          Navigator.pop(context); // ปิด BottomSheet ก่อน
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ProfilePage(idx: widget.uid),
+                            ),
+                          );
+                        },
+                      ),
+                      ListTile(
+                        leading: Icon(Icons.logout),
+                        title: Text('Logout'),
+                        onTap: () {
+                          Navigator.pop(context); // ปิด BottomSheet ก่อน
+                          Navigator.of(context)
+                              .popUntil((route) => route.isFirst);
+                        },
+                      ),
+                    ],
+                  );
+                },
+              );
               break;
           }
         },
-        selectedItemColor:
-            Color.fromARGB(255, 250, 150, 44), // สีของไอคอนที่เลือก
-        unselectedItemColor: Colors.grey, // สีของไอคอนที่ไม่เลือก
-        backgroundColor: Colors.white, // สีพื้นหลังของแถบเมนู
+        selectedItemColor: const Color.fromARGB(255, 250, 150, 44),
+        unselectedItemColor: Colors.grey,
+        backgroundColor: Colors.white,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
@@ -324,8 +419,16 @@ class _HomeState extends State<Home> {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
 
-    var json = await http.get(Uri.parse("$url/trips"));
-    trips = tripsGetResponesFromJson(json.body);
+    var response = await http.get(Uri.parse("$url/db/get_WinLottery"));
+    if (response.statusCode == 200) {
+      win_lotterys = getLotteryNumbersFromJson(response.body);
+      log(win_lotterys.toString());
+      for (var lottery in win_lotterys) {
+        log(lottery.numbers.toString());
+      }
+    } else {
+      log('Failed to load lottery numbers. Status code: ${response.statusCode}');
+    }
   }
 
   void randomNumbers() async {
@@ -335,15 +438,15 @@ class _HomeState extends State<Home> {
       String number = Random().nextInt(999999).toString().padLeft(6, '0');
       uniqueNumbers.add(number);
     }
+    var value = await Configuration.getConfig();
+    String url = value['apiEndpoint'];
 
     List<String> numbers = uniqueNumbers.toList();
 
-    var url = Uri.parse('http://192.168.1.8:3004/db/random');
-    var headers = {'Content-Type': 'application/json'};
-    var body = jsonEncode({'numbers': numbers});
-
     try {
-      var response = await http.post(url, headers: headers, body: body);
+      var response = await http.post(Uri.parse("$url/db/random"),
+          headers: {"Content-Type": "application/json; charset=utf-8"},
+          body: jsonEncode({'numbers': numbers}));
 
       if (response.statusCode == 200) {
         print('Insert success');
@@ -355,34 +458,34 @@ class _HomeState extends State<Home> {
     }
   }
 
-  void getTrips(String? zone) async {
-    // 1. Load url from config
-    var value = await Configuration.getConfig();
-    String url = value['apiEndpoint'];
+  // void getTrips(String? zone) async {
+  //   // 1. Load url from config
+  //   var value = await Configuration.getConfig();
+  //   String url = value['apiEndpoint'];
 
-    // 2. Call Get / trips
-    var json = await http.get(Uri.parse("$url/trips"));
-    trips = tripsGetResponesFromJson(json.body);
-    log('API response body: ${json.body}');
+  //   // 2. Call Get / trips
+  //   var json = await http.get(Uri.parse("$url/trips"));
+  //   trips = tripsGetResponesFromJson(json.body);
+  //   log('API response body: ${json.body}');
 
-    // 3. Put response data to model
-    List<TripsGetRespones> filteredTrips = [];
-    // 3.1 Check if zone is "ทั้งหมด" (all)
-    if (zone == null) {
-      filteredTrips = trips; // Show all trips
-    } else {
-      for (var trip in trips) {
-        String tripZone = destinationZoneValues.reverse[trip.destinationZone]!;
-        if (tripZone == zone) {
-          filteredTrips.add(trip);
-        }
-      }
-    }
+  //   // 3. Put response data to model
+  //   List<TripsGetRespones> filteredTrips = [];
+  //   // 3.1 Check if zone is "ทั้งหมด" (all)
+  //   if (zone == null) {
+  //     filteredTrips = trips; // Show all trips
+  //   } else {
+  //     for (var trip in trips) {
+  //       String tripZone = destinationZoneValues.reverse[trip.destinationZone]!;
+  //       if (tripZone == zone) {
+  //         filteredTrips.add(trip);
+  //       }
+  //     }
+  //   }
 
-    trips = filteredTrips;
+  //   trips = filteredTrips;
 
-    // 4. Log number of trips
-    log(trips.length.toString());
-    setState(() {});
-  }
+  //   // 4. Log number of trips
+  //   log(trips.length.toString());
+  //   setState(() {});
+  // }
 }

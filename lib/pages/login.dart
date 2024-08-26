@@ -192,7 +192,12 @@ class _LoginPageState extends State<LoginPage> {
       Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => Home(idx: res.uid),
+            builder: (context) => HomePage(
+              uid: res.uid,
+              wallet: res.wallet,
+              username: res.username,
+              selectedIndex: 0,
+            ),
           ));
     } catch (err) {
       log(err.toString());
