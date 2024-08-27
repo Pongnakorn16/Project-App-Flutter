@@ -14,24 +14,28 @@ String getLotteryNumbersToJson(List<GetLotteryNumbers> data) =>
 class GetLotteryNumbers {
   int lid;
   int numbers;
-  int status;
+  int status_prize;
+  int status_buy;
 
   GetLotteryNumbers({
     required this.lid,
     required this.numbers,
-    required this.status,
+    required this.status_prize,
+    required this.status_buy,
   });
 
   factory GetLotteryNumbers.fromJson(Map<String, dynamic> json) =>
       GetLotteryNumbers(
         lid: json["lid"],
         numbers: json["Numbers"],
-        status: json["Status"],
+        status_prize: json["Status_prize"],
+        status_buy: json["Status_buy"],
       );
 
   Map<String, dynamic> toJson() => {
         "lid": lid,
         "Numbers": numbers,
-        "Status": status,
+        "Status_prize": status_prize,
+        "Status_buy": status_buy,
       };
 }

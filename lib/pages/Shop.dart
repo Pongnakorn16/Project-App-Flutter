@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
+import 'package:mobile_miniproject_app/models/request/cart_post_req.dart';
+import 'package:mobile_miniproject_app/models/response/GetCart_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetLotteryNumbers_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
 import 'package:mobile_miniproject_app/pages/Ticket.dart';
@@ -26,93 +28,250 @@ class ShopPage extends StatefulWidget {
   State<ShopPage> createState() => _ShopPageState();
 }
 
+class CartLotteryItem {
+  final int lid;
+  final List<String> numbers;
+
+  CartLotteryItem({required this.lid, required this.numbers});
+}
+
 class _ShopPageState extends State<ShopPage> {
   String url = '';
 
   List<GetLotteryNumbers> all_lotterys = [];
+  List<GetCartRes> all_cart = [];
+  List<CartLotteryItem> cart_lotterys = [];
   late Future<void> loadData;
   int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    // randomNumbers();
     _selectedIndex = widget.selectedIndex;
     log(_selectedIndex.toString());
     loadData = loadDataAsync();
+    log("CHECKKKKKKKKK length" + all_cart.length.toString());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 5),
-              child: RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Welcome ',
-                      style: const TextStyle(
-                          fontSize: 20,
-                          color: Colors.black), // สีของข้อความที่เหลือ
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 5),
+                  child: RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'Welcome ',
+                          style: const TextStyle(
+                              fontSize: 20,
+                              color: Colors.black), // สีของข้อความที่เหลือ
+                        ),
+                        TextSpan(
+                          text: widget.username,
+                          style: const TextStyle(
+                              fontSize: 20,
+                              color: Colors.blue,
+                              fontWeight:
+                                  FontWeight.bold), // สีของ ${widget.username}
+                        ),
+                      ],
                     ),
-                    TextSpan(
-                      text: widget.username,
-                      style: const TextStyle(
-                          fontSize: 20,
-                          color: Colors.blue,
-                          fontWeight:
-                              FontWeight.bold), // สีของ ${widget.username}
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 10, left: 1.5),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.account_balance_wallet,
-                    size: 20,
-                    color: Color.fromARGB(255, 254, 137, 69),
+                Padding(
+                  padding: const EdgeInsets.only(top: 10, left: 1.5),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.account_balance_wallet,
+                        size: 20,
+                        color: Color.fromARGB(255, 254, 137, 69),
+                      ),
+                      SizedBox(width: 5),
+                      Text(
+                        'Wallet :  ${widget.wallet}  THB',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: Color.fromARGB(255, 131, 130, 130),
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(width: 5),
-                  Text(
-                    'Wallet :  ${widget.wallet}  THB',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      color: Color.fromARGB(255, 131, 130, 130),
+                )
+              ],
+            ),
+            Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.shopping_cart,
+                    color: Color.fromARGB(255, 254, 137, 69),
+                    size: 29.0,
+                  ),
+                  onPressed: () {
+                    // ฟังก์ชันที่ต้องการให้เกิดเมื่อกดไอคอน
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('รถเข็นของฉัน'),
+                            FilledButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              child: Icon(
+                                Icons.close,
+                                size: 25,
+                              ),
+                              style: ButtonStyle(
+                                backgroundColor: WidgetStateProperty.all(
+                                    Colors.red), // สีพื้นหลังของปุ่ม
+                                foregroundColor: WidgetStateProperty.all(
+                                    Colors.white), // สีของข้อความบนปุ่ม
+                                padding: WidgetStateProperty.all<EdgeInsets>(
+                                    EdgeInsets.zero),
+                                minimumSize: WidgetStateProperty.all<Size>(
+                                    Size(30, 30)), // ขนาดของ padding ภายในปุ่ม
+                                shape: WidgetStateProperty.all<
+                                    RoundedRectangleBorder>(
+                                  RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                        30), // มุมโค้งของปุ่มให้กลายเป็นวงกลม
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        content: SingleChildScrollView(
+                          child: Column(
+                            children: all_cart.asMap().entries.map((entry) {
+                              int index = entry.key +
+                                  1; // กำหนดหมายเลขลำดับ (เริ่มจาก 1)
+                              GetCartRes item =
+                                  entry.value; // item เป็น GetCartRes
+                              List<String> numbers = [
+                                item.numbers.toString()
+                              ]; // แปลง GetCartRes เป็น numbers // แปลง GetCartRes เป็น numbers
+                              return Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      '$index. รหัส  ${numbers.join()} งวดวันที่ ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
+                                      style: TextStyle(
+                                          fontSize: 9), // กำหนดขนาดของข้อความ
+                                    ),
+                                  ),
+                                  Text(
+                                    'ราคา 100 บาท',
+                                    style: TextStyle(fontSize: 9),
+                                  ),
+                                ],
+                              );
+                            }).toList(),
+                          ),
+                        ), // แสดงรายการใน cart_lotterys
+                        actions: [
+                          const Padding(
+                            padding: EdgeInsets.only(top: 25.0, bottom: 5.0),
+                            child: Divider(
+                              color: Colors.grey,
+                              thickness: 1,
+                            ),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "ราคารวม : ${all_cart.length * 100} บาท",
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    'จำนวน ${all_cart.length} ใบ',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: Color.fromARGB(255, 131, 130, 130),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              FilledButton(
+                                onPressed: () {
+                                  purchase();
+                                  Navigator.pop(context);
+                                },
+                                child: const Text('Purchase'),
+                                style: ButtonStyle(
+                                  backgroundColor: WidgetStateProperty.all(
+                                      Colors.blue), // สีพื้นหลังของปุ่ม
+                                  foregroundColor: WidgetStateProperty.all(
+                                      Colors.white), // สีของข้อความบนปุ่ม
+                                  padding: WidgetStateProperty.all<EdgeInsets>(
+                                      EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical:
+                                              10)), // ขนาดของ padding ภายในปุ่ม
+                                  textStyle: WidgetStateProperty.all<TextStyle>(
+                                      TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight
+                                              .bold)), // ขนาดของข้อความในปุ่ม
+                                ),
+                              )
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                Positioned(
+                  top: 3,
+                  right: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '${all_cart.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
-                ],
-              ),
-            )
+                ),
+              ],
+            ),
           ],
         ),
         automaticallyImplyLeading: false,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(10.0),
+        padding: const EdgeInsets.all(2.0),
         child: Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Padding(
-                  padding:
-                      const EdgeInsets.only(top: 20, bottom: 25.0, left: 10.0),
-                  child: Text(
-                    'Today Reward : ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
-                    style: const TextStyle(fontSize: 15),
-                  ),
-                ),
-              ],
-            ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(5.0),
@@ -131,159 +290,141 @@ class _ShopPageState extends State<ShopPage> {
                         List<String> numberList =
                             lottery.numbers.toString().split('');
                         return Card(
+                          color: Colors
+                              .transparent, // ทำให้พื้นหลังของ Card เป็นโปร่งใส
+                          elevation: 0, // ปิดการแสดงเงา
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                                10.0), // กำหนดความโค้งมนของมุม
+                          ),
                           child: Padding(
-                            padding: const EdgeInsets.all(5.0),
+                            padding: const EdgeInsets.all(3.0),
                             child: Column(
                               children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Builder(
-                                      builder: (context) {
-                                        String status;
-                                        double fontSize;
-                                        Icon? icon;
-                                        Color textColor = Colors.black;
-                                        Color iconColor = Colors.black;
-
-                                        if (lottery.status == 1) {
-                                          status = 'st';
-                                          fontSize = 21;
-                                          iconColor = Colors.blue;
-                                          icon = Icon(
-                                            Icons.local_fire_department,
-                                            color: iconColor,
-                                            size: 40,
-                                          );
-                                          textColor = Colors.blue;
-                                        } else if (lottery.status == 2) {
-                                          status = 'nd';
-                                          fontSize = 19;
-                                        } else if (lottery.status == 3) {
-                                          status = 'rd';
-                                          fontSize = 17;
-                                        } else if (lottery.status >= 4) {
-                                          status = 'th';
-                                          fontSize = 15;
-                                        } else {
-                                          status = 'unknown';
-                                          fontSize = 15;
-                                        }
-
-                                        return Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              "${lottery.status}${status}",
-                                              style: TextStyle(
-                                                fontSize: fontSize,
-                                                fontWeight: FontWeight.bold,
-                                                color: textColor,
-                                              ),
-                                            ),
-                                            if (icon != null)
-                                              Padding(
-                                                padding: const EdgeInsets.only(
-                                                    right: 8.0),
-                                                child: icon,
-                                              ),
-                                          ],
-                                        );
-                                      },
-                                    ),
-                                    Builder(
-                                      builder: (context) {
-                                        String prize;
-                                        if (lottery.status == 1) {
-                                          prize = '10,000';
-                                        } else if (lottery.status == 2) {
-                                          prize = '5,000';
-                                        } else if (lottery.status == 3) {
-                                          prize = '1,000';
-                                        } else if (lottery.status == 4) {
-                                          prize = '500';
-                                        } else if (lottery.status == 5) {
-                                          prize = '150';
-                                        } else {
-                                          prize = 'unknown';
-                                        }
-
-                                        return Text(
-                                          "เงินรางวัล $prize บาท",
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
                                   child: IntrinsicWidth(
-                                    child: Card(
-                                      color: const Color.fromARGB(
-                                          255, 254, 137, 69),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(30.0),
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 2),
-                                        child: SingleChildScrollView(
-                                          scrollDirection: Axis.horizontal,
-                                          child: Row(
-                                            children: numberList
-                                                .map((number) => Padding(
-                                                      padding: const EdgeInsets
-                                                          .symmetric(
-                                                          horizontal: 5,
-                                                          vertical: 5),
-                                                      child: Card(
-                                                        color: const Color
-                                                            .fromARGB(
-                                                            255, 255, 255, 255),
-                                                        shape:
-                                                            RoundedRectangleBorder(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                                      50.0),
-                                                        ),
-                                                        child: Padding(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .symmetric(
-                                                                  horizontal:
-                                                                      10.0,
-                                                                  vertical: 2),
-                                                          child: Center(
-                                                            child: Text(
-                                                              number,
-                                                              style:
-                                                                  const TextStyle(
-                                                                fontSize: 21,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                color: Colors
-                                                                    .black,
+                                      child: Row(
+                                    children: [
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(10.0),
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              const Color.fromARGB(255, 254,
+                                                  137, 69), // สีที่กำหนด
+                                              Colors.white.withOpacity(
+                                                  0), // สีขาวที่โปร่งแสง
+                                            ],
+                                            stops: [
+                                              0.75,
+                                              1.0
+                                            ], // ตำแหน่งของการเปลี่ยนสี
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                          ),
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 2),
+                                          child: SingleChildScrollView(
+                                            scrollDirection: Axis.horizontal,
+                                            child: Row(
+                                              children: [
+                                                ...numberList
+                                                    .map(
+                                                      (number) => Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                horizontal: 3.5,
+                                                                vertical: 5),
+                                                        child: Card(
+                                                          color: const Color
+                                                              .fromARGB(255,
+                                                              255, 255, 255),
+                                                          shape:
+                                                              RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        50.0),
+                                                          ),
+                                                          child: Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .symmetric(
+                                                                    horizontal:
+                                                                        5.0,
+                                                                    vertical:
+                                                                        2),
+                                                            child: Center(
+                                                              child: Text(
+                                                                number,
+                                                                style:
+                                                                    const TextStyle(
+                                                                  fontSize: 18,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                  color: Colors
+                                                                      .black,
+                                                                ),
                                                               ),
                                                             ),
                                                           ),
                                                         ),
                                                       ),
-                                                    ))
-                                                .toList(),
+                                                    )
+                                                    .toList(),
+                                              ],
+                                            ),
                                           ),
                                         ),
                                       ),
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(left: 25.0),
+                                        child: FilledButton(
+                                          onPressed: () {
+                                            int number = lottery
+                                                .numbers; // ใช้ตัวแปรนี้เป็น int
+                                            List<String> Lot_Num = [
+                                              number.toString()
+                                            ]; // สร้าง List<String> จาก int เดียว
+                                            add_toCart(lottery.lid,
+                                                Lot_Num); // ส่ง List<String> ไปยัง add_toCart
+                                          },
+                                          style: ButtonStyle(
+                                            backgroundColor:
+                                                WidgetStateProperty.all(
+                                                    Colors.blue),
+                                            foregroundColor:
+                                                WidgetStateProperty.all(
+                                                    Colors.white),
+                                          ),
+                                          child: const Icon(
+                                            Icons.add_shopping_cart,
+                                            size: 24,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  )),
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          bottom: 10.0, left: 10.0),
+                                      child: Text(
+                                        'งวดวันที่ : ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
+                                        style: const TextStyle(fontSize: 15),
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -413,33 +554,111 @@ class _ShopPageState extends State<ShopPage> {
     } else {
       log('Failed to load lottery numbers. Status code: ${response.statusCode}');
     }
+    var get_cart = await http.get(Uri.parse("$url/db/get_cart/${widget.uid}"));
+    if (get_cart.statusCode == 200) {
+      all_cart = getCartResFromJson(get_cart.body);
+      log('Loaded cart items: ${all_cart.toString()}');
+      for (var cart in all_cart) {
+        log('lid' + cart.cLid.toString());
+      }
+    } else {
+      log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
+    }
   }
 
-  void randomNumbers() async {
-    Set<String> uniqueNumbers = Set();
-
-    while (uniqueNumbers.length < 10) {
-      String number = Random().nextInt(999999).toString().padLeft(6, '0');
-      uniqueNumbers.add(number);
-    }
+  void add_toCart(int lid, List<String> Lot_Num) async {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
 
-    List<String> numbers = uniqueNumbers.toList();
-
     try {
-      var response = await http.post(Uri.parse("$url/db/random"),
-          headers: {"Content-Type": "application/json; charset=utf-8"},
-          body: jsonEncode({'numbers': numbers}));
+      // สร้าง JSON payload ที่ต้องการส่งไปยังเซิร์ฟเวอร์
+      var requestBody = CartPostRequest(
+        cLid: lid,
+        cUid: widget.uid,
+      );
 
-      if (response.statusCode == 200) {
-        print('Insert success');
+      var add_cart = await http.post(Uri.parse("$url/db/add_toCart"),
+          headers: {"Content-Type": "application/json; charset=utf-8"},
+          body:
+              cartPostRequestToJson((requestBody)) // ใช้ List<CartPostRequest>
+          );
+
+      var get_cart =
+          await http.get(Uri.parse("$url/db/get_cart/${widget.uid}"));
+      if (get_cart.statusCode == 200) {
+        all_cart = getCartResFromJson(get_cart.body);
+        log(all_cart.toString());
+        for (var cart in all_cart) {
+          log('lid' + cart.cLid.toString());
+        }
       } else {
-        print('Failed to insert. Status code: ${response.statusCode}');
+        log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
       }
-    } catch (e) {
-      print('Error: $e');
+
+      // ตรวจสอบสถานะการตอบกลับของเซิร์ฟเวอร์
+      if (add_cart.statusCode == 200) {
+        log('Response data: ${add_cart.body}');
+      } else {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('แจ้งเตือน'),
+            content: Text('ท่านได้เพิ่มหมายเลขในรถเข็นแล้ว'),
+            actions: [
+              const Padding(
+                padding: EdgeInsets.only(top: 25.0, bottom: 5.0),
+                child: Divider(
+                  color: Colors.grey,
+                  thickness: 1,
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  FilledButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: const Text('ปิด'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (err) {
+      log(err.toString());
     }
+
+    log('Items in cart: $cart_lotterys');
+  }
+
+  void purchase() async {
+    log("Purchase success!!!");
+    // var value = await Configuration.getConfig();
+    // String url = value['apiEndpoint'];
+
+    // var response = await http.get(Uri.parse("$url/db/get_allLottery"));
+    // if (response.statusCode == 200) {
+    //   all_lotterys = getLotteryNumbersFromJson(response.body);
+    //   log(all_lotterys.toString());
+    //   for (var lottery in all_lotterys) {
+    //     log(lottery.numbers.toString());
+    //   }
+    // } else {
+    //   log('Failed to load lottery numbers. Status code: ${response.statusCode}');
+    // }
+    // var get_cart = await http.get(Uri.parse("$url/db/get_cart/${widget.uid}"));
+    // if (get_cart.statusCode == 200) {
+    //   all_cart = getCartResFromJson(get_cart.body);
+    //   log(all_cart.toString());
+    //   for (var cart in all_cart) {
+    //     log('lid' + cart.cLid.toString());
+    //   }
+    // } else {
+    //   log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
+    // }
   }
 
   // void getTrips(String? zone) async {

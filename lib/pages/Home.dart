@@ -152,7 +152,7 @@ class _HomePageState extends State<HomePage> {
                                             Color iconColor = Colors
                                                 .black; // สีเริ่มต้นของไอคอน
 
-                                            if (lottery.status == 1) {
+                                            if (lottery.status_prize == 1) {
                                               status = 'st';
                                               fontSize = 21;
                                               iconColor = Colors.blue;
@@ -162,13 +162,16 @@ class _HomePageState extends State<HomePage> {
                                                 size: 40,
                                               );
                                               textColor = Colors.blue;
-                                            } else if (lottery.status == 2) {
+                                            } else if (lottery.status_prize ==
+                                                2) {
                                               status = 'nd';
                                               fontSize = 19;
-                                            } else if (lottery.status == 3) {
+                                            } else if (lottery.status_prize ==
+                                                3) {
                                               status = 'rd';
                                               fontSize = 17;
-                                            } else if (lottery.status >= 4) {
+                                            } else if (lottery.status_prize >=
+                                                4) {
                                               status = 'th';
                                               fontSize = 15;
                                             } else {
@@ -183,7 +186,7 @@ class _HomePageState extends State<HomePage> {
                                               children: [
                                                 // แสดงไอคอนเฉพาะเมื่อไม่เป็น null
                                                 Text(
-                                                  "${lottery.status}${status}",
+                                                  "${lottery.status_prize}${status}",
                                                   style: TextStyle(
                                                     fontSize: fontSize,
                                                     fontWeight: FontWeight.bold,
@@ -206,15 +209,19 @@ class _HomePageState extends State<HomePage> {
                                           builder: (context) {
                                             // กำหนดตัวแปร status ตามค่า lottery.status
                                             String prize;
-                                            if (lottery.status == 1) {
+                                            if (lottery.status_prize == 1) {
                                               prize = '10,000';
-                                            } else if (lottery.status == 2) {
+                                            } else if (lottery.status_prize ==
+                                                2) {
                                               prize = '5,000';
-                                            } else if (lottery.status == 3) {
+                                            } else if (lottery.status_prize ==
+                                                3) {
                                               prize = '1,000';
-                                            } else if (lottery.status == 4) {
+                                            } else if (lottery.status_prize ==
+                                                4) {
                                               prize = '500';
-                                            } else if (lottery.status == 5) {
+                                            } else if (lottery.status_prize ==
+                                                5) {
                                               prize = '150';
                                             } else {
                                               prize =
