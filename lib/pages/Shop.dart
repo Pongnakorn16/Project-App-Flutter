@@ -17,12 +17,14 @@ class ShopPage extends StatefulWidget {
   int wallet = 0;
   String username = '';
   int selectedIndex = 0;
+  int cart_length = 0;
   ShopPage(
       {super.key,
       required this.uid,
       required this.wallet,
       required this.username,
-      required this.selectedIndex});
+      required this.selectedIndex,
+      required this.cart_length});
 
   @override
   State<ShopPage> createState() => _ShopPageState();
@@ -253,7 +255,7 @@ class _ShopPageState extends State<ShopPage> {
                       shape: BoxShape.circle,
                     ),
                     child: Text(
-                      '${all_cart.length}',
+                      '${widget.cart_length}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -468,6 +470,7 @@ class _ShopPageState extends State<ShopPage> {
                           wallet: widget.wallet,
                           username: widget.username,
                           selectedIndex: _selectedIndex,
+                          cart_length: all_cart.length,
                         )),
               );
               break;
@@ -553,16 +556,6 @@ class _ShopPageState extends State<ShopPage> {
       }
     } else {
       log('Failed to load lottery numbers. Status code: ${response.statusCode}');
-    }
-    var get_cart = await http.get(Uri.parse("$url/db/get_cart/${widget.uid}"));
-    if (get_cart.statusCode == 200) {
-      all_cart = getCartResFromJson(get_cart.body);
-      log('Loaded cart items: ${all_cart.toString()}');
-      for (var cart in all_cart) {
-        log('lid' + cart.cLid.toString());
-      }
-    } else {
-      log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
     }
   }
 

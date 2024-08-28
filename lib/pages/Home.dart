@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
+import 'package:mobile_miniproject_app/models/response/GetCart_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetLotteryNumbers_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/pages/Shop.dart';
@@ -32,7 +33,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String url = '';
-
+  List<GetCartRes> all_cart = [];
   List<GetLotteryNumbers> win_lotterys = [];
   late Future<void> loadData;
   int _selectedIndex = 0;
@@ -351,6 +352,7 @@ class _HomePageState extends State<HomePage> {
                           wallet: widget.wallet,
                           username: widget.username,
                           selectedIndex: _selectedIndex,
+                          cart_length: all_cart.length,
                         )),
               );
               break;
@@ -435,6 +437,17 @@ class _HomePageState extends State<HomePage> {
       }
     } else {
       log('Failed to load lottery numbers. Status code: ${response.statusCode}');
+    }
+
+    var get_cart = await http.get(Uri.parse("$url/db/get_cart/${widget.uid}"));
+    if (get_cart.statusCode == 200) {
+      all_cart = getCartResFromJson(get_cart.body);
+      log(all_cart.toString());
+      for (var cart in all_cart) {
+        log('lid' + cart.cLid.toString());
+      }
+    } else {
+      log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
     }
   }
 
