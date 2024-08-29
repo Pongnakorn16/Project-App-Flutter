@@ -557,6 +557,17 @@ class _ShopPageState extends State<ShopPage> {
     } else {
       log('Failed to load lottery numbers. Status code: ${response.statusCode}');
     }
+
+    var get_cart = await http.get(Uri.parse("$url/db/get_cart/${widget.uid}"));
+    if (get_cart.statusCode == 200) {
+      all_cart = getCartResFromJson(get_cart.body);
+      log(all_cart.toString());
+      for (var cart in all_cart) {
+        log('lid' + cart.cLid.toString());
+      }
+    } else {
+      log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
+    }
   }
 
   void add_toCart(int lid, List<String> Lot_Num) async {
@@ -606,13 +617,15 @@ class _ShopPageState extends State<ShopPage> {
                 ),
               ),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   FilledButton(
                     onPressed: () {
                       Navigator.pop(context);
                     },
                     child: const Text('ปิด'),
+                    style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.all(Colors.red)),
                   ),
                 ],
               ),
@@ -629,29 +642,70 @@ class _ShopPageState extends State<ShopPage> {
 
   void purchase() async {
     log("Purchase success!!!");
-    // var value = await Configuration.getConfig();
-    // String url = value['apiEndpoint'];
+    var value = await Configuration.getConfig();
+    String url = value['apiEndpoint'];
 
-    // var response = await http.get(Uri.parse("$url/db/get_allLottery"));
-    // if (response.statusCode == 200) {
-    //   all_lotterys = getLotteryNumbersFromJson(response.body);
-    //   log(all_lotterys.toString());
-    //   for (var lottery in all_lotterys) {
-    //     log(lottery.numbers.toString());
-    //   }
-    // } else {
-    //   log('Failed to load lottery numbers. Status code: ${response.statusCode}');
-    // }
-    // var get_cart = await http.get(Uri.parse("$url/db/get_cart/${widget.uid}"));
-    // if (get_cart.statusCode == 200) {
-    //   all_cart = getCartResFromJson(get_cart.body);
-    //   log(all_cart.toString());
-    //   for (var cart in all_cart) {
-    //     log('lid' + cart.cLid.toString());
-    //   }
-    // } else {
-    //   log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
-    // }
+    List<int> CLid = all_cart.map((item) => item.cLid).toList();
+
+    // สร้าง JSON body สำหรับ PUT request
+    var body = jsonEncode({"lids": CLid});
+
+    try {
+      var res = await http.put(
+        Uri.parse('$url/db/purchase/${widget.uid}'),
+        headers: {"Content-Type": "application/json; charset=utf-8"},
+        body: body,
+      );
+      log(res.body);
+      var result = jsonDecode(res.body);
+      // Need to know json's property by reading from API Tester
+      log(result['message']);
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('สำเร็จ'),
+          content: const Text('Purchase Successful'),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                FilledButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('ปิด'),
+                  style: ButtonStyle(
+                      backgroundColor: WidgetStateProperty.all(Colors.red)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    } catch (err) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('ผิดพลาด'),
+          content: Text('Purchase Failed ' + err.toString()),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                FilledButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('ปิด'),
+                  style: ButtonStyle(
+                      backgroundColor: WidgetStateProperty.all(Colors.red)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   // void getTrips(String? zone) async {
