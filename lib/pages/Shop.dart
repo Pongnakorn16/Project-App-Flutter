@@ -166,27 +166,62 @@ class _ShopPageState extends State<ShopPage> {
                                   entry.value; // item เป็น GetCartRes
                               List<String> numbers = [
                                 item.numbers.toString()
-                              ]; // แปลง GetCartRes เป็น numbers // แปลง GetCartRes เป็น numbers
-                              return Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
+                              ]; // แปลง GetCartRes เป็น numbers
+                              return SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    Text(
                                       '$index. รหัส  ${numbers.join()} งวดวันที่ ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
                                       style: TextStyle(
                                           fontSize: 9), // กำหนดขนาดของข้อความ
                                     ),
-                                  ),
-                                  Text(
-                                    'ราคา 100 บาท',
-                                    style: TextStyle(fontSize: 9),
-                                  ),
-                                ],
+                                    SizedBox(
+                                        width:
+                                            10), // เพิ่มระยะห่างระหว่างข้อความ
+                                    Text(
+                                      'ราคา 100 บาท',
+                                      style: TextStyle(fontSize: 9),
+                                    ),
+                                    SizedBox(
+                                        width:
+                                            10), // เพิ่มระยะห่างระหว่างข้อความและปุ่ม
+                                    FilledButton(
+                                      onPressed: () {
+                                        remove_cart(item.cLid);
+                                      },
+                                      child: Icon(
+                                        Icons.close,
+                                        size: 18,
+                                      ),
+                                      style: ButtonStyle(
+                                        backgroundColor:
+                                            WidgetStateProperty.all(Colors
+                                                .red), // สีพื้นหลังของปุ่ม
+                                        foregroundColor:
+                                            WidgetStateProperty.all(Colors
+                                                .white), // สีของข้อความบนปุ่ม
+                                        padding:
+                                            WidgetStateProperty.all<EdgeInsets>(
+                                                EdgeInsets.zero),
+                                        minimumSize:
+                                            WidgetStateProperty.all<Size>(
+                                                Size(25, 25)), // ขนาดของปุ่ม
+                                        shape: WidgetStateProperty.all<
+                                            RoundedRectangleBorder>(
+                                          RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                                30), // มุมโค้งของปุ่มให้กลายเป็นวงกลม
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               );
                             }).toList(),
                           ),
-                        ), // แสดงรายการใน cart_lotterys
+                        ),
                         actions: [
                           const Padding(
                             padding: EdgeInsets.only(top: 25.0, bottom: 5.0),
@@ -395,8 +430,8 @@ class _ShopPageState extends State<ShopPage> {
                                             List<String> Lot_Num = [
                                               number.toString()
                                             ]; // สร้าง List<String> จาก int เดียว
-                                            add_toCart(lottery.lid,
-                                                Lot_Num); // ส่ง List<String> ไปยัง add_toCart
+                                            add_toCart(lottery.lid, Lot_Num);
+                                            initState(); // ส่ง List<String> ไปยัง add_toCart
                                           },
                                           style: ButtonStyle(
                                             backgroundColor:
@@ -688,6 +723,67 @@ class _ShopPageState extends State<ShopPage> {
         builder: (context) => AlertDialog(
           title: const Text('ผิดพลาด'),
           content: Text('Purchase Failed ' + err.toString()),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                FilledButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('ปิด'),
+                  style: ButtonStyle(
+                      backgroundColor: WidgetStateProperty.all(Colors.red)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  void get_cart() async {
+    var value = await Configuration.getConfig();
+    String url = value['apiEndpoint'];
+  }
+
+  void remove_cart(int cLid) async {
+    var value = await Configuration.getConfig();
+    String url = value['apiEndpoint'];
+
+    try {
+      var remove_cart =
+          await http.delete(Uri.parse("$url/db/remove_cart/${cLid}"));
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('สำเร็จ'),
+          content: const Text('Delete Successful'),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                FilledButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('ปิด'),
+                  style: ButtonStyle(
+                      backgroundColor: WidgetStateProperty.all(Colors.red)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    } catch (err) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('ผิดพลาด'),
+          content: Text('Delete Failed ' + err.toString()),
           actions: [
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
