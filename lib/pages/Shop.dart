@@ -121,7 +121,6 @@ class _ShopPageState extends State<ShopPage> {
                     size: 29.0,
                   ),
                   onPressed: () {
-                    // ฟังก์ชันที่ต้องการให้เกิดเมื่อกดไอคอน
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
@@ -131,6 +130,9 @@ class _ShopPageState extends State<ShopPage> {
                             const Text('รถเข็นของฉัน'),
                             FilledButton(
                               onPressed: () {
+                                setState(() {
+                                  widget.cart_length = all_cart.length;
+                                });
                                 Navigator.pop(context);
                               },
                               child: Icon(
@@ -167,6 +169,7 @@ class _ShopPageState extends State<ShopPage> {
                               List<String> numbers = [
                                 item.numbers.toString()
                               ]; // แปลง GetCartRes เป็น numbers
+
                               return SingleChildScrollView(
                                 scrollDirection: Axis.horizontal,
                                 child: Row(
@@ -189,6 +192,7 @@ class _ShopPageState extends State<ShopPage> {
                                     FilledButton(
                                       onPressed: () {
                                         remove_cart(item.cLid);
+                                        setState(() {}); // ลบรายการจากรถเข็น
                                       },
                                       child: Icon(
                                         Icons.close,
@@ -431,7 +435,7 @@ class _ShopPageState extends State<ShopPage> {
                                               number.toString()
                                             ]; // สร้าง List<String> จาก int เดียว
                                             add_toCart(lottery.lid, Lot_Num);
-                                            initState(); // ส่ง List<String> ไปยัง add_toCart
+                                            // ส่ง List<String> ไปยัง add_toCart
                                           },
                                           style: ButtonStyle(
                                             backgroundColor:
@@ -637,12 +641,16 @@ class _ShopPageState extends State<ShopPage> {
       // ตรวจสอบสถานะการตอบกลับของเซิร์ฟเวอร์
       if (add_cart.statusCode == 200) {
         log('Response data: ${add_cart.body}');
+        setState(() {
+          widget.cart_length = all_cart.length;
+          loadDataAsync();
+        });
       } else {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('แจ้งเตือน'),
-            content: Text('ท่านได้เพิ่มหมายเลขในรถเข็นแล้ว'),
+            content: Text('ท่านได้มีหมายเลขนี้ในรถเข็นอยู่แล้ว'),
             actions: [
               const Padding(
                 padding: EdgeInsets.only(top: 25.0, bottom: 5.0),
@@ -743,48 +751,35 @@ class _ShopPageState extends State<ShopPage> {
     }
   }
 
-  void get_cart() async {
-    var value = await Configuration.getConfig();
-    String url = value['apiEndpoint'];
-  }
-
   void remove_cart(int cLid) async {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
 
-    try {
-      var remove_cart =
-          await http.delete(Uri.parse("$url/db/remove_cart/${cLid}"));
+    var remove_cart =
+        await http.delete(Uri.parse("$url/db/remove_cart/${cLid}"));
 
+    if (remove_cart.statusCode == 200) {
+      setState(() async {
+        var get_cart =
+            await http.get(Uri.parse("$url/db/get_cart/${widget.uid}"));
+        all_cart = getCartResFromJson(get_cart.body);
+        log("CHECKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK ${all_cart.length.toString()}");
+        log("CHECKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK222222222222 ${all_cart.length.toString()}");
+      });
+    } else {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('สำเร็จ'),
-          content: const Text('Delete Successful'),
+          title: const Text('แจ้งเตือน'),
+          content: Text('นำออกจากรถเข็นไม่สำเร็จ'),
           actions: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                FilledButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: const Text('ปิด'),
-                  style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.all(Colors.red)),
-                ),
-              ],
+            const Padding(
+              padding: EdgeInsets.only(top: 25.0, bottom: 5.0),
+              child: Divider(
+                color: Colors.grey,
+                thickness: 1,
+              ),
             ),
-          ],
-        ),
-      );
-    } catch (err) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('ผิดพลาด'),
-          content: Text('Delete Failed ' + err.toString()),
-          actions: [
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -804,34 +799,13 @@ class _ShopPageState extends State<ShopPage> {
     }
   }
 
-  // void getTrips(String? zone) async {
-  //   // 1. Load url from config
-  //   var value = await Configuration.getConfig();
-  //   String url = value['apiEndpoint'];
+  void show_cart() {}
 
-  //   // 2. Call Get / trips
-  //   var json = await http.get(Uri.parse("$url/trips"));
-  //   trips = tripsGetResponesFromJson(json.body);
-  //   log('API response body: ${json.body}');
-
-  //   // 3. Put response data to model
-  //   List<TripsGetRespones> filteredTrips = [];
-  //   // 3.1 Check if zone is "ทั้งหมด" (all)
-  //   if (zone == null) {
-  //     filteredTrips = trips; // Show all trips
-  //   } else {
-  //     for (var trip in trips) {
-  //       String tripZone = destinationZoneValues.reverse[trip.destinationZone]!;
-  //       if (tripZone == zone) {
-  //         filteredTrips.add(trip);
-  //       }
-  //     }
-  //   }
-
-  //   trips = filteredTrips;
-
-  //   // 4. Log number of trips
-  //   log(trips.length.toString());
-  //   setState(() {});
-  // }
+  Future<void> get_cart() async {
+    var get_cart = await http.get(Uri.parse("$url/db/get_cart/${widget.uid}"));
+    setState(() {
+      all_cart = getCartResFromJson(get_cart.body);
+      log("ALL cart check ${all_cart.length.toString()}"); // ตรวจสอบจำนวนรายการ
+    });
+  }
 }
