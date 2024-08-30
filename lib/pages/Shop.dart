@@ -8,6 +8,7 @@ import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/cart_post_req.dart';
 import 'package:mobile_miniproject_app/models/response/GetCart_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetLotteryNumbers_Res.dart';
+import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
 import 'package:mobile_miniproject_app/pages/Ticket.dart';
 import 'package:mobile_miniproject_app/pages/profile.dart';
@@ -43,6 +44,7 @@ class _ShopPageState extends State<ShopPage> {
   List<GetLotteryNumbers> all_lotterys = [];
   List<GetCartRes> all_cart = [];
   List<CartLotteryItem> cart_lotterys = [];
+  List<GetOneUserRes> userInfo = [];
   late Future<void> loadData;
   int _selectedIndex = 0;
 
@@ -121,6 +123,7 @@ class _ShopPageState extends State<ShopPage> {
                     size: 29.0,
                   ),
                   onPressed: () {
+                    int wallet_pay = all_cart.length * 100;
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
@@ -241,7 +244,7 @@ class _ShopPageState extends State<ShopPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    "ราคารวม : ${all_cart.length * 100} บาท",
+                                    "ราคารวม : $wallet_pay บาท",
                                     style:
                                         TextStyle(fontWeight: FontWeight.bold),
                                   ),
@@ -256,7 +259,7 @@ class _ShopPageState extends State<ShopPage> {
                               ),
                               FilledButton(
                                 onPressed: () {
-                                  purchase();
+                                  purchase(wallet_pay);
                                   Navigator.pop(context);
                                 },
                                 child: const Text('Purchase'),
@@ -516,7 +519,14 @@ class _ShopPageState extends State<ShopPage> {
             case 2:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => TicketPage()),
+                MaterialPageRoute(
+                    builder: (context) => TicketPage(
+                          uid: widget.uid,
+                          wallet: widget.wallet,
+                          username: widget.username,
+                          selectedIndex: _selectedIndex,
+                          cart_length: all_cart.length,
+                        )),
               );
               break;
             case 3:
@@ -683,7 +693,7 @@ class _ShopPageState extends State<ShopPage> {
     log('Items in cart: $cart_lotterys');
   }
 
-  void purchase() async {
+  void purchase(int wallet_pay) async {
     log("Purchase success!!!");
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
@@ -695,10 +705,25 @@ class _ShopPageState extends State<ShopPage> {
 
     try {
       var res = await http.put(
-        Uri.parse('$url/db/purchase/${widget.uid}'),
+        Uri.parse('$url/db/purchase/${wallet_pay}/${widget.uid}'),
         headers: {"Content-Type": "application/json; charset=utf-8"},
         body: body,
       );
+      var get_user = await http.get(Uri.parse("$url/db/user/${widget.uid}"));
+      if (get_user.statusCode == 200) {
+        List<GetOneUserRes> userInfoList = getOneUserResFromJson(get_user.body);
+        log("UserInfoooooooooooooooooooooooooo$userInfoList");
+
+        // สมมติว่ามีแค่หนึ่งผู้ใช้ในรายการ
+        if (userInfoList.isNotEmpty) {
+          GetOneUserRes userInfo = userInfoList.first;
+          setState(() {
+            widget.wallet = userInfo.wallet;
+            loadDataAsync();
+          });
+        }
+      }
+
       log(res.body);
       var result = jsonDecode(res.body);
       // Need to know json's property by reading from API Tester

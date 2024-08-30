@@ -359,7 +359,14 @@ class _HomePageState extends State<HomePage> {
             case 2:
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => TicketPage()),
+                MaterialPageRoute(
+                    builder: (context) => TicketPage(
+                          uid: widget.uid,
+                          wallet: widget.wallet,
+                          username: widget.username,
+                          selectedIndex: _selectedIndex,
+                          cart_length: all_cart.length,
+                        )),
               );
               break;
             case 3:
