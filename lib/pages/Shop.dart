@@ -123,168 +123,7 @@ class _ShopPageState extends State<ShopPage> {
                     size: 29.0,
                   ),
                   onPressed: () {
-                    int wallet_pay = all_cart.length * 100;
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('รถเข็นของฉัน'),
-                            FilledButton(
-                              onPressed: () {
-                                setState(() {
-                                  widget.cart_length = all_cart.length;
-                                });
-                                Navigator.pop(context);
-                              },
-                              child: Icon(
-                                Icons.close,
-                                size: 25,
-                              ),
-                              style: ButtonStyle(
-                                backgroundColor: WidgetStateProperty.all(
-                                    Colors.red), // สีพื้นหลังของปุ่ม
-                                foregroundColor: WidgetStateProperty.all(
-                                    Colors.white), // สีของข้อความบนปุ่ม
-                                padding: WidgetStateProperty.all<EdgeInsets>(
-                                    EdgeInsets.zero),
-                                minimumSize: WidgetStateProperty.all<Size>(
-                                    Size(30, 30)), // ขนาดของ padding ภายในปุ่ม
-                                shape: WidgetStateProperty.all<
-                                    RoundedRectangleBorder>(
-                                  RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                        30), // มุมโค้งของปุ่มให้กลายเป็นวงกลม
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        content: SingleChildScrollView(
-                          child: Column(
-                            children: all_cart.asMap().entries.map((entry) {
-                              int index = entry.key +
-                                  1; // กำหนดหมายเลขลำดับ (เริ่มจาก 1)
-                              GetCartRes item =
-                                  entry.value; // item เป็น GetCartRes
-                              List<String> numbers = [
-                                item.numbers.toString()
-                              ]; // แปลง GetCartRes เป็น numbers
-
-                              return SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      '$index. รหัส  ${numbers.join()} งวดวันที่ ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
-                                      style: TextStyle(
-                                          fontSize: 9), // กำหนดขนาดของข้อความ
-                                    ),
-                                    SizedBox(
-                                        width:
-                                            10), // เพิ่มระยะห่างระหว่างข้อความ
-                                    Text(
-                                      'ราคา 100 บาท',
-                                      style: TextStyle(fontSize: 9),
-                                    ),
-                                    SizedBox(
-                                        width:
-                                            10), // เพิ่มระยะห่างระหว่างข้อความและปุ่ม
-                                    FilledButton(
-                                      onPressed: () {
-                                        remove_cart(item.cLid);
-                                        setState(() {}); // ลบรายการจากรถเข็น
-                                      },
-                                      child: Icon(
-                                        Icons.close,
-                                        size: 18,
-                                      ),
-                                      style: ButtonStyle(
-                                        backgroundColor:
-                                            WidgetStateProperty.all(Colors
-                                                .red), // สีพื้นหลังของปุ่ม
-                                        foregroundColor:
-                                            WidgetStateProperty.all(Colors
-                                                .white), // สีของข้อความบนปุ่ม
-                                        padding:
-                                            WidgetStateProperty.all<EdgeInsets>(
-                                                EdgeInsets.zero),
-                                        minimumSize:
-                                            WidgetStateProperty.all<Size>(
-                                                Size(25, 25)), // ขนาดของปุ่ม
-                                        shape: WidgetStateProperty.all<
-                                            RoundedRectangleBorder>(
-                                          RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                                30), // มุมโค้งของปุ่มให้กลายเป็นวงกลม
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                        actions: [
-                          const Padding(
-                            padding: EdgeInsets.only(top: 25.0, bottom: 5.0),
-                            child: Divider(
-                              color: Colors.grey,
-                              thickness: 1,
-                            ),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "ราคารวม : $wallet_pay บาท",
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  Text(
-                                    'จำนวน ${all_cart.length} ใบ',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: Color.fromARGB(255, 131, 130, 130),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              FilledButton(
-                                onPressed: () {
-                                  purchase(wallet_pay);
-                                  Navigator.pop(context);
-                                },
-                                child: const Text('Purchase'),
-                                style: ButtonStyle(
-                                  backgroundColor: WidgetStateProperty.all(
-                                      Colors.blue), // สีพื้นหลังของปุ่ม
-                                  foregroundColor: WidgetStateProperty.all(
-                                      Colors.white), // สีของข้อความบนปุ่ม
-                                  padding: WidgetStateProperty.all<EdgeInsets>(
-                                      EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical:
-                                              10)), // ขนาดของ padding ภายในปุ่ม
-                                  textStyle: WidgetStateProperty.all<TextStyle>(
-                                      TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight
-                                              .bold)), // ขนาดของข้อความในปุ่ม
-                                ),
-                              )
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
+                    show_cart();
                   },
                 ),
                 Positioned(
@@ -544,8 +383,13 @@ class _ShopPageState extends State<ShopPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  ProfilePage(idx: widget.uid),
+                              builder: (context) => ProfilePage(
+                                uid: widget.uid,
+                                wallet: widget.wallet,
+                                username: widget.username,
+                                selectedIndex: _selectedIndex,
+                                cart_length: all_cart.length,
+                              ),
                             ),
                           );
                         },
@@ -739,6 +583,9 @@ class _ShopPageState extends State<ShopPage> {
               children: [
                 FilledButton(
                   onPressed: () {
+                    setState(() {
+                      widget.cart_length = all_cart.length;
+                    });
                     Navigator.pop(context);
                   },
                   child: const Text('ปิด'),
@@ -790,6 +637,8 @@ class _ShopPageState extends State<ShopPage> {
         all_cart = getCartResFromJson(get_cart.body);
         log("CHECKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK ${all_cart.length.toString()}");
         log("CHECKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK222222222222 ${all_cart.length.toString()}");
+        Navigator.pop(context);
+        show_cart();
       });
     } else {
       showDialog(
@@ -824,13 +673,151 @@ class _ShopPageState extends State<ShopPage> {
     }
   }
 
-  void show_cart() {}
+  void show_cart() {
+    int wallet_pay = all_cart.length * 100;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('รถเข็นของฉัน'),
+            FilledButton(
+              onPressed: () {
+                setState(() {
+                  widget.cart_length = all_cart.length;
+                });
+                Navigator.pop(context);
+              },
+              child: Icon(
+                Icons.close,
+                size: 25,
+              ),
+              style: ButtonStyle(
+                backgroundColor:
+                    WidgetStateProperty.all(Colors.red), // สีพื้นหลังของปุ่ม
+                foregroundColor:
+                    WidgetStateProperty.all(Colors.white), // สีของข้อความบนปุ่ม
+                padding: WidgetStateProperty.all<EdgeInsets>(EdgeInsets.zero),
+                minimumSize: WidgetStateProperty.all<Size>(
+                    Size(30, 30)), // ขนาดของ padding ภายในปุ่ม
+                shape: WidgetStateProperty.all<RoundedRectangleBorder>(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(
+                        30), // มุมโค้งของปุ่มให้กลายเป็นวงกลม
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            children: all_cart.asMap().entries.map((entry) {
+              int index = entry.key + 1; // กำหนดหมายเลขลำดับ (เริ่มจาก 1)
+              GetCartRes item = entry.value; // item เป็น GetCartRes
+              List<String> numbers = [
+                item.numbers.toString()
+              ]; // แปลง GetCartRes เป็น numbers
 
-  Future<void> get_cart() async {
-    var get_cart = await http.get(Uri.parse("$url/db/get_cart/${widget.uid}"));
-    setState(() {
-      all_cart = getCartResFromJson(get_cart.body);
-      log("ALL cart check ${all_cart.length.toString()}"); // ตรวจสอบจำนวนรายการ
-    });
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    Text(
+                      '$index. รหัส  ${numbers.join()} งวดวันที่ ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
+                      style: TextStyle(fontSize: 9), // กำหนดขนาดของข้อความ
+                    ),
+                    SizedBox(width: 10), // เพิ่มระยะห่างระหว่างข้อความ
+                    Text(
+                      'ราคา 100 บาท',
+                      style: TextStyle(fontSize: 9),
+                    ),
+                    SizedBox(width: 10), // เพิ่มระยะห่างระหว่างข้อความและปุ่ม
+                    FilledButton(
+                      onPressed: () {
+                        remove_cart(item.cLid);
+                        Navigator.pop(context);
+                        show_cart();
+                      },
+                      child: Icon(
+                        Icons.close,
+                        size: 18,
+                      ),
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.all(
+                            Colors.red), // สีพื้นหลังของปุ่ม
+                        foregroundColor: WidgetStateProperty.all(
+                            Colors.white), // สีของข้อความบนปุ่ม
+                        padding: WidgetStateProperty.all<EdgeInsets>(
+                            EdgeInsets.zero),
+                        minimumSize: WidgetStateProperty.all<Size>(
+                            Size(25, 25)), // ขนาดของปุ่ม
+                        shape: WidgetStateProperty.all<RoundedRectangleBorder>(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                                30), // มุมโค้งของปุ่มให้กลายเป็นวงกลม
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        actions: [
+          const Padding(
+            padding: EdgeInsets.only(top: 25.0, bottom: 5.0),
+            child: Divider(
+              color: Colors.grey,
+              thickness: 1,
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "ราคารวม : $wallet_pay บาท",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    'จำนวน ${all_cart.length} ใบ',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Color.fromARGB(255, 131, 130, 130),
+                    ),
+                  ),
+                ],
+              ),
+              FilledButton(
+                onPressed: () {
+                  purchase(wallet_pay);
+                  Navigator.pop(context);
+                },
+                child: const Text('Purchase'),
+                style: ButtonStyle(
+                  backgroundColor:
+                      WidgetStateProperty.all(Colors.blue), // สีพื้นหลังของปุ่ม
+                  foregroundColor: WidgetStateProperty.all(
+                      Colors.white), // สีของข้อความบนปุ่ม
+                  padding: WidgetStateProperty.all<EdgeInsets>(
+                      EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 10)), // ขนาดของ padding ภายในปุ่ม
+                  textStyle: WidgetStateProperty.all<TextStyle>(TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold)), // ขนาดของข้อความในปุ่ม
+                ),
+              )
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }

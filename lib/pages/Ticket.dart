@@ -461,8 +461,13 @@ class _TicketPageState extends State<TicketPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  ProfilePage(idx: widget.uid),
+                              builder: (context) => ProfilePage(
+                                uid: widget.uid,
+                                wallet: widget.wallet,
+                                username: widget.username,
+                                selectedIndex: _selectedIndex,
+                                cart_length: all_cart.length,
+                              ),
                             ),
                           );
                         },
@@ -516,24 +521,15 @@ class _TicketPageState extends State<TicketPage> {
     var response =
         await http.get(Uri.parse("$url/db/get_UserLottery/${widget.uid}"));
     if (response.statusCode == 200) {
-      all_Userlotterys = getLotteryNumbersFromJson(response.body);
+      setState(() {
+        all_Userlotterys = getLotteryNumbersFromJson(response.body);
+      });
       log(all_Userlotterys.toString());
       for (var lottery in all_Userlotterys) {
         log(lottery.numbers.toString());
       }
     } else {
       log('Failed to load lottery numbers. Status code: ${response.statusCode}');
-    }
-
-    var get_cart = await http.get(Uri.parse("$url/db/get_cart/${widget.uid}"));
-    if (get_cart.statusCode == 200) {
-      all_cart = getCartResFromJson(get_cart.body);
-      log(all_cart.toString());
-      for (var cart in all_cart) {
-        log('lid' + cart.cLid.toString());
-      }
-    } else {
-      log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
     }
   }
 
@@ -558,6 +554,9 @@ class _TicketPageState extends State<TicketPage> {
                 child: FilledButton(
                   onPressed: () {
                     Cash_out(lid, Prize);
+                    setState(() {
+                      loadDataAsync();
+                    });
                   },
                   child: const Text(
                     'ตกลง',
@@ -603,7 +602,7 @@ class _TicketPageState extends State<TicketPage> {
     String url = value['apiEndpoint'];
 
     var res = await http.put(
-      Uri.parse('$url/db/add_prize/${lid}/${Prize}'),
+      Uri.parse('$url/db/add_prize/${lid}/${Prize}/${widget.uid}'),
       headers: {"Content-Type": "application/json; charset=utf-8"},
     );
 

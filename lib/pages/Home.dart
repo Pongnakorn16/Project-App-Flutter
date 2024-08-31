@@ -384,8 +384,13 @@ class _HomePageState extends State<HomePage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  ProfilePage(idx: widget.uid),
+                              builder: (context) => ProfilePage(
+                                uid: widget.uid,
+                                wallet: widget.wallet,
+                                username: widget.username,
+                                selectedIndex: _selectedIndex,
+                                cart_length: all_cart.length,
+                              ),
                             ),
                           );
                         },
@@ -484,35 +489,4 @@ class _HomePageState extends State<HomePage> {
       print('Error: $e');
     }
   }
-
-  // void getTrips(String? zone) async {
-  //   // 1. Load url from config
-  //   var value = await Configuration.getConfig();
-  //   String url = value['apiEndpoint'];
-
-  //   // 2. Call Get / trips
-  //   var json = await http.get(Uri.parse("$url/trips"));
-  //   trips = tripsGetResponesFromJson(json.body);
-  //   log('API response body: ${json.body}');
-
-  //   // 3. Put response data to model
-  //   List<TripsGetRespones> filteredTrips = [];
-  //   // 3.1 Check if zone is "ทั้งหมด" (all)
-  //   if (zone == null) {
-  //     filteredTrips = trips; // Show all trips
-  //   } else {
-  //     for (var trip in trips) {
-  //       String tripZone = destinationZoneValues.reverse[trip.destinationZone]!;
-  //       if (tripZone == zone) {
-  //         filteredTrips.add(trip);
-  //       }
-  //     }
-  //   }
-
-  //   trips = filteredTrips;
-
-  //   // 4. Log number of trips
-  //   log(trips.length.toString());
-  //   setState(() {});
-  // }
 }
