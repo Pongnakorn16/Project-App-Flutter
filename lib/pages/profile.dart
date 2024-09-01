@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/GetCart_Res.dart';
+import 'package:mobile_miniproject_app/models/response/GetHistory_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/models/response/customers_idx_get_res.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
@@ -32,6 +34,7 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   List<GetOneUserRes> user_Info = [];
   List<GetCartRes> all_cart = [];
+  List<GetHistoryRes> all_history = [];
   TextEditingController nameCtl = TextEditingController();
   TextEditingController walletCtl = TextEditingController();
   TextEditingController emailCtl = TextEditingController();
@@ -120,7 +123,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 child: IconButton(
                                   icon: Icon(Icons.edit),
                                   onPressed: () {
-                                    // Add your onPressed logic here
+                                    edit_profile();
                                   },
                                   color: const Color.fromARGB(255, 254, 137,
                                       69), // Change the icon color if needed
@@ -143,6 +146,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           mainAxisSize:
                               MainAxisSize.min, // ใช้ขนาดของเนื้อหาภายใน Column
                           children: [
+                            // แสดงยอดเงิน
                             RichText(
                               text: TextSpan(
                                 children: [
@@ -151,16 +155,15 @@ class _ProfilePageState extends State<ProfilePage> {
                                     style: TextStyle(
                                       fontSize: 40,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.black, // กำหนดสีตามต้องการ
+                                      color: Colors.black,
                                     ),
                                   ),
                                   TextSpan(
                                     text: '.00 THB',
                                     style: TextStyle(
                                       fontSize: 20,
-                                      fontWeight:
-                                          FontWeight.bold, // ขนาดที่เล็กกว่า
-                                      color: Colors.black, // สีที่แตกต่าง
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
                                     ),
                                   ),
                                 ],
@@ -169,7 +172,9 @@ class _ProfilePageState extends State<ProfilePage> {
                             Padding(
                               padding: const EdgeInsets.only(bottom: 20),
                               child: FilledButton(
-                                onPressed: () {},
+                                onPressed: () {
+                                  top_up();
+                                },
                                 style: ButtonStyle(
                                   backgroundColor:
                                       WidgetStateProperty.all(Colors.blue),
@@ -179,8 +184,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                       horizontal: 8.0,
                                     ),
                                   ),
-                                  minimumSize: WidgetStateProperty.all(Size(
-                                      0, 10)), // กำหนดความสูงขั้นต่ำของปุ่ม
+                                  minimumSize:
+                                      WidgetStateProperty.all(Size(0, 10)),
                                 ),
                                 child: const Text(
                                   'เติมเงินเข้าระบบ',
@@ -188,6 +193,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                               ),
                             ),
+                            // แสดงหัวข้อ 'ประวัติ'
                             Row(
                               mainAxisAlignment: MainAxisAlignment.start,
                               children: [
@@ -206,6 +212,68 @@ class _ProfilePageState extends State<ProfilePage> {
                               indent: 10,
                               endIndent: 10,
                             ),
+                            // แสดงข้อมูลใน all_history
+                            ...all_history.asMap().entries.map((entry) {
+                              GetHistoryRes item =
+                                  entry.value; // item เป็น GetHistoryRes
+                              return Column(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 8.0, horizontal: 10.0),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        RichText(
+                                          text: TextSpan(
+                                            children: [
+                                              TextSpan(
+                                                text:
+                                                    '${item.hNumber.toString()} - ',
+                                                style: TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors
+                                                      .black, // กำหนดสีที่ต้องการสำหรับ hNumber
+                                                ),
+                                              ),
+                                              TextSpan(
+                                                text:
+                                                    '${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors
+                                                      .black, // กำหนดสีที่ต้องการสำหรับวันที่
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Text(
+                                          item.hWallet > 100
+                                              ? '+${item.hWallet.toString()}'
+                                              : '-${item.hWallet.toString()}',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: item.hWallet > 100
+                                                ? Colors.green
+                                                : Colors
+                                                    .red, // กำหนดสีตามเงื่อนไข
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Divider(
+                                    color: Colors.black,
+                                    thickness: 2,
+                                    indent: 10,
+                                    endIndent: 10,
+                                  ),
+                                ],
+                              );
+                            }).toList(),
                           ],
                         ),
                       ),
@@ -360,10 +428,10 @@ class _ProfilePageState extends State<ProfilePage> {
       var get_history =
           await http.get(Uri.parse("$url/db/get_history/${widget.uid}"));
       if (get_history.statusCode == 200) {
-        all_cart = getCartResFromJson(get_history.body);
-        log(all_cart.toString());
-        for (var cart in all_cart) {
-          log('lid' + cart.cLid.toString());
+        all_history = getHistoryResFromJson(get_history.body);
+        log(all_history.toString());
+        for (var history in all_history) {
+          log('HISTORY_LID' + history.hNumber.toString());
         }
       } else {
         log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
@@ -373,53 +441,7 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  void update() async {}
+  void edit_profile() async {}
 
-  void delete() async {
-    var config = await Configuration.getConfig();
-    var url = config['apiEndpoint'];
-
-    var res = await http.delete(Uri.parse('$url/customers/${widget.uid}'));
-    log(res.statusCode.toString());
-    if (res.statusCode == 200) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('สำเร็จ'),
-          content: Text('ลบข้อมูลสำเร็จ'),
-          actions: [
-            FilledButton(
-                onPressed: () {
-                  Navigator.popUntil(
-                    context,
-                    (route) => route.isFirst,
-                  );
-                },
-                child: const Text('ปิด'))
-          ],
-        ),
-      ).then((s) {
-        Navigator.popUntil(
-          context,
-          (route) => route.isFirst,
-        );
-      });
-    } else {
-      Navigator.pop(context);
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('ผิดพลาด'),
-          content: Text('ลบข้อมูลไม่สำเร็จ'),
-          actions: [
-            FilledButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: const Text('ปิด'))
-          ],
-        ),
-      );
-    }
-  }
+  void top_up() async {}
 }
