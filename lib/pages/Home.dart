@@ -12,8 +12,7 @@ import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/pages/Shop.dart';
 import 'package:mobile_miniproject_app/pages/TEST.dart';
 import 'package:mobile_miniproject_app/pages/Ticket.dart';
-import 'package:mobile_miniproject_app/pages/profile.dart';
-import 'package:mobile_miniproject_app/pages/trip.dart';
+import 'package:mobile_miniproject_app/pages/Profile.dart';
 
 class HomePage extends StatefulWidget {
   int uid = 0;
@@ -41,7 +40,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // randomNumbers();
     _selectedIndex = widget.selectedIndex;
     loadData = loadDataAsync();
   }
@@ -460,33 +458,6 @@ class _HomePageState extends State<HomePage> {
       }
     } else {
       log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
-    }
-  }
-
-  void randomNumbers() async {
-    Set<String> uniqueNumbers = Set();
-
-    while (uniqueNumbers.length < 10) {
-      String number = Random().nextInt(999999).toString().padLeft(6, '0');
-      uniqueNumbers.add(number);
-    }
-    var value = await Configuration.getConfig();
-    String url = value['apiEndpoint'];
-
-    List<String> numbers = uniqueNumbers.toList();
-
-    try {
-      var response = await http.post(Uri.parse("$url/db/random"),
-          headers: {"Content-Type": "application/json; charset=utf-8"},
-          body: jsonEncode({'numbers': numbers}));
-
-      if (response.statusCode == 200) {
-        print('Insert success');
-      } else {
-        print('Failed to insert. Status code: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error: $e');
     }
   }
 }

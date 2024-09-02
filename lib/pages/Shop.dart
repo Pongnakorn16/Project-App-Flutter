@@ -11,7 +11,7 @@ import 'package:mobile_miniproject_app/models/response/GetLotteryNumbers_Res.dar
 import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
 import 'package:mobile_miniproject_app/pages/Ticket.dart';
-import 'package:mobile_miniproject_app/pages/profile.dart';
+import 'package:mobile_miniproject_app/pages/Profile.dart';
 
 class ShopPage extends StatefulWidget {
   int uid = 0;

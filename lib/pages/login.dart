@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/customers_login_post_req.dart';
 import 'package:mobile_miniproject_app/models/response/customersLoginPostRes.dart';
+import 'package:mobile_miniproject_app/pages/Admin.dart';
 import 'package:mobile_miniproject_app/pages/TEST.dart';
 import 'package:mobile_miniproject_app/pages/register.dart';
 import 'package:http/http.dart' as http;
@@ -176,7 +177,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void login() async {
-    //Create Model Object
+    // Create Model Object
     var model = CustomersLoginPostRequest(
         Email: EmailCtl.text, Password: PasswordCtl.text);
     try {
@@ -189,16 +190,32 @@ class _LoginPageState extends State<LoginPage> {
       var res = CustomersLoginPostResponse.fromJson(jsonResponse.first);
 
       log(res.image);
-      Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HomePage(
-              uid: res.uid,
-              wallet: res.wallet,
-              username: res.username,
-              selectedIndex: 0,
-            ),
-          ));
+
+      if (res.uid == 1) {
+        log("Admin User Logged In");
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AdminPage(
+                uid: res.uid,
+                wallet: res.wallet,
+                username: res.username,
+                selectedIndex: 0,
+              ), // ไปยังหน้า Admin
+            ));
+      } else {
+        // นำไปยังหน้า HomePage ตามปกติ
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HomePage(
+                uid: res.uid,
+                wallet: res.wallet,
+                username: res.username,
+                selectedIndex: 0,
+              ),
+            ));
+      }
     } catch (err) {
       log(err.toString());
       setState(() {

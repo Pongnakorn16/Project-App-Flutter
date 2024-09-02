@@ -12,7 +12,7 @@ import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
 import 'package:mobile_miniproject_app/pages/Shop.dart';
 import 'package:mobile_miniproject_app/pages/Ticket.dart';
-import 'package:mobile_miniproject_app/pages/profile.dart';
+import 'package:mobile_miniproject_app/pages/Profile.dart';
 
 class TicketPage extends StatefulWidget {
   int uid = 0;

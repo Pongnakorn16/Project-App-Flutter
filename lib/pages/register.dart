@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/customers_regis_post_req.dart';
-import 'package:mobile_miniproject_app/pages/login.dart';
+import 'package:mobile_miniproject_app/pages/Login.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
 
 class RegisterPage extends StatefulWidget {

@@ -37,7 +37,6 @@ class _ProfilePageState extends State<ProfilePage> {
   List<GetHistoryRes> all_history = [];
   TextEditingController nameCtl = TextEditingController();
   TextEditingController walletCtl = TextEditingController();
-  TextEditingController emailCtl = TextEditingController();
   TextEditingController imageCtl = TextEditingController();
   int _selectedIndex = 0;
 
@@ -77,9 +76,51 @@ class _ProfilePageState extends State<ProfilePage> {
                     Padding(
                       padding: const EdgeInsets.only(top: 16.0, bottom: 8),
                       child: user_Info.isNotEmpty
-                          ? Image.network(
-                              user_Info[0].image,
-                              width: 150,
+                          ? GestureDetector(
+                              onTap: () {
+                                change_image(); // ฟังก์ชันที่จะถูกเรียกเมื่อกดที่รูป
+                              },
+                              child: Stack(
+                                alignment: Alignment
+                                    .center, // จัดตำแหน่งของไอคอนกลางรูป
+                                children: [
+                                  // รูปภาพหลัก
+                                  Image.network(
+                                    user_Info[0].image,
+                                    width: 150,
+                                    height:
+                                        150, // กำหนดความสูงเพื่อให้รูปเป็นสี่เหลี่ยมจัตุรัส
+                                    fit: BoxFit
+                                        .cover, // ครอบคลุมรูปให้เต็มพื้นที่
+                                  ),
+                                  // ไอคอนที่บ่งบอกการแก้ไข
+                                  Positioned(
+                                    bottom: 8,
+                                    right: 8,
+                                    child: Container(
+                                      padding: EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(50),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color:
+                                                Colors.black.withOpacity(0.5),
+                                            spreadRadius: 2,
+                                            blurRadius: 5,
+                                          ),
+                                        ],
+                                      ),
+                                      child: Icon(
+                                        Icons
+                                            .add_a_photo, // เปลี่ยนไอคอนที่นี่หากต้องการ
+                                        color: Colors.blue,
+                                        size: 24,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             )
                           : const Text(
                               'No Image Available'), // หรือ placeholder อื่นๆ
@@ -199,9 +240,26 @@ class _ProfilePageState extends State<ProfilePage> {
                               children: [
                                 Padding(
                                   padding: const EdgeInsets.only(left: 10),
-                                  child: const Text(
-                                    'ประวัติ',
-                                    style: TextStyle(fontSize: 15),
+                                  child: RichText(
+                                    text: TextSpan(
+                                      children: [
+                                        TextSpan(
+                                          text: 'ประวัติ',
+                                          style: TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: ' การซื้อและขึ้นเงิน Lotterys',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ],
@@ -441,7 +499,403 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  void edit_profile() async {}
+  void edit_profile() async {
+    // รีเซ็ตค่าของ TextEditingController
+    nameCtl.clear();
+    showDialog(
+      context: context,
+      barrierDismissible: false, // กำหนดให้ dialog ไม่หายเมื่อแตะบริเวณรอบนอก
+      builder: (context) => AlertDialog(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('เปลี่ยนชื่อ'),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Icon(
+                Icons.close,
+                size: 25,
+              ),
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.all(Colors.red),
+                foregroundColor: WidgetStateProperty.all(Colors.white),
+                padding: WidgetStateProperty.all<EdgeInsets>(EdgeInsets.zero),
+                minimumSize: WidgetStateProperty.all<Size>(const Size(30, 30)),
+                shape: WidgetStateProperty.all<RoundedRectangleBorder>(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('กรอกชื่อที่ต้องการเปลี่ยน'),
+            const SizedBox(height: 10),
+            TextField(
+              controller: nameCtl,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: const Color.fromARGB(255, 228, 225, 225),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30.0),
+                  borderSide: const BorderSide(width: 1),
+                ),
+                hintText: user_Info.first
+                    .username, // กำหนดให้ hintText เป็นค่าของ user_Info.Username
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Row(
+            mainAxisAlignment:
+                MainAxisAlignment.center, // ปรับตำแหน่งปุ่มให้ตรงกลาง
+            children: [
+              FilledButton(
+                onPressed: () {
+                  change_name();
+                  setState(() {
+                    loadDataAsync();
+                  });
+                  Navigator.pop(context);
+                },
+                child: const Text('ยืนยัน'),
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.all(Colors.blue),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
-  void top_up() async {}
+  void change_name() async {
+    var value = await Configuration.getConfig();
+    String url = value['apiEndpoint'];
+
+    // ดึงค่าจาก TextEditingController แล้วสร้าง JSON object
+    var body = jsonEncode({"Username": nameCtl.text});
+
+    var Change_name = await http.put(
+      Uri.parse('$url/db/user/change_name/${widget.uid}'),
+      headers: {"Content-Type": "application/json; charset=utf-8"},
+      body: body,
+    );
+
+    var res = await http.get(Uri.parse("$url/db/user/${widget.uid}"));
+    if (res.statusCode == 200) {
+      user_Info = getOneUserResFromJson(res.body);
+      if (user_Info != null) {
+        log("user_Info: " + user_Info.toString());
+      } else {
+        log("Failed to parse user info.");
+      }
+    } else {
+      log('Failed to load user info. Status code: ${res.statusCode}');
+    }
+
+    if (res.statusCode == 200) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('สำเร็จ'),
+          content: const Text('Name change Successful!!!'),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                FilledButton(
+                  onPressed: () {
+                    setState(() {
+                      widget.username = user_Info.first.username;
+                      loadDataAsync();
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: const Text('ปิด'),
+                  style: ButtonStyle(
+                      backgroundColor: WidgetStateProperty.all(Colors.red)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    } else {
+      // จัดการกับ error ถ้า update ไม่สำเร็จ
+      print('Failed to change name: ${res.body}');
+    }
+  }
+
+  void top_up() async {
+    walletCtl.clear();
+    showDialog(
+      context: context,
+      barrierDismissible: false, // กำหนดให้ dialog ไม่หายเมื่อแตะบริเวณรอบนอก
+      builder: (context) => AlertDialog(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('เติมเงิน'),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Icon(
+                Icons.close,
+                size: 25,
+              ),
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.all(Colors.red),
+                foregroundColor: WidgetStateProperty.all(Colors.white),
+                padding: WidgetStateProperty.all<EdgeInsets>(EdgeInsets.zero),
+                minimumSize: WidgetStateProperty.all<Size>(const Size(30, 30)),
+                shape: WidgetStateProperty.all<RoundedRectangleBorder>(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('ระบุจำนวน Wallet ที่ต้องการจะเติม'),
+            const SizedBox(height: 10),
+            TextField(
+              controller: walletCtl,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: const Color.fromARGB(255, 228, 225, 225),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30.0),
+                  borderSide: const BorderSide(width: 1),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Row(
+            mainAxisAlignment:
+                MainAxisAlignment.center, // ปรับตำแหน่งปุ่มให้ตรงกลาง
+            children: [
+              FilledButton(
+                onPressed: () {
+                  wallet_add();
+                  setState(() {
+                    loadDataAsync();
+                  });
+                  Navigator.pop(context);
+                },
+                child: const Text('ยืนยัน'),
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.all(Colors.blue),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void wallet_add() async {
+    var value = await Configuration.getConfig();
+    String url = value['apiEndpoint'];
+
+    var body = jsonEncode({"Wallet": walletCtl.text});
+
+    var Top_up = await http.put(
+      Uri.parse('$url/db/user/top_up/${widget.uid}'),
+      headers: {"Content-Type": "application/json; charset=utf-8"},
+      body: body,
+    );
+
+    var res = await http.get(Uri.parse("$url/db/user/${widget.uid}"));
+    if (res.statusCode == 200) {
+      user_Info = getOneUserResFromJson(res.body);
+      if (user_Info != null) {
+        log("user_Info: " + user_Info.toString());
+      } else {
+        log("Failed to parse user info.");
+      }
+    } else {
+      log('Failed to load user info. Status code: ${res.statusCode}');
+    }
+
+    if (res.statusCode == 200) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('สำเร็จ'),
+          content: const Text('Top up Successful!!!'),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                FilledButton(
+                  onPressed: () {
+                    setState(() {
+                      widget.wallet = user_Info.first.wallet;
+                      loadDataAsync();
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: const Text('ปิด'),
+                  style: ButtonStyle(
+                      backgroundColor: WidgetStateProperty.all(Colors.red)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    } else {
+      // จัดการกับ error ถ้า update ไม่สำเร็จ
+      print('Failed to change name: ${res.body}');
+    }
+  }
+
+  void change_image() {
+    walletCtl.clear();
+    showDialog(
+      context: context,
+      barrierDismissible: false, // กำหนดให้ dialog ไม่หายเมื่อแตะบริเวณรอบนอก
+      builder: (context) => AlertDialog(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('เปลี่ยนรูป'),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Icon(
+                Icons.close,
+                size: 25,
+              ),
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.all(Colors.red),
+                foregroundColor: WidgetStateProperty.all(Colors.white),
+                padding: WidgetStateProperty.all<EdgeInsets>(EdgeInsets.zero),
+                minimumSize: WidgetStateProperty.all<Size>(const Size(30, 30)),
+                shape: WidgetStateProperty.all<RoundedRectangleBorder>(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('กรอก URL ของรูปที่ต้องการจะเปลี่ยน'),
+            const SizedBox(height: 10),
+            TextField(
+              controller: imageCtl,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: const Color.fromARGB(255, 228, 225, 225),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30.0),
+                  borderSide: const BorderSide(width: 1),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Row(
+            mainAxisAlignment:
+                MainAxisAlignment.center, // ปรับตำแหน่งปุ่มให้ตรงกลาง
+            children: [
+              FilledButton(
+                onPressed: () {
+                  edit_image();
+                  setState(() {
+                    loadDataAsync();
+                  });
+                  Navigator.pop(context);
+                },
+                child: const Text('ยืนยัน'),
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.all(Colors.blue),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void edit_image() async {
+    var value = await Configuration.getConfig();
+    String url = value['apiEndpoint'];
+
+    var body = jsonEncode({"url_image": imageCtl.text});
+
+    var change_image = await http.put(
+      Uri.parse('$url/db/user/change_image/${widget.uid}'),
+      headers: {"Content-Type": "application/json; charset=utf-8"},
+      body: body,
+    );
+
+    var res = await http.get(Uri.parse("$url/db/user/${widget.uid}"));
+    if (res.statusCode == 200) {
+      user_Info = getOneUserResFromJson(res.body);
+      if (user_Info != null) {
+        log("user_Info: " + user_Info.toString());
+      } else {
+        log("Failed to parse user info.");
+      }
+    } else {
+      log('Failed to load user info. Status code: ${res.statusCode}');
+    }
+
+    if (res.statusCode == 200) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('สำเร็จ'),
+          content: const Text('Image change Successful!!!'),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                FilledButton(
+                  onPressed: () {
+                    setState(() {
+                      widget.wallet = user_Info.first.wallet;
+                      loadDataAsync();
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: const Text('ปิด'),
+                  style: ButtonStyle(
+                      backgroundColor: WidgetStateProperty.all(Colors.red)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    } else {
+      // จัดการกับ error ถ้า update ไม่สำเร็จ
+      print('Failed to change name: ${res.body}');
+    }
+  }
 }
