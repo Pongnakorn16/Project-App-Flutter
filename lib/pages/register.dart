@@ -230,7 +230,45 @@ class _RegisterPageState extends State<RegisterPage> {
         conPassCtl.text.isEmpty ||
         walletCtl.text.isEmpty ||
         passwordCtl.text != conPassCtl.text) {
-      log('Fields cannot be empty');
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text(
+            'แจ้งเตือน',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+          ),
+          content: Text(
+            'ข้อมูลไม่ถูกต้องโปรดตรวจสอบความถูกต้อง แล้วลองอีกครั้ง',
+            style: TextStyle(fontSize: 15),
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0), // Padding ภายนอก
+                  child: FilledButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: const Text(
+                      'ปิด',
+                      style: TextStyle(fontSize: 19),
+                    ),
+                    style: ButtonStyle(
+                      backgroundColor: WidgetStateProperty.all(Colors.red),
+                      padding: WidgetStateProperty.all<EdgeInsets>(
+                        EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 5), // Padding ภายใน
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
       return;
     }
 

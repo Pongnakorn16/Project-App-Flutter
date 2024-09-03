@@ -99,7 +99,7 @@ class _AdminPageState extends State<AdminPage> {
                               height: 50, // กำหนดความสูงของปุ่ม
                               child: FilledButton(
                                 onPressed: () async {
-                                  await randomPrize_sold(); // รอให้ randomPrize ทำงานเสร็จ
+                                  await randomPrize_sold();
                                   await loadDataAsync(); // รอให้ loadDataAsync ทำงานเสร็จ
 
                                   setState(() {
@@ -323,9 +323,6 @@ class _AdminPageState extends State<AdminPage> {
                       child: FilledButton(
                         onPressed: () {
                           randomNumbers();
-                          setState(() {
-                            loadDataAsync();
-                          });
                         },
                         child: const Text(
                           'สุ่มตัวเลขใหม่ทั้งหมด',
@@ -358,9 +355,19 @@ class _AdminPageState extends State<AdminPage> {
                       width: 250, // กำหนดความกว้างของปุ่ม
                       height: 60, // กำหนดความสูงของปุ่ม
                       child: FilledButton(
-                        onPressed: () {},
+                        onPressed: () async {
+                          await reset();
+                          await loadDataAsync(); // รอให้ loadDataAsync ทำงานเสร็จ
+
+                          setState(() {
+                            log("Updated win_lotterys length: " +
+                                win_lotterys.length.toString());
+                          });
+                          log("Final win_lotterys length: " +
+                              win_lotterys.length.toString());
+                        },
                         child: const Text(
-                          'รีเซ็ตระบบใหม่ทั้งหมด',
+                          'รีเซ็ทระบบใหม่ทั้งหมด',
                           textAlign: TextAlign
                               .center, // จัดข้อความให้อยู่ตรงกลางแนวนอน
                           style: TextStyle(fontSize: 19),
@@ -577,9 +584,105 @@ class _AdminPageState extends State<AdminPage> {
           body: jsonEncode({'numbers': numbers}));
 
       if (response.statusCode == 200) {
-        print('Insert success');
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text(
+              'แจ้งเตือน',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+            ),
+            content: Text(
+              'สุ่มตัวเลขเรียบร้อยแล้ว',
+              style: TextStyle(fontSize: 15),
+            ),
+            actions: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0), // Padding ภายนอก
+                    child: FilledButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: const Text(
+                        'ปิด',
+                        style: TextStyle(fontSize: 19),
+                      ),
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.all(Colors.red),
+                        padding: WidgetStateProperty.all<EdgeInsets>(
+                          EdgeInsets.symmetric(
+                              horizontal: 16.0, vertical: 5), // Padding ภายใน
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
       } else {
         print('Failed to insert. Status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
+  }
+
+  Future<void> reset() async {
+    var value = await Configuration.getConfig();
+    String url = value['apiEndpoint'];
+
+    try {
+      var response = await http.delete(
+        Uri.parse("$url/db/reset"),
+        headers: {"Content-Type": "application/json; charset=utf-8"},
+      );
+
+      if (response.statusCode == 200) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text(
+              'แจ้งเตือน',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+            ),
+            content: Text(
+              'รีเซ็ทระบบเรียบร้อยแล้ว',
+              style: TextStyle(fontSize: 15),
+            ),
+            actions: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0), // Padding ภายนอก
+                    child: FilledButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: const Text(
+                        'ปิด',
+                        style: TextStyle(fontSize: 19),
+                      ),
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.all(Colors.red),
+                        padding: WidgetStateProperty.all<EdgeInsets>(
+                          EdgeInsets.symmetric(
+                              horizontal: 16.0, vertical: 5), // Padding ภายใน
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      } else {
+        print('Failed to delete. Status code: ${response.statusCode}');
       }
     } catch (e) {
       print('Error: $e');

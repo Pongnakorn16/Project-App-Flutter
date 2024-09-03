@@ -531,6 +531,17 @@ class _TicketPageState extends State<TicketPage> {
     } else {
       log('Failed to load lottery numbers. Status code: ${response.statusCode}');
     }
+
+    var get_cart = await http.get(Uri.parse("$url/db/get_cart/${widget.uid}"));
+    if (get_cart.statusCode == 200) {
+      all_cart = getCartResFromJson(get_cart.body);
+      log(all_cart.toString());
+      for (var cart in all_cart) {
+        log('lid' + cart.cLid.toString());
+      }
+    } else {
+      log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
+    }
   }
 
   void ShowDialog(int lid, int Prize) {
