@@ -37,6 +37,7 @@ class _AdminPageState extends State<AdminPage> {
   List<GetLotteryNumbers> win_lotterys = [];
   late Future<void> loadData;
   int _selectedIndex = 0;
+  TextEditingController resetCodeCtl = TextEditingController();
 
   @override
   void initState() {
@@ -356,7 +357,7 @@ class _AdminPageState extends State<AdminPage> {
                       height: 60, // กำหนดความสูงของปุ่ม
                       child: FilledButton(
                         onPressed: () async {
-                          await reset();
+                          await reset_card();
                           await loadDataAsync(); // รอให้ loadDataAsync ทำงานเสร็จ
 
                           setState(() {
@@ -631,17 +632,144 @@ class _AdminPageState extends State<AdminPage> {
     }
   }
 
+  Future<void> reset_card() async {
+    resetCodeCtl.clear();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.red, // กำหนดสีพื้นหลังของ Dialog
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'คำเตือน',
+              style:
+                  TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'การรีเซ็ทระบบจะทำให้ข้อมูลทุกอย่างหายไปเหลือแต่ข้อมูลของผู้ดูแล หากต้องการโปรดใส่รหัส',
+              style: TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: resetCodeCtl,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: const Color.fromARGB(255, 228, 225, 225),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30.0),
+                  borderSide: const BorderSide(width: 1),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Row(
+            mainAxisAlignment:
+                MainAxisAlignment.center, // ปรับตำแหน่งปุ่มให้ตรงกลาง
+            children: [
+              FilledButton(
+                onPressed: () async {
+                  await reset();
+                  await loadDataAsync(); // รอให้ loadDataAsync ทำงานเสร็จ
+
+                  setState(() {
+                    log("Go to reset()");
+                  });
+                },
+                child: const Text('ยืนยัน'),
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.all(Colors.blue),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> reset() async {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
 
+    var response = await http.get(Uri.parse("$url/db/get_WinLottery"));
+    if (response.statusCode == 200) {
+      win_lotterys = getLotteryNumbersFromJson(response.body);
+      log(win_lotterys.toString());
+      for (var lottery in win_lotterys) {
+        log(lottery.numbers.toString());
+      }
+    } else {
+      log('Failed to load lottery numbers. Status code: ${response.statusCode}');
+    }
+
     try {
-      var response = await http.delete(
-        Uri.parse("$url/db/reset"),
+      // ตรวจสอบรหัสผ่าน
+      var checkPasswordResponse = await http.post(
+        Uri.parse("$url/db/checkResetCode"),
         headers: {"Content-Type": "application/json; charset=utf-8"},
+        body: jsonEncode({'password': resetCodeCtl.text}),
       );
 
-      if (response.statusCode == 200) {
+      if (checkPasswordResponse.statusCode == 200) {
+        // ถ้ารหัสผ่านถูกต้อง ให้ทำการรีเซ็ต
+        var resetResponse = await http.delete(
+          Uri.parse("$url/db/reset"),
+          headers: {"Content-Type": "application/json; charset=utf-8"},
+        );
+
+        if (resetResponse.statusCode == 200) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text(
+                'แจ้งเตือน',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+              ),
+              content: Text(
+                'รีเซ็ทระบบเรียบร้อยแล้ว',
+                style: TextStyle(fontSize: 15),
+              ),
+              actions: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: FilledButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          Navigator.pop(context);
+                        },
+                        child: const Text(
+                          'ปิด',
+                          style: TextStyle(fontSize: 19),
+                        ),
+                        style: ButtonStyle(
+                          backgroundColor: WidgetStateProperty.all(Colors.red),
+                          padding: WidgetStateProperty.all<EdgeInsets>(
+                            EdgeInsets.symmetric(horizontal: 16.0, vertical: 5),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        } else {
+          print('Failed to delete. Status code: ${resetResponse.statusCode}');
+        }
+      } else {
+        // ถ้ารหัสผ่านไม่ถูกต้อง
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -650,7 +778,7 @@ class _AdminPageState extends State<AdminPage> {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
             ),
             content: Text(
-              'รีเซ็ทระบบเรียบร้อยแล้ว',
+              'รหัสผ่านไม่ถูกต้อง กรุณาลองอีกครั้ง',
               style: TextStyle(fontSize: 15),
             ),
             actions: [
@@ -658,7 +786,7 @@ class _AdminPageState extends State<AdminPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(8.0), // Padding ภายนอก
+                    padding: const EdgeInsets.all(8.0),
                     child: FilledButton(
                       onPressed: () {
                         Navigator.pop(context);
@@ -670,8 +798,7 @@ class _AdminPageState extends State<AdminPage> {
                       style: ButtonStyle(
                         backgroundColor: WidgetStateProperty.all(Colors.red),
                         padding: WidgetStateProperty.all<EdgeInsets>(
-                          EdgeInsets.symmetric(
-                              horizontal: 16.0, vertical: 5), // Padding ภายใน
+                          EdgeInsets.symmetric(horizontal: 16.0, vertical: 5),
                         ),
                       ),
                     ),
@@ -681,8 +808,6 @@ class _AdminPageState extends State<AdminPage> {
             ],
           ),
         );
-      } else {
-        print('Failed to delete. Status code: ${response.statusCode}');
       }
     } catch (e) {
       print('Error: $e');
