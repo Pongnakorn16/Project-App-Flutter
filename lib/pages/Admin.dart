@@ -98,8 +98,16 @@ class _AdminPageState extends State<AdminPage> {
                               width: 150, // กำหนดความกว้างของปุ่ม
                               height: 50, // กำหนดความสูงของปุ่ม
                               child: FilledButton(
-                                onPressed: () {
-                                  randomPrize_sold();
+                                onPressed: () async {
+                                  await randomPrize_sold(); // รอให้ randomPrize ทำงานเสร็จ
+                                  await loadDataAsync(); // รอให้ loadDataAsync ทำงานเสร็จ
+
+                                  setState(() {
+                                    log("Updated win_lotterys length: " +
+                                        win_lotterys.length.toString());
+                                  });
+                                  log("Final win_lotterys length: " +
+                                      win_lotterys.length.toString());
                                 },
                                 child: const Text(
                                   'สุ่มรางวัลจาก lotterys ที่ขายไปแล้ว',
@@ -126,7 +134,17 @@ class _AdminPageState extends State<AdminPage> {
                               width: 150, // กำหนดความกว้างของปุ่ม
                               height: 50, // กำหนดความสูงของปุ่ม
                               child: FilledButton(
-                                onPressed: () {},
+                                onPressed: () async {
+                                  await randomPrize(); // รอให้ randomPrize ทำงานเสร็จ
+                                  await loadDataAsync(); // รอให้ loadDataAsync ทำงานเสร็จ
+
+                                  setState(() {
+                                    log("Updated win_lotterys length: " +
+                                        win_lotterys.length.toString());
+                                  });
+                                  log("Final win_lotterys length: " +
+                                      win_lotterys.length.toString());
+                                },
                                 child: const Text(
                                   'สุ่มรางวัลจาก lotterys ทั้งหมด',
                                   textAlign: TextAlign
@@ -177,13 +195,9 @@ class _AdminPageState extends State<AdminPage> {
                                             children: [
                                               Builder(
                                                 builder: (context) {
-                                                  String status;
-                                                  double fontSize;
                                                   Icon? icon;
                                                   Color textColor = Colors
                                                       .black; // สีเริ่มต้นของตัวหนังสือ
-                                                  Color iconColor = Colors
-                                                      .black; // สีเริ่มต้นของไอคอน
 
                                                   return Row(
                                                     mainAxisAlignment:
@@ -309,6 +323,9 @@ class _AdminPageState extends State<AdminPage> {
                       child: FilledButton(
                         onPressed: () {
                           randomNumbers();
+                          setState(() {
+                            loadDataAsync();
+                          });
                         },
                         child: const Text(
                           'สุ่มตัวเลขใหม่ทั้งหมด',
@@ -423,20 +440,9 @@ class _AdminPageState extends State<AdminPage> {
     } else {
       log('Failed to load lottery numbers. Status code: ${response.statusCode}');
     }
-
-    var get_cart = await http.get(Uri.parse("$url/db/get_cart/${widget.uid}"));
-    if (get_cart.statusCode == 200) {
-      all_cart = getCartResFromJson(get_cart.body);
-      log(all_cart.toString());
-      for (var cart in all_cart) {
-        log('lid' + cart.cLid.toString());
-      }
-    } else {
-      log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
-    }
   }
 
-  void randomPrize_sold() async {
+  Future<void> randomPrize() async {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
 
@@ -449,7 +455,104 @@ class _AdminPageState extends State<AdminPage> {
       if (randomPrize.statusCode == 200) {
         print('Insert success');
       } else {
-        print('Failed to insert. Status code: ${randomPrize.statusCode}');
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text(
+              'แจ้งเตือน',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+            ),
+            content: Text(
+              'ท่านได้ทำการสุ่มรางวัลไปแล้ว',
+              style: TextStyle(fontSize: 15),
+            ),
+            actions: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0), // Padding ภายนอก
+                    child: FilledButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: const Text(
+                        'ปิด',
+                        style: TextStyle(fontSize: 19),
+                      ),
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.all(Colors.red),
+                        padding: WidgetStateProperty.all<EdgeInsets>(
+                          EdgeInsets.symmetric(
+                              horizontal: 16.0, vertical: 5), // Padding ภายใน
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
+  }
+
+  Future<void> randomPrize_sold() async {
+    var value = await Configuration.getConfig();
+    String url = value['apiEndpoint'];
+
+    try {
+      var randomPrize = await http.put(
+        Uri.parse('$url/db/lotterys/randomPrize_sold'),
+        headers: {"Content-Type": "application/json; charset=utf-8"},
+      );
+
+      if (randomPrize.statusCode == 200) {
+        print('Insert success');
+      } else {
+        print('ERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR');
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text(
+              'แจ้งเตือน',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+            ),
+            content: Text(
+              'ท่านได้ทำการสุ่มรางวัลไปแล้ว',
+              style: TextStyle(fontSize: 15),
+            ),
+            actions: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0), // Padding ภายนอก
+                    child: FilledButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: const Text(
+                        'ปิด',
+                        style: TextStyle(fontSize: 19),
+                      ),
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.all(Colors.red),
+                        padding: WidgetStateProperty.all<EdgeInsets>(
+                          EdgeInsets.symmetric(
+                              horizontal: 16.0, vertical: 5), // Padding ภายใน
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
       }
     } catch (e) {
       print('Error: $e');
