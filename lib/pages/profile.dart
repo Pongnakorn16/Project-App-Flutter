@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -11,6 +13,8 @@ import 'package:mobile_miniproject_app/models/response/customers_idx_get_res.dar
 import 'package:mobile_miniproject_app/pages/Home.dart';
 import 'package:mobile_miniproject_app/pages/Shop.dart';
 import 'package:mobile_miniproject_app/pages/Ticket.dart';
+import 'package:mobile_miniproject_app/shared/share_data.dart';
+import 'package:provider/provider.dart';
 
 class ProfilePage extends StatefulWidget {
   int uid = 0;
@@ -19,19 +23,21 @@ class ProfilePage extends StatefulWidget {
   int selectedIndex = 0;
   int cart_length = 0;
 
-  ProfilePage(
-      {super.key,
-      required this.uid,
-      required this.wallet,
-      required this.username,
-      required this.selectedIndex,
-      required this.cart_length});
+  ProfilePage({
+    super.key,
+    required this.selectedIndex,
+  });
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  int uid = 0;
+  int wallet = 0;
+  String username = '';
+  int cart_length = 0;
+  GetStorage gs = GetStorage();
   List<GetOneUserRes> user_Info = [];
   List<GetCartRes> all_cart = [];
   List<GetHistoryRes> all_history = [];
@@ -46,6 +52,10 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     // TODO: implement initState
     super.initState();
+    uid = context.read<ShareData>().user_info.uid;
+    username = context.read<ShareData>().user_info.username;
+    wallet = context.read<ShareData>().user_info.wallet;
+    cart_length = context.read<ShareData>().user_info.cart_length;
     // log(widget.uid.toString());
     _selectedIndex = widget.selectedIndex;
     loadData = loadDataAsync();
@@ -192,7 +202,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               text: TextSpan(
                                 children: [
                                   TextSpan(
-                                    text: '${widget.wallet}',
+                                    text: '${wallet}',
                                     style: TextStyle(
                                       fontSize: 40,
                                       fontWeight: FontWeight.bold,
@@ -354,9 +364,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 context,
                 MaterialPageRoute(
                     builder: (context) => HomePage(
-                          uid: widget.uid,
-                          wallet: widget.wallet,
-                          username: widget.username,
                           selectedIndex: _selectedIndex,
                         )),
               );
@@ -366,11 +373,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 context,
                 MaterialPageRoute(
                     builder: (context) => ShopPage(
-                          uid: widget.uid,
-                          wallet: widget.wallet,
-                          username: widget.username,
                           selectedIndex: _selectedIndex,
-                          cart_length: all_cart.length,
                         )),
               );
               break;
@@ -379,11 +382,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 context,
                 MaterialPageRoute(
                     builder: (context) => TicketPage(
-                          uid: widget.uid,
-                          wallet: widget.wallet,
-                          username: widget.username,
                           selectedIndex: _selectedIndex,
-                          cart_length: all_cart.length,
                         )),
               );
               break;
@@ -403,11 +402,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => ProfilePage(
-                                uid: widget.uid,
-                                wallet: widget.wallet,
-                                username: widget.username,
                                 selectedIndex: _selectedIndex,
-                                cart_length: all_cart.length,
                               ),
                             ),
                           );
@@ -417,7 +412,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         leading: Icon(Icons.logout),
                         title: Text('Logout'),
                         onTap: () {
-                          Navigator.pop(context); // ปิด BottomSheet ก่อน
+                          gs.remove('Email'); // ปิด BottomSheet ก่อน
                           Navigator.of(context)
                               .popUntil((route) => route.isFirst);
                         },
@@ -459,7 +454,7 @@ class _ProfilePageState extends State<ProfilePage> {
     String url = value['apiEndpoint'];
 
     try {
-      var res = await http.get(Uri.parse("$url/db/user/${widget.uid}"));
+      var res = await http.get(Uri.parse("$url/db/user/${uid}"));
       if (res.statusCode == 200) {
         user_Info = getOneUserResFromJson(res.body);
         if (user_Info != null) {
@@ -471,8 +466,7 @@ class _ProfilePageState extends State<ProfilePage> {
         log('Failed to load user info. Status code: ${res.statusCode}');
       }
 
-      var get_cart =
-          await http.get(Uri.parse("$url/db/get_cart/${widget.uid}"));
+      var get_cart = await http.get(Uri.parse("$url/db/get_cart/${uid}"));
       if (get_cart.statusCode == 200) {
         all_cart = getCartResFromJson(get_cart.body);
         log(all_cart.toString());
@@ -483,8 +477,7 @@ class _ProfilePageState extends State<ProfilePage> {
         log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
       }
 
-      var get_history =
-          await http.get(Uri.parse("$url/db/get_history/${widget.uid}"));
+      var get_history = await http.get(Uri.parse("$url/db/get_history/${uid}"));
       if (get_history.statusCode == 200) {
         all_history = getHistoryResFromJson(get_history.body);
         log(all_history.toString());
@@ -585,12 +578,12 @@ class _ProfilePageState extends State<ProfilePage> {
     var body = jsonEncode({"Username": nameCtl.text});
 
     var Change_name = await http.put(
-      Uri.parse('$url/db/user/change_name/${widget.uid}'),
+      Uri.parse('$url/db/user/change_name/${uid}'),
       headers: {"Content-Type": "application/json; charset=utf-8"},
       body: body,
     );
 
-    var res = await http.get(Uri.parse("$url/db/user/${widget.uid}"));
+    var res = await http.get(Uri.parse("$url/db/user/${uid}"));
     if (res.statusCode == 200) {
       user_Info = getOneUserResFromJson(res.body);
       if (user_Info != null) {
@@ -603,32 +596,20 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     if (res.statusCode == 200) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('สำเร็จ'),
-          content: const Text('Name change Successful!!!'),
-          actions: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                FilledButton(
-                  onPressed: () {
-                    setState(() {
-                      widget.username = user_Info.first.username;
-                      loadDataAsync();
-                    });
-                    Navigator.pop(context);
-                  },
-                  child: const Text('ปิด'),
-                  style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.all(Colors.red)),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
+      setState(() {
+        username = user_Info.first.username;
+        loadDataAsync();
+      });
+
+      Fluttertoast.showToast(
+          msg: "Name has changed !!!",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+          backgroundColor: Color.fromARGB(255, 250, 150, 44),
+          textColor: Colors.white,
+          fontSize: 15.0);
     } else {
       // จัดการกับ error ถ้า update ไม่สำเร็จ
       print('Failed to change name: ${res.body}');
@@ -717,12 +698,12 @@ class _ProfilePageState extends State<ProfilePage> {
     var body = jsonEncode({"Wallet": walletCtl.text});
 
     var Top_up = await http.put(
-      Uri.parse('$url/db/user/top_up/${widget.uid}'),
+      Uri.parse('$url/db/user/top_up/${uid}'),
       headers: {"Content-Type": "application/json; charset=utf-8"},
       body: body,
     );
 
-    var res = await http.get(Uri.parse("$url/db/user/${widget.uid}"));
+    var res = await http.get(Uri.parse("$url/db/user/${uid}"));
     if (res.statusCode == 200) {
       user_Info = getOneUserResFromJson(res.body);
       if (user_Info != null) {
@@ -735,32 +716,21 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     if (res.statusCode == 200) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('สำเร็จ'),
-          content: const Text('Top up Successful!!!'),
-          actions: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                FilledButton(
-                  onPressed: () {
-                    setState(() {
-                      widget.wallet = user_Info.first.wallet;
-                      loadDataAsync();
-                    });
-                    Navigator.pop(context);
-                  },
-                  child: const Text('ปิด'),
-                  style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.all(Colors.red)),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
+      setState(() {
+        wallet = user_Info.first.wallet;
+        context.read<ShareData>().user_info.wallet = user_Info.first.wallet;
+        loadDataAsync();
+      });
+
+      Fluttertoast.showToast(
+          msg: "Wallet has added !!!",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+          backgroundColor: Color.fromARGB(255, 250, 150, 44),
+          textColor: Colors.white,
+          fontSize: 15.0);
     } else {
       // จัดการกับ error ถ้า update ไม่สำเร็จ
       print('Failed to change name: ${res.body}');
@@ -768,7 +738,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void change_image() {
-    walletCtl.clear();
+    imageCtl.clear();
     showDialog(
       context: context,
       barrierDismissible: false, // กำหนดให้ dialog ไม่หายเมื่อแตะบริเวณรอบนอก
@@ -849,12 +819,12 @@ class _ProfilePageState extends State<ProfilePage> {
     var body = jsonEncode({"url_image": imageCtl.text});
 
     var change_image = await http.put(
-      Uri.parse('$url/db/user/change_image/${widget.uid}'),
+      Uri.parse('$url/db/user/change_image/${uid}'),
       headers: {"Content-Type": "application/json; charset=utf-8"},
       body: body,
     );
 
-    var res = await http.get(Uri.parse("$url/db/user/${widget.uid}"));
+    var res = await http.get(Uri.parse("$url/db/user/${uid}"));
     if (res.statusCode == 200) {
       user_Info = getOneUserResFromJson(res.body);
       if (user_Info != null) {
@@ -867,32 +837,19 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     if (res.statusCode == 200) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('สำเร็จ'),
-          content: const Text('Image change Successful!!!'),
-          actions: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                FilledButton(
-                  onPressed: () {
-                    setState(() {
-                      widget.wallet = user_Info.first.wallet;
-                      loadDataAsync();
-                    });
-                    Navigator.pop(context);
-                  },
-                  child: const Text('ปิด'),
-                  style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.all(Colors.red)),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
+      setState(() {
+        loadDataAsync();
+      });
+
+      Fluttertoast.showToast(
+          msg: "Image has changed !!!",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+          backgroundColor: Color.fromARGB(255, 250, 150, 44),
+          textColor: Colors.white,
+          fontSize: 15.0);
     } else {
       // จัดการกับ error ถ้า update ไม่สำเร็จ
       print('Failed to change name: ${res.body}');

@@ -14,7 +14,7 @@ String getHistoryResToJson(List<GetHistoryRes> data) =>
 class GetHistoryRes {
   int hid;
   int hLid;
-  int hNumber;
+  String hNumber;
   int hUid;
   int hWallet;
 

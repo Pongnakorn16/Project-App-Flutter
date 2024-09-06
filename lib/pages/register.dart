@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'dart:ui';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
@@ -230,45 +231,15 @@ class _RegisterPageState extends State<RegisterPage> {
         conPassCtl.text.isEmpty ||
         walletCtl.text.isEmpty ||
         passwordCtl.text != conPassCtl.text) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text(
-            'แจ้งเตือน',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
-          ),
-          content: Text(
-            'ข้อมูลไม่ถูกต้องโปรดตรวจสอบความถูกต้อง แล้วลองอีกครั้ง',
-            style: TextStyle(fontSize: 15),
-          ),
-          actions: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0), // Padding ภายนอก
-                  child: FilledButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Text(
-                      'ปิด',
-                      style: TextStyle(fontSize: 19),
-                    ),
-                    style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.all(Colors.red),
-                      padding: WidgetStateProperty.all<EdgeInsets>(
-                        EdgeInsets.symmetric(
-                            horizontal: 16.0, vertical: 5), // Padding ภายใน
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
+      Fluttertoast.showToast(
+          msg: "ข้อมูลไม่ถูกต้องโปรดตรวจสอบความถูกต้อง แล้วลองอีกครั้ง",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+          backgroundColor: Color.fromARGB(255, 255, 0, 0),
+          textColor: Colors.white,
+          fontSize: 15.0);
       return;
     }
 
@@ -305,87 +276,3 @@ class _RegisterPageState extends State<RegisterPage> {
         ));
   }
 }
-
-//TEST mini project flutter connect to Node.js
-
-// import 'dart:convert';
-// import 'dart:developer';
-// import 'package:flutter/material.dart';
-// import 'package:http/http.dart' as http;
-// import 'package:mobile_miniproject_app/config/config.dart';
-// import 'package:mobile_miniproject_app/models/response/testGetREs.dart';
-
-// class UserInfoPage extends StatefulWidget {
-//   const UserInfoPage({Key? key}) : super(key: key);
-
-//   @override
-//   State<UserInfoPage> createState() => _UserInfoPageState();
-// }
-
-// class _UserInfoPageState extends State<UserInfoPage> {
-//   String url = '';
-//   List<TestGetRes> userDataList = [];
-//   bool isLoading = true;
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     Configuration.getConfig().then((value) {
-//       url = value['apiEndpoint'];
-//       fetchUserData();
-//     });
-//   }
-
-//   Future<void> fetchUserData() async {
-//     try {
-//       var response = await http.get(Uri.parse('$url/db/userxx'));
-//       if (response.statusCode == 200) {
-//         setState(() {
-//           userDataList = testGetResFromJson(response.body);
-//           isLoading = false;
-//         });
-//       } else {
-//         throw Exception('Failed to load user data');
-//       }
-//     } catch (e) {
-//       log('Error fetching user data: $e');
-//       setState(() {
-//         isLoading = false;
-//       });
-//     }
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: const Text('ข้อมูลผู้ใช้'),
-//       ),
-//       body: isLoading
-//           ? const Center(child: CircularProgressIndicator())
-//           : ListView.builder(
-//               itemCount: userDataList.length,
-//               itemBuilder: (context, index) {
-//                 final user = userDataList[index];
-//                 return Card(
-//                   margin: const EdgeInsets.all(8.0),
-//                   child: Padding(
-//                     padding: const EdgeInsets.all(16.0),
-//                     child: Column(
-//                       crossAxisAlignment: CrossAxisAlignment.start,
-//                       children: [
-//                         Text('UID: ${user.uid}'),
-//                         Text('Email: ${user.email}'),
-//                         Text('Username: ${user.username}'),
-//                         Text('Type: ${user.type.toString().split('.').last}'),
-//                         Text('Bio: ${user.bio ?? "N/A"}'),
-//                         Text('User Image: ${user.userImage ?? "N/A"}'),
-//                       ],
-//                     ),
-//                   ),
-//                 );
-//               },
-//             ),
-//     );
-//   }
-// }

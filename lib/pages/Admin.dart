@@ -3,6 +3,8 @@ import 'dart:developer';
 import 'dart:ffi';
 import 'dart:math' hide log;
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
@@ -32,6 +34,7 @@ class AdminPage extends StatefulWidget {
 }
 
 class _AdminPageState extends State<AdminPage> {
+  GetStorage gs = GetStorage();
   String url = '';
   List<GetCartRes> all_cart = [];
   List<GetLotteryNumbers> win_lotterys = [];
@@ -398,6 +401,7 @@ class _AdminPageState extends State<AdminPage> {
                       height: 60, // กำหนดความสูงของปุ่ม
                       child: FilledButton(
                         onPressed: () {
+                          gs.remove('Email');
                           Navigator.of(context)
                               .popUntil((route) => route.isFirst);
                         },
@@ -463,45 +467,15 @@ class _AdminPageState extends State<AdminPage> {
       if (randomPrize.statusCode == 200) {
         print('Insert success');
       } else {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text(
-              'แจ้งเตือน',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
-            ),
-            content: Text(
-              'ท่านได้ทำการสุ่มรางวัลไปแล้ว',
-              style: TextStyle(fontSize: 15),
-            ),
-            actions: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0), // Padding ภายนอก
-                    child: FilledButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: const Text(
-                        'ปิด',
-                        style: TextStyle(fontSize: 19),
-                      ),
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStateProperty.all(Colors.red),
-                        padding: WidgetStateProperty.all<EdgeInsets>(
-                          EdgeInsets.symmetric(
-                              horizontal: 16.0, vertical: 5), // Padding ภายใน
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
+        Fluttertoast.showToast(
+            msg: "ท่านได้ทำการสุ่มรางวัลไปแล้ว !!!",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+            backgroundColor: Color.fromARGB(255, 255, 0, 0),
+            textColor: Colors.white,
+            fontSize: 15.0);
       }
     } catch (e) {
       print('Error: $e');
@@ -522,45 +496,15 @@ class _AdminPageState extends State<AdminPage> {
         print('Insert success');
       } else {
         print('ERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR');
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text(
-              'แจ้งเตือน',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
-            ),
-            content: Text(
-              'ท่านได้ทำการสุ่มรางวัลไปแล้ว',
-              style: TextStyle(fontSize: 15),
-            ),
-            actions: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0), // Padding ภายนอก
-                    child: FilledButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: const Text(
-                        'ปิด',
-                        style: TextStyle(fontSize: 19),
-                      ),
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStateProperty.all(Colors.red),
-                        padding: WidgetStateProperty.all<EdgeInsets>(
-                          EdgeInsets.symmetric(
-                              horizontal: 16.0, vertical: 5), // Padding ภายใน
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
+        Fluttertoast.showToast(
+            msg: "ท่านได้ทำการสุ่มรางวัลไปแล้ว !!!",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+            backgroundColor: Color.fromARGB(255, 255, 0, 0),
+            textColor: Colors.white,
+            fontSize: 15.0);
       }
     } catch (e) {
       print('Error: $e');
@@ -568,67 +512,62 @@ class _AdminPageState extends State<AdminPage> {
   }
 
   void randomNumbers() async {
-    Set<String> uniqueNumbers = Set();
-
-    while (uniqueNumbers.length < 10) {
-      String number = Random().nextInt(999999).toString().padLeft(6, '0');
-      uniqueNumbers.add(number);
-    }
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
 
-    List<String> numbers = uniqueNumbers.toList();
+    // ตรวจสอบจาก API ว่ามี lottery อยู่แล้วหรือไม่
+    var lot_check = await http.get(Uri.parse("$url/db/get_Lottery"),
+        headers: {"Content-Type": "application/json; charset=utf-8"});
 
-    try {
-      var response = await http.post(Uri.parse("$url/db/random"),
-          headers: {"Content-Type": "application/json; charset=utf-8"},
-          body: jsonEncode({'numbers': numbers}));
+    if (lot_check.statusCode == 200) {
+      // แปลง body เป็น JSON
+      var responseBody = jsonDecode(lot_check.body);
 
-      if (response.statusCode == 200) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text(
-              'แจ้งเตือน',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
-            ),
-            content: Text(
-              'สุ่มตัวเลขเรียบร้อยแล้ว',
-              style: TextStyle(fontSize: 15),
-            ),
-            actions: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0), // Padding ภายนอก
-                    child: FilledButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: const Text(
-                        'ปิด',
-                        style: TextStyle(fontSize: 19),
-                      ),
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStateProperty.all(Colors.red),
-                        padding: WidgetStateProperty.all<EdgeInsets>(
-                          EdgeInsets.symmetric(
-                              horizontal: 16.0, vertical: 5), // Padding ภายใน
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
+      // ตรวจสอบว่าข้อมูลเป็น array ว่างหรือไม่
+      if (responseBody is List && responseBody.isNotEmpty) {
+        Fluttertoast.showToast(
+            msg: "ท่านได้ทำการสุ่มเลขใหม่ทั้งหมดไปแล้ว!!!",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Color.fromARGB(255, 255, 218, 10),
+            textColor: Colors.white,
+            fontSize: 15.0);
       } else {
-        print('Failed to insert. Status code: ${response.statusCode}');
+        // ถ้าไม่มีข้อมูล lottery ให้ทำการสุ่มเลขใหม่
+        Set<String> uniqueNumbers = Set();
+
+        while (uniqueNumbers.length < 100) {
+          String number = Random().nextInt(999999).toString().padLeft(6, '0');
+          uniqueNumbers.add(number);
+        }
+        List<String> numbers = uniqueNumbers.toList();
+
+        try {
+          var response = await http.post(Uri.parse("$url/db/random"),
+              headers: {"Content-Type": "application/json; charset=utf-8"},
+              body: jsonEncode({'numbers': numbers}));
+
+          if (response.statusCode == 200) {
+            // แสดงข้อความว่าได้สุ่มเลขใหม่แล้ว
+            Fluttertoast.showToast(
+                msg: "สุ่มเลขใหม่ทั้งหมดแล้ว !!!",
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.CENTER,
+                timeInSecForIosWeb: 1,
+                backgroundColor: Color.fromARGB(255, 3, 252, 32),
+                textColor: Colors.white,
+                fontSize: 15.0);
+          } else {
+            print('Failed to insert. Status code: ${response.statusCode}');
+          }
+        } catch (e) {
+          print('Error: $e');
+        }
       }
-    } catch (e) {
-      print('Error: $e');
+    } else {
+      print(
+          'Failed to fetch lottery data. Status code: ${lot_check.statusCode}');
     }
   }
 
@@ -726,88 +665,30 @@ class _AdminPageState extends State<AdminPage> {
         );
 
         if (resetResponse.statusCode == 200) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text(
-                'แจ้งเตือน',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
-              ),
-              content: Text(
-                'รีเซ็ทระบบเรียบร้อยแล้ว',
-                style: TextStyle(fontSize: 15),
-              ),
-              actions: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: FilledButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          Navigator.pop(context);
-                        },
-                        child: const Text(
-                          'ปิด',
-                          style: TextStyle(fontSize: 19),
-                        ),
-                        style: ButtonStyle(
-                          backgroundColor: WidgetStateProperty.all(Colors.red),
-                          padding: WidgetStateProperty.all<EdgeInsets>(
-                            EdgeInsets.symmetric(horizontal: 16.0, vertical: 5),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
+          Fluttertoast.showToast(
+              msg: "รีเซ็ทระบบเรียบร้อยแล้ว",
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.CENTER,
+              timeInSecForIosWeb: 1,
+              // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+              backgroundColor: Color.fromARGB(255, 3, 252, 32),
+              textColor: Colors.white,
+              fontSize: 15.0);
+          Navigator.pop(context);
         } else {
           print('Failed to delete. Status code: ${resetResponse.statusCode}');
         }
       } else {
         // ถ้ารหัสผ่านไม่ถูกต้อง
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text(
-              'แจ้งเตือน',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
-            ),
-            content: Text(
-              'รหัสผ่านไม่ถูกต้อง กรุณาลองอีกครั้ง',
-              style: TextStyle(fontSize: 15),
-            ),
-            actions: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: FilledButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: const Text(
-                        'ปิด',
-                        style: TextStyle(fontSize: 19),
-                      ),
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStateProperty.all(Colors.red),
-                        padding: WidgetStateProperty.all<EdgeInsets>(
-                          EdgeInsets.symmetric(horizontal: 16.0, vertical: 5),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
+        Fluttertoast.showToast(
+            msg: "รหัสผ่านไม่ถูกต้อง กรุณาลองอีกครั้ง",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+            backgroundColor: Color.fromARGB(255, 244, 0, 0),
+            textColor: Colors.white,
+            fontSize: 15.0);
       }
     } catch (e) {
       print('Error: $e');

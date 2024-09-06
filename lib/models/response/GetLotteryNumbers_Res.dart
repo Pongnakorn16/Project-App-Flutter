@@ -13,7 +13,7 @@ String getLotteryNumbersToJson(List<GetLotteryNumbers> data) =>
 
 class GetLotteryNumbers {
   int lid;
-  int numbers;
+  String numbers;
   int status_prize;
   int status_buy;
 

@@ -15,7 +15,7 @@ class GetCartRes {
   int cLid;
   int cUid;
   int lid;
-  int numbers;
+  String numbers;
   int statusPrize;
   int statusBuy;
   dynamic ownerUid;

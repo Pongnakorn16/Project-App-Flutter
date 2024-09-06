@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/customers_login_post_req.dart';
 import 'package:mobile_miniproject_app/models/response/customersLoginPostRes.dart';
@@ -9,6 +11,8 @@ import 'package:mobile_miniproject_app/pages/TEST.dart';
 import 'package:mobile_miniproject_app/pages/register.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_miniproject_app/pages/Home.dart';
+import 'package:mobile_miniproject_app/shared/share_data.dart';
+import 'package:provider/provider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -18,6 +22,8 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  var model;
+  GetStorage gs = GetStorage();
   String text = '';
   int count = 0;
   String phoneNo = '', txt = '';
@@ -29,7 +35,16 @@ class _LoginPageState extends State<LoginPage> {
   void initState() {
     super.initState();
     Configuration.getConfig().then((value) {
-      url = value['apiEndpoint'];
+      setState(() {
+        url = value['apiEndpoint'];
+        log("API Endpoint: $url"); // ตรวจสอบค่า URL หลังจากตั้งค่าเสร็จ
+        print(gs.read('Email'));
+        print(gs.read('Password'));
+
+        if (gs.read('Email') != null) {
+          login();
+        }
+      });
     });
   }
 
@@ -117,7 +132,13 @@ class _LoginPageState extends State<LoginPage> {
                         width: 300,
                         height: 50,
                         child: FilledButton(
-                          onPressed: login,
+                          onPressed: () {
+                            gs.write('Email', EmailCtl.text);
+                            gs.write('Password', PasswordCtl.text);
+                            print(gs.read('Email'));
+                            print(gs.read('Password'));
+                            login();
+                          },
                           style: ButtonStyle(
                             backgroundColor: WidgetStateProperty.all(
                                 Color.fromARGB(255, 254, 137, 69)),
@@ -177,9 +198,15 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void login() async {
-    // Create Model Object
-    var model = CustomersLoginPostRequest(
-        Email: EmailCtl.text, Password: PasswordCtl.text);
+    log("API Endpoint: $url");
+    String email = gs.read('Email');
+    String password = gs.read('Password');
+    log(email);
+    log(password);
+
+    log("xxxxxxx");
+    model = CustomersLoginPostRequest(Email: email, Password: password);
+
     try {
       var Value = await http.post(Uri.parse("$url/db/users/login"),
           headers: {"Content-Type": "application/json; charset=utf-8"},
@@ -188,7 +215,11 @@ class _LoginPageState extends State<LoginPage> {
 
       List<dynamic> jsonResponse = json.decode(Value.body);
       var res = CustomersLoginPostResponse.fromJson(jsonResponse.first);
-
+      User_info User = User_info();
+      User.uid = res.uid;
+      User.wallet = res.wallet;
+      User.username = res.username;
+      context.read<ShareData>().user_info = User;
       log(res.image);
 
       if (res.uid == 1) {
@@ -209,9 +240,6 @@ class _LoginPageState extends State<LoginPage> {
             context,
             MaterialPageRoute(
               builder: (context) => HomePage(
-                uid: res.uid,
-                wallet: res.wallet,
-                username: res.username,
                 selectedIndex: 0,
               ),
             ));
@@ -219,7 +247,16 @@ class _LoginPageState extends State<LoginPage> {
     } catch (err) {
       log(err.toString());
       setState(() {
-        txt = "Invalid Email Or Password!!!";
+        Fluttertoast.showToast(
+            msg:
+                "Email หรือ Password ไม่ถูกต้องโปรดตรวจสอบความถูกต้อง แล้วลองอีกครั้ง",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+            backgroundColor: Color.fromARGB(255, 255, 0, 0),
+            textColor: Colors.white,
+            fontSize: 15.0);
       });
 
       setState(() {});
