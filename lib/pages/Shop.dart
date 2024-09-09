@@ -682,6 +682,7 @@ class _ShopPageState extends State<ShopPage> {
   void show_cart() {
     int wallet_pay = all_cart.length * 100;
     showDialog(
+      barrierDismissible: false,
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
@@ -717,62 +718,63 @@ class _ShopPageState extends State<ShopPage> {
             ),
           ],
         ),
-        content: SingleChildScrollView(
-          child: Column(
-            children: all_cart.asMap().entries.map((entry) {
-              int index = entry.key + 1; // กำหนดหมายเลขลำดับ (เริ่มจาก 1)
-              GetCartRes item = entry.value; // item เป็น GetCartRes
-              List<String> numbers = [
-                item.numbers.toString()
-              ]; // แปลง GetCartRes เป็น numbers
+        content: all_cart.isEmpty
+            ? Text('ไม่มีล็อตเตอรี่ในรถเข็น',
+                style: TextStyle(fontSize: 16, color: Colors.red))
+            : SingleChildScrollView(
+                child: Column(
+                  children: all_cart.asMap().entries.map((entry) {
+                    int index = entry.key + 1;
+                    GetCartRes item = entry.value;
+                    List<String> numbers = [item.numbers.toString()];
 
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    Text(
-                      '$index. รหัส  ${numbers.join()} งวดวันที่ ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
-                      style: TextStyle(fontSize: 9), // กำหนดขนาดของข้อความ
-                    ),
-                    SizedBox(width: 10), // เพิ่มระยะห่างระหว่างข้อความ
-                    Text(
-                      'ราคา 100 บาท',
-                      style: TextStyle(fontSize: 9),
-                    ),
-                    SizedBox(width: 10), // เพิ่มระยะห่างระหว่างข้อความและปุ่ม
-                    FilledButton(
-                      onPressed: () {
-                        remove_cart(item.cLid);
-                        Navigator.pop(context);
-                        show_cart();
-                      },
-                      child: Icon(
-                        Icons.close,
-                        size: 18,
-                      ),
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStateProperty.all(
-                            Colors.red), // สีพื้นหลังของปุ่ม
-                        foregroundColor: WidgetStateProperty.all(
-                            Colors.white), // สีของข้อความบนปุ่ม
-                        padding: WidgetStateProperty.all<EdgeInsets>(
-                            EdgeInsets.zero),
-                        minimumSize: WidgetStateProperty.all<Size>(
-                            Size(25, 25)), // ขนาดของปุ่ม
-                        shape: WidgetStateProperty.all<RoundedRectangleBorder>(
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                                30), // มุมโค้งของปุ่มให้กลายเป็นวงกลม
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          Text(
+                            '$index. รหัส  ${numbers.join()} งวดวันที่ ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
+                            style: TextStyle(fontSize: 9),
                           ),
-                        ),
+                          SizedBox(width: 10),
+                          Text(
+                            'ราคา 100 บาท',
+                            style: TextStyle(fontSize: 9),
+                          ),
+                          SizedBox(width: 10),
+                          FilledButton(
+                            onPressed: () {
+                              remove_cart(item.cLid);
+                              Navigator.pop(context);
+                              show_cart();
+                            },
+                            child: Icon(
+                              Icons.close,
+                              size: 18,
+                            ),
+                            style: ButtonStyle(
+                              backgroundColor:
+                                  WidgetStateProperty.all(Colors.red),
+                              foregroundColor:
+                                  WidgetStateProperty.all(Colors.white),
+                              padding: WidgetStateProperty.all<EdgeInsets>(
+                                  EdgeInsets.zero),
+                              minimumSize:
+                                  WidgetStateProperty.all<Size>(Size(25, 25)),
+                              shape: WidgetStateProperty.all<
+                                  RoundedRectangleBorder>(
+                                RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                    );
+                  }).toList(),
                 ),
-              );
-            }).toList(),
-          ),
-        ),
+              ),
         actions: [
           const Padding(
             padding: EdgeInsets.only(top: 25.0, bottom: 5.0),
@@ -802,8 +804,20 @@ class _ShopPageState extends State<ShopPage> {
               ),
               FilledButton(
                 onPressed: () {
-                  purchase(wallet_pay);
-                  Navigator.pop(context);
+                  if (wallet < wallet_pay) {
+                    Fluttertoast.showToast(
+                        msg: "ยอด Wallet ของท่านไม่เพียงพอกรุณาเติมเงิน!!!",
+                        toastLength: Toast.LENGTH_SHORT,
+                        gravity: ToastGravity.CENTER,
+                        timeInSecForIosWeb: 1,
+                        // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+                        backgroundColor: Color.fromARGB(255, 255, 0, 0),
+                        textColor: Colors.white,
+                        fontSize: 15.0);
+                  } else {
+                    purchase(wallet_pay);
+                    Navigator.pop(context);
+                  }
                 },
                 child: const Text('Purchase'),
                 style: ButtonStyle(
