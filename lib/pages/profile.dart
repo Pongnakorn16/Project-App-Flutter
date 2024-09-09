@@ -458,7 +458,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (res.statusCode == 200) {
         user_Info = getOneUserResFromJson(res.body);
         if (user_Info != null) {
-          log("user_Info: " + user_Info.toString());
+          log("user_Info : " + user_Info.toString());
         } else {
           log("Failed to parse user info.");
         }
@@ -466,16 +466,16 @@ class _ProfilePageState extends State<ProfilePage> {
         log('Failed to load user info. Status code: ${res.statusCode}');
       }
 
-      var get_cart = await http.get(Uri.parse("$url/db/get_cart/${uid}"));
-      if (get_cart.statusCode == 200) {
-        all_cart = getCartResFromJson(get_cart.body);
-        log(all_cart.toString());
-        for (var cart in all_cart) {
-          log('lid' + cart.cLid.toString());
-        }
-      } else {
-        log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
-      }
+      // var get_cart = await http.get(Uri.parse("$url/db/get_cart/${uid}"));
+      // if (get_cart.statusCode == 200) {
+      //   all_cart = getCartResFromJson(get_cart.body);
+      //   log(all_cart.toString());
+      //   for (var cart in all_cart) {
+      //     log('lidddddddddddddddddddddd' + cart.cLid.toString());
+      //   }
+      // } else {
+      //   log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
+      // }
 
       var get_history = await http.get(Uri.parse("$url/db/get_history/${uid}"));
       if (get_history.statusCode == 200) {
@@ -485,7 +485,7 @@ class _ProfilePageState extends State<ProfilePage> {
           log('HISTORY_LID' + history.hNumber.toString());
         }
       } else {
-        log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
+        log('Failed to load lottery numbers. Status code: ${get_history.statusCode}');
       }
     } catch (e) {
       log("Error occurred: $e");

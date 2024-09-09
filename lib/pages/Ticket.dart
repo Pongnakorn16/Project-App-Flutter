@@ -393,8 +393,7 @@ class _TicketPageState extends State<TicketPage> {
                                                                           prize =
                                                                               0;
                                                                       }
-                                                                      Prize =
-                                                                          prize;
+
                                                                       return 'รางวัลที่ ${lottery.status_prize} : $prize บาท';
                                                                     } else {
                                                                       return 'ไม่ถูกรางวัล';
@@ -582,7 +581,22 @@ class _TicketPageState extends State<TicketPage> {
     }
   }
 
-  void ShowDialog(int lid, int Prize) {
+  void ShowDialog(int lid, int Prize) async {
+    // var value = await Configuration.getConfig();
+    // String url = value['apiEndpoint'];
+
+    // var response = await http.get(Uri.parse("$url/db/get_UserLottery/${uid}"));
+    // if (response.statusCode == 200) {
+    //   setState(() {
+    //     all_Userlotterys = getLotteryNumbersFromJson(response.body);
+    //   });
+    //   log(all_Userlotterys.toString());
+    //   for (var lottery in all_Userlotterys) {
+    //     log(lottery.numbers.toString());
+    //   }
+    // } else {
+    //   log('Failed to load lottery numbers. Status code: ${response.statusCode}');
+    // }
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -602,6 +616,24 @@ class _TicketPageState extends State<TicketPage> {
                 padding: const EdgeInsets.all(8.0), // Padding ภายนอก
                 child: FilledButton(
                   onPressed: () {
+                    // ตรวจสอบสถานะของ all_Userlotterys.status_prize
+                    all_Userlotterys.forEach((lottery) {
+                      if (lottery.status_prize == 1) {
+                        Prize = 10000;
+                      } else if (lottery.status_prize == 2) {
+                        Prize = 5000;
+                      } else if (lottery.status_prize == 3) {
+                        Prize = 1000;
+                      } else if (lottery.status_prize == 4) {
+                        Prize = 500;
+                      } else if (lottery.status_prize == 5) {
+                        Prize = 150;
+                      }
+                      log("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" +
+                          Prize.toString());
+                    });
+
+                    // เรียกใช้ฟังก์ชัน Cash_out และอัปเดตสถานะ
                     Cash_out(lid, Prize);
                     setState(() {
                       loadDataAsync();
@@ -649,6 +681,9 @@ class _TicketPageState extends State<TicketPage> {
   void Cash_out(int lid, int Prize) async {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
+
+    log("TEST PRIZEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE" +
+        Prize.toString());
 
     var res = await http.put(
       Uri.parse('$url/db/add_prize/${lid}/${Prize}/${uid}'),
