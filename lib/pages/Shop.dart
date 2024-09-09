@@ -44,8 +44,9 @@ class _ShopPageState extends State<ShopPage> {
   GetStorage gs = GetStorage();
 
   String url = '';
-
+  TextEditingController searchCtl = TextEditingController();
   List<GetLotteryNumbers> all_lotterys = [];
+  List<GetLotteryNumbers> filteredLotterys = []; // List ล็อตเตอรี่ที่กรองแล้ว
   List<GetCartRes> all_cart = [];
   List<CartLotteryItem> cart_lotterys = [];
   List<GetOneUserRes> userInfo = [];
@@ -69,88 +70,91 @@ class _ShopPageState extends State<ShopPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        title: Column(
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 5),
-                  child: RichText(
-                    text: TextSpan(
-                      children: [
-                        TextSpan(
-                          text: 'Welcome ',
-                          style: const TextStyle(
-                              fontSize: 20,
-                              color: Colors.black), // สีของข้อความที่เหลือ
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 5),
+                      child: RichText(
+                        text: TextSpan(
+                          children: [
+                            TextSpan(
+                              text: 'Welcome ',
+                              style: const TextStyle(
+                                  fontSize: 20, color: Colors.black),
+                            ),
+                            TextSpan(
+                              text: username,
+                              style: const TextStyle(
+                                  fontSize: 20,
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ],
                         ),
-                        TextSpan(
-                          text: username,
-                          style: const TextStyle(
-                              fontSize: 20,
-                              color: Colors.blue,
-                              fontWeight: FontWeight.bold),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10, left: 1.5),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.account_balance_wallet,
+                            size: 20,
+                            color: Color.fromARGB(255, 254, 137, 69),
+                          ),
+                          SizedBox(width: 5),
+                          Text(
+                            'Wallet :  ${wallet}  THB',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              color: Color.fromARGB(255, 131, 130, 130),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 10, left: 1.5),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.account_balance_wallet,
-                        size: 20,
+                Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.shopping_cart,
                         color: Color.fromARGB(255, 254, 137, 69),
+                        size: 29.0,
                       ),
-                      SizedBox(width: 5),
-                      Text(
-                        'Wallet :  ${wallet}  THB',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          color: Color.fromARGB(255, 131, 130, 130),
+                      onPressed: () {
+                        show_cart();
+                      },
+                    ),
+                    Positioned(
+                      top: 3,
+                      right: 6,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '${cart_length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
-                    ],
-                  ),
-                )
-              ],
-            ),
-            Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.shopping_cart,
-                    color: Color.fromARGB(255, 254, 137, 69),
-                    size: 29.0,
-                  ),
-                  onPressed: () {
-                    show_cart();
-                  },
-                ),
-                Positioned(
-                  top: 3,
-                  right: 6,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
                     ),
-                    child: Text(
-                      '${cart_length}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -162,6 +166,27 @@ class _ShopPageState extends State<ShopPage> {
         padding: const EdgeInsets.all(2.0),
         child: Column(
           children: [
+            // ช่องค้นหา
+            Padding(
+              padding: const EdgeInsets.only(top: 10, left: 10, right: 10),
+              child: TextField(
+                controller: searchCtl,
+                onChanged: (value) {
+                  filterSearch(
+                      value); // เรียกค้นหาทุกครั้งที่มีการเปลี่ยนข้อความ
+                },
+                decoration: InputDecoration(
+                  hintText: 'ค้นหาหมายเลขล็อตเตอรี่',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey[200],
+                ),
+              ),
+            ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(5.0),
@@ -174,9 +199,9 @@ class _ShopPageState extends State<ShopPage> {
                       );
                     }
                     return ListView.builder(
-                      itemCount: all_lotterys.length,
+                      itemCount: filteredLotterys.length,
                       itemBuilder: (context, index) {
-                        final lottery = all_lotterys[index];
+                        final lottery = filteredLotterys[index];
                         List<String> numberList =
                             lottery.numbers.toString().split('');
                         return Card(
@@ -454,6 +479,8 @@ class _ShopPageState extends State<ShopPage> {
     } else {
       log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
     }
+
+    filteredLotterys = all_lotterys;
   }
 
   void add_toCart(int lid, List<String> Lot_Num) async {
@@ -798,5 +825,35 @@ class _ShopPageState extends State<ShopPage> {
         ],
       ),
     );
+  }
+
+  void filterSearch(String query) async {
+    var value = await Configuration.getConfig();
+    String url = value['apiEndpoint'];
+
+    var response = await http.get(Uri.parse("$url/db/get_allLottery"));
+    if (response.statusCode == 200) {
+      all_lotterys = getLotteryNumbersFromJson(response.body);
+      log(all_lotterys.toString());
+      for (var lottery in all_lotterys) {
+        log('load all_lotterys comlplete. Status code: ${response.statusCode}');
+      }
+    } else {
+      log('Failed to load lottery numbers. Status code: ${response.statusCode}');
+    }
+
+    setState(() {
+      if (query.isEmpty) {
+        filteredLotterys = all_lotterys; // ถ้าช่องค้นหาว่างให้แสดงข้อมูลทั้งหมด
+      } else {
+        filteredLotterys = all_lotterys.where((lottery) {
+          // ตรวจสอบว่าแต่ละตำแหน่งของ numbers ตรงกับ query ที่พิมพ์ทีละตัว
+          if (query.length <= lottery.numbers.length) {
+            return lottery.numbers.substring(0, query.length) == query;
+          }
+          return false;
+        }).toList();
+      }
+    });
   }
 }

@@ -13,7 +13,6 @@ import 'package:mobile_miniproject_app/models/response/GetLotteryNumbers_Res.dar
 import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
 import 'package:mobile_miniproject_app/pages/Shop.dart';
-import 'package:mobile_miniproject_app/pages/TEST.dart';
 import 'package:mobile_miniproject_app/pages/Ticket.dart';
 import 'package:mobile_miniproject_app/pages/Profile.dart';
 
@@ -314,40 +313,40 @@ class _AdminPageState extends State<AdminPage> {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: SizedBox(
-                      width: 150, // กำหนดความกว้างของปุ่ม
-                      height: 50, // กำหนดความสูงของปุ่ม
-                      child: FilledButton(
-                        onPressed: () {
-                          randomNumbers();
-                        },
-                        child: const Text(
-                          'สุ่มตัวเลขใหม่ทั้งหมด',
-                          textAlign: TextAlign
-                              .center, // จัดข้อความให้อยู่ตรงกลางแนวนอน
-                          style: TextStyle(fontSize: 13),
-                        ),
-                        style: ButtonStyle(
-                          backgroundColor: WidgetStateProperty.all(Colors.blue),
-                          padding: WidgetStateProperty.all<EdgeInsets>(
-                            EdgeInsets.symmetric(
-                                horizontal: 15.0,
-                                vertical: 8.0), // ปรับ padding ภายในปุ่ม
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // Padding(
+            //   padding: const EdgeInsets.only(bottom: 20),
+            //   child: Row(
+            //     mainAxisAlignment: MainAxisAlignment.center,
+            //     children: [
+            //       Padding(
+            //         padding: const EdgeInsets.all(8.0),
+            //         child: SizedBox(
+            //           width: 150, // กำหนดความกว้างของปุ่ม
+            //           height: 50, // กำหนดความสูงของปุ่ม
+            //           child: FilledButton(
+            //             onPressed: () {
+            //               randomNumbers();
+            //             },
+            //             child: const Text(
+            //               'สุ่มตัวเลขใหม่ทั้งหมด',
+            //               textAlign: TextAlign
+            //                   .center, // จัดข้อความให้อยู่ตรงกลางแนวนอน
+            //               style: TextStyle(fontSize: 13),
+            //             ),
+            //             style: ButtonStyle(
+            //               backgroundColor: WidgetStateProperty.all(Colors.blue),
+            //               padding: WidgetStateProperty.all<EdgeInsets>(
+            //                 EdgeInsets.symmetric(
+            //                     horizontal: 15.0,
+            //                     vertical: 8.0), // ปรับ padding ภายในปุ่ม
+            //               ),
+            //             ),
+            //           ),
+            //         ),
+            //       ),
+            //     ],
+            //   ),
+            // ),
             Padding(
               padding: const EdgeInsets.only(bottom: 40),
               child: Row(
@@ -361,7 +360,7 @@ class _AdminPageState extends State<AdminPage> {
                       child: FilledButton(
                         onPressed: () async {
                           await reset_card();
-                          await loadDataAsync(); // รอให้ loadDataAsync ทำงานเสร็จ
+                          await loadDataAsync();
 
                           setState(() {
                             log("Updated win_lotterys length: " +
@@ -495,23 +494,36 @@ class _AdminPageState extends State<AdminPage> {
       if (randomPrize.statusCode == 200) {
         print('Insert success');
       } else {
-        print('ERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR');
-        Fluttertoast.showToast(
-            msg: "ท่านได้ทำการสุ่มรางวัลไปแล้ว !!!",
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.CENTER,
-            timeInSecForIosWeb: 1,
-            // backgroundColor: Color.fromARGB(120, 0, 0, 0),
-            backgroundColor: Color.fromARGB(255, 255, 0, 0),
-            textColor: Colors.white,
-            fontSize: 15.0);
+        // แสดงข้อความข้อผิดพลาดตามที่ได้รับจากเซิร์ฟเวอร์
+        var responseBody = jsonDecode(randomPrize.body);
+        if (responseBody['error'] == "already sold prize") {
+          Fluttertoast.showToast(
+              msg: "ท่านได้ทำการสุ่มรางวัลไปแล้ว !!!",
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.CENTER,
+              timeInSecForIosWeb: 1,
+              // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+              backgroundColor: Color.fromARGB(255, 255, 0, 0),
+              textColor: Colors.white,
+              fontSize: 15.0);
+        } else if (responseBody['error'] == "No sold lottery") {
+          Fluttertoast.showToast(
+              msg: "ยังไม่มี lotterys ที่ขายไป !!!",
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.CENTER,
+              timeInSecForIosWeb: 1,
+              // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+              backgroundColor: Color.fromARGB(255, 255, 0, 0),
+              textColor: Colors.white,
+              fontSize: 15.0);
+        }
       }
     } catch (e) {
       print('Error: $e');
     }
   }
 
-  void randomNumbers() async {
+  Future<void> randomNumbers() async {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
 
@@ -665,13 +677,14 @@ class _AdminPageState extends State<AdminPage> {
         );
 
         if (resetResponse.statusCode == 200) {
+          await randomNumbers();
           Fluttertoast.showToast(
               msg: "รีเซ็ทระบบเรียบร้อยแล้ว",
               toastLength: Toast.LENGTH_SHORT,
               gravity: ToastGravity.CENTER,
               timeInSecForIosWeb: 1,
               // backgroundColor: Color.fromARGB(120, 0, 0, 0),
-              backgroundColor: Color.fromARGB(255, 3, 252, 32),
+              backgroundColor: Color.fromARGB(255, 3, 131, 14),
               textColor: Colors.white,
               fontSize: 15.0);
           Navigator.pop(context);

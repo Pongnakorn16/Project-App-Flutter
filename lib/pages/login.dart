@@ -7,7 +7,6 @@ import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/customers_login_post_req.dart';
 import 'package:mobile_miniproject_app/models/response/customersLoginPostRes.dart';
 import 'package:mobile_miniproject_app/pages/Admin.dart';
-import 'package:mobile_miniproject_app/pages/TEST.dart';
 import 'package:mobile_miniproject_app/pages/register.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_miniproject_app/pages/Home.dart';
