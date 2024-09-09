@@ -508,7 +508,7 @@ class _AdminPageState extends State<AdminPage> {
               fontSize: 15.0);
         } else if (responseBody['error'] == "No sold lottery") {
           Fluttertoast.showToast(
-              msg: "ยังไม่มี lotterys ที่ขายไป !!!",
+              msg: "ยังไม่มี lotterys ที่ขายได้ !!!",
               toastLength: Toast.LENGTH_SHORT,
               gravity: ToastGravity.CENTER,
               timeInSecForIosWeb: 1,
