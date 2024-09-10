@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:developer';
 import 'dart:ui';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
@@ -250,21 +252,33 @@ class _RegisterPageState extends State<RegisterPage> {
         wallet: int.tryParse(walletCtl.text) ?? 0,
         image:
             'http://202.28.34.197:8888/contents/4a00cead-afb3-45db-a37a-c8bebe08fe0d.png');
-    try {
-      var Value = await http.post(Uri.parse("$url/db/register/user"),
-          headers: {"Content-Type": "application/json; charset=utf-8"},
-          body: customersRegisterPostRequestToJson(model));
+
+    var Value = await http.post(Uri.parse("$url/db/register/user"),
+        headers: {"Content-Type": "application/json; charset=utf-8"},
+        body: customersRegisterPostRequestToJson(model));
+
+    if (Value.statusCode == 200) {
       log('Registration is successful');
       Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => const LoginPage(),
           ));
-    } catch (err) {
-      log(err.toString());
+    } else {
+      // ถ้า status code ไม่ใช่ 200 ให้ดึงข้อความจาก response body
+      var responseBody = jsonDecode(Value.body);
       setState(() {
-        txt = "Registration is failed";
+        Fluttertoast.showToast(
+            msg: "Email นี้เป็นสมาชิกแล้ว!!!",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+            backgroundColor: Color.fromARGB(255, 255, 0, 0),
+            textColor: Colors.white,
+            fontSize: 15.0);
       });
+      log(responseBody['error']);
     }
   }
 

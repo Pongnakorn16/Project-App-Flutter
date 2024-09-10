@@ -15,6 +15,8 @@ import 'package:mobile_miniproject_app/pages/Home.dart';
 import 'package:mobile_miniproject_app/pages/Shop.dart';
 import 'package:mobile_miniproject_app/pages/Ticket.dart';
 import 'package:mobile_miniproject_app/pages/Profile.dart';
+import 'package:mobile_miniproject_app/shared/share_data.dart';
+import 'package:provider/provider.dart';
 
 class AdminPage extends StatefulWidget {
   int uid = 0;
@@ -33,6 +35,7 @@ class AdminPage extends StatefulWidget {
 }
 
 class _AdminPageState extends State<AdminPage> {
+  int check_prizeOut = 0;
   GetStorage gs = GetStorage();
   String url = '';
   List<GetCartRes> all_cart = [];
@@ -44,6 +47,8 @@ class _AdminPageState extends State<AdminPage> {
   @override
   void initState() {
     super.initState();
+    log(context.read<ShareData>().check_prizeOut.toString());
+    check_prizeOut = context.read<ShareData>().check_prizeOut;
     _selectedIndex = widget.selectedIndex;
     loadData = loadDataAsync();
   }
@@ -457,27 +462,25 @@ class _AdminPageState extends State<AdminPage> {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
 
-    try {
+    log("checkkkkkkkkkkkkkk" + check_prizeOut.toString());
+    if (check_prizeOut == 1) {
+      check_prizeOut = context.read<ShareData>().check_prizeOut = 2;
+      log("checkkkkkkkkkkkkkk" + check_prizeOut.toString());
+
       var randomPrize = await http.put(
         Uri.parse('$url/db/lotterys/randomPrize'),
         headers: {"Content-Type": "application/json; charset=utf-8"},
       );
-
-      if (randomPrize.statusCode == 200) {
-        print('Insert success');
-      } else {
-        Fluttertoast.showToast(
-            msg: "ท่านได้ทำการสุ่มรางวัลไปแล้ว !!!",
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.CENTER,
-            timeInSecForIosWeb: 1,
-            // backgroundColor: Color.fromARGB(120, 0, 0, 0),
-            backgroundColor: Color.fromARGB(255, 255, 0, 0),
-            textColor: Colors.white,
-            fontSize: 15.0);
-      }
-    } catch (e) {
-      print('Error: $e');
+    } else {
+      Fluttertoast.showToast(
+          msg: "ท่านได้ทำการสุ่มรางวัลไปแล้ว !!!",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+          backgroundColor: Color.fromARGB(255, 255, 0, 0),
+          textColor: Colors.white,
+          fontSize: 15.0);
     }
   }
 
@@ -491,32 +494,39 @@ class _AdminPageState extends State<AdminPage> {
         headers: {"Content-Type": "application/json; charset=utf-8"},
       );
 
-      if (randomPrize.statusCode == 200) {
-        print('Insert success');
-      } else {
-        // แสดงข้อความข้อผิดพลาดตามที่ได้รับจากเซิร์ฟเวอร์
-        var responseBody = jsonDecode(randomPrize.body);
-        if (responseBody['error'] == "already sold prize") {
-          Fluttertoast.showToast(
-              msg: "ท่านได้ทำการสุ่มรางวัลไปแล้ว !!!",
-              toastLength: Toast.LENGTH_SHORT,
-              gravity: ToastGravity.CENTER,
-              timeInSecForIosWeb: 1,
-              // backgroundColor: Color.fromARGB(120, 0, 0, 0),
-              backgroundColor: Color.fromARGB(255, 255, 0, 0),
-              textColor: Colors.white,
-              fontSize: 15.0);
-        } else if (responseBody['error'] == "No sold lottery") {
-          Fluttertoast.showToast(
-              msg: "ยังไม่มี lotterys ที่ขายได้ !!!",
-              toastLength: Toast.LENGTH_SHORT,
-              gravity: ToastGravity.CENTER,
-              timeInSecForIosWeb: 1,
-              // backgroundColor: Color.fromARGB(120, 0, 0, 0),
-              backgroundColor: Color.fromARGB(255, 255, 0, 0),
-              textColor: Colors.white,
-              fontSize: 15.0);
+      log("checkkkkkkkkkkkkkk" + check_prizeOut.toString());
+      if (check_prizeOut == 1) {
+        check_prizeOut = context.read<ShareData>().check_prizeOut = 2;
+        log("checkkkkkkkkkkkkkk" + check_prizeOut.toString());
+
+        if (randomPrize.statusCode == 200) {
+          print('Insert success');
+        } else {
+          // แสดงข้อความข้อผิดพลาดตามที่ได้รับจากเซิร์ฟเวอร์
+          var responseBody = jsonDecode(randomPrize.body);
+          if (responseBody['error'] == "already sold prize") {
+          } else if (responseBody['error'] == "No sold lottery") {
+            Fluttertoast.showToast(
+                msg: "ยังไม่มี lotterys ที่ขายได้ !!!",
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.CENTER,
+                timeInSecForIosWeb: 1,
+                // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+                backgroundColor: Color.fromARGB(255, 255, 0, 0),
+                textColor: Colors.white,
+                fontSize: 15.0);
+          }
         }
+      } else {
+        Fluttertoast.showToast(
+            msg: "ท่านได้ทำการสุ่มรางวัลไปแล้ว !!!",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+            backgroundColor: Color.fromARGB(255, 255, 0, 0),
+            textColor: Colors.white,
+            fontSize: 15.0);
       }
     } catch (e) {
       print('Error: $e');
@@ -677,6 +687,8 @@ class _AdminPageState extends State<AdminPage> {
         );
 
         if (resetResponse.statusCode == 200) {
+          check_prizeOut = context.read<ShareData>().check_prizeOut =
+              1; ///////////////////////CHECK/////////////////////////////////////////////////////////////////////////////////
           await randomNumbers();
           Fluttertoast.showToast(
               msg: "รีเซ็ทระบบเรียบร้อยแล้ว",

@@ -139,7 +139,7 @@ class _ShopPageState extends State<ShopPage> {
                       top: 3,
                       right: 6,
                       child: Container(
-                        padding: const EdgeInsets.all(2),
+                        padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
                           color: Colors.red,
                           shape: BoxShape.circle,

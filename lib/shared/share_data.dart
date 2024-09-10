@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class ShareData with ChangeNotifier {
   //Shared data
+  int check_prizeOut = 1;
   late User_info user_info;
 }
 

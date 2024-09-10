@@ -448,6 +448,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> loadDataAsync() async {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
+    log(url);
 
     var response = await http.get(Uri.parse("$url/db/get_WinLottery"));
     if (response.statusCode == 200) {

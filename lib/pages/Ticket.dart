@@ -273,6 +273,18 @@ class _TicketPageState extends State<TicketPage> {
                                                                               List<String> Lot_Num = [
                                                                                 number.toString()
                                                                               ];
+                                                                              if (lottery.status_prize == 1) {
+                                                                                Prize = 10000;
+                                                                              } else if (lottery.status_prize == 2) {
+                                                                                Prize = 5000;
+                                                                              } else if (lottery.status_prize == 3) {
+                                                                                Prize = 1000;
+                                                                              } else if (lottery.status_prize == 4) {
+                                                                                Prize = 500;
+                                                                              } else if (lottery.status_prize == 5) {
+                                                                                Prize = 150;
+                                                                              }
+                                                                              log("Prizeeeeeeeeeeeeeeeeee + $Prize");
                                                                               ShowDialog(lottery.lid, Prize);
                                                                             }
                                                                           : null,
@@ -616,23 +628,6 @@ class _TicketPageState extends State<TicketPage> {
                 padding: const EdgeInsets.all(8.0), // Padding ภายนอก
                 child: FilledButton(
                   onPressed: () {
-                    // ตรวจสอบสถานะของ all_Userlotterys.status_prize
-                    all_Userlotterys.forEach((lottery) {
-                      if (lottery.status_prize == 1) {
-                        Prize = 10000;
-                      } else if (lottery.status_prize == 2) {
-                        Prize = 5000;
-                      } else if (lottery.status_prize == 3) {
-                        Prize = 1000;
-                      } else if (lottery.status_prize == 4) {
-                        Prize = 500;
-                      } else if (lottery.status_prize == 5) {
-                        Prize = 150;
-                      }
-                      log("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" +
-                          Prize.toString());
-                    });
-
                     // เรียกใช้ฟังก์ชัน Cash_out และอัปเดตสถานะ
                     Cash_out(lid, Prize);
                     setState(() {
