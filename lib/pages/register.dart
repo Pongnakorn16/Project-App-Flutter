@@ -162,6 +162,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(30.0),
                       borderSide: BorderSide(width: 1)),
+                  hintText:
+                      'ถ้าไม่กรอก Wallet เริ่มต้นจะเป็น 1,000', // ใส่ placeholder ตรงนี้
+                  hintStyle: TextStyle(color: Colors.grey), // สีของ placeholder
                 ),
               ),
             ),
@@ -231,7 +234,6 @@ class _RegisterPageState extends State<RegisterPage> {
         usernameCtl.text.isEmpty ||
         passwordCtl.text.isEmpty ||
         conPassCtl.text.isEmpty ||
-        walletCtl.text.isEmpty ||
         passwordCtl.text != conPassCtl.text) {
       Fluttertoast.showToast(
           msg: "ข้อมูลไม่ถูกต้องโปรดตรวจสอบความถูกต้อง แล้วลองอีกครั้ง",
@@ -243,6 +245,10 @@ class _RegisterPageState extends State<RegisterPage> {
           textColor: Colors.white,
           fontSize: 15.0);
       return;
+    }
+
+    if (walletCtl.text.isEmpty) {
+      walletCtl.text = "1000";
     }
 
     var model = CustomersRegisterPostRequest(

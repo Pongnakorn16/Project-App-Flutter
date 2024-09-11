@@ -489,13 +489,12 @@ class _AdminPageState extends State<AdminPage> {
     String url = value['apiEndpoint'];
 
     try {
-      var randomPrize = await http.put(
-        Uri.parse('$url/db/lotterys/randomPrize_sold'),
-        headers: {"Content-Type": "application/json; charset=utf-8"},
-      );
-
       log("checkkkkkkkkkkkkkk" + check_prizeOut.toString());
       if (check_prizeOut == 1) {
+        var randomPrize = await http.put(
+          Uri.parse('$url/db/lotterys/randomPrize_sold'),
+          headers: {"Content-Type": "application/json; charset=utf-8"},
+        );
         check_prizeOut = context.read<ShareData>().check_prizeOut = 2;
         log("checkkkkkkkkkkkkkk" + check_prizeOut.toString());
 

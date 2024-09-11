@@ -562,9 +562,9 @@ class _ShopPageState extends State<ShopPage> {
         if (userInfoList.isNotEmpty) {
           GetOneUserRes userInfo = userInfoList.first;
           setState(() {
-            wallet = userInfo.wallet;
-            context.read<ShareData>().user_info.wallet = userInfo.wallet;
-            loadDataAsync();
+            wallet =
+                context.read<ShareData>().user_info.wallet = userInfo.wallet;
+            ;
           });
         }
       }
@@ -589,8 +589,12 @@ class _ShopPageState extends State<ShopPage> {
         log('Response data: ${get_cart.body}');
         setState(() {
           log(all_cart.length.toString());
-          cart_length = all_cart.length;
-          context.read<ShareData>().user_info.cart_length = all_cart.length;
+          cart_length =
+              context.read<ShareData>().user_info.cart_length = all_cart.length;
+
+          loadDataAsync().then((_) {
+            setState(() {}); // เรียก setState อีกครั้งหลังจากโหลดข้อมูลเสร็จ
+          });
         });
         Fluttertoast.showToast(
             msg: "สำเร็จ Purchase Successful",
