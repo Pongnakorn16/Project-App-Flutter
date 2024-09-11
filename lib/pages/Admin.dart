@@ -501,6 +501,7 @@ class _AdminPageState extends State<AdminPage> {
         if (randomPrize.statusCode == 200) {
           print('Insert success');
         } else {
+          check_prizeOut = context.read<ShareData>().check_prizeOut = 1;
           // แสดงข้อความข้อผิดพลาดตามที่ได้รับจากเซิร์ฟเวอร์
           var responseBody = jsonDecode(randomPrize.body);
           if (responseBody['error'] == "already sold prize") {

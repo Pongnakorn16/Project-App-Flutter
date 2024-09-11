@@ -698,9 +698,8 @@ class _TicketPageState extends State<TicketPage> {
         if (userInfoList.isNotEmpty) {
           GetOneUserRes userInfo = userInfoList.first;
           setState(() {
-            wallet = userInfo.wallet;
-            context.read<ShareData>().user_info.wallet = userInfo.wallet;
-            loadDataAsync();
+            wallet =
+                context.read<ShareData>().user_info.wallet = userInfo.wallet;
           });
         }
       }
