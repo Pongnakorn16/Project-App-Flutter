@@ -28,6 +28,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  List<GetLotteryNumbers> winlotto = [];
   int uid = 0;
   String username = '';
   int wallet = 0;
@@ -139,7 +140,9 @@ class _HomePageState extends State<HomePage> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                if (win_lotterys
+                                if (context
+                                    .read<ShareData>()
+                                    .winlotto
                                     .isEmpty) // ตรวจสอบว่ารายการ win_lotterys ว่างหรือไม่
                                   const Center(
                                     child: const Text(
@@ -150,7 +153,10 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                   )
                                 else
-                                  ...win_lotterys.map((lottery) {
+                                  ...context
+                                      .read<ShareData>()
+                                      .winlotto
+                                      .map((lottery) {
                                     List<String> numberList =
                                         lottery.numbers.toString().split('');
                                     return Column(
@@ -453,6 +459,14 @@ class _HomePageState extends State<HomePage> {
     var response = await http.get(Uri.parse("$url/db/get_WinLottery"));
     if (response.statusCode == 200) {
       win_lotterys = getLotteryNumbersFromJson(response.body);
+
+      log(context.read<ShareData>().winlotto.toString());
+
+      if (context.read<ShareData>().winlotto.isEmpty) {
+        context.read<ShareData>().winlotto = win_lotterys;
+      }
+
+      log(context.read<ShareData>().winlotto.toString());
       log(win_lotterys.toString());
       for (var lottery in win_lotterys) {
         log(lottery.numbers.toString());

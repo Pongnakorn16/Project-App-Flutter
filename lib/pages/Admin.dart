@@ -192,7 +192,10 @@ class _AdminPageState extends State<AdminPage> {
                                   padding: const EdgeInsets.all(5.0),
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
-                                    children: win_lotterys.map((lottery) {
+                                    children: context
+                                        .read<ShareData>()
+                                        .winlotto
+                                        .map((lottery) {
                                       List<String> numberList =
                                           lottery.numbers.toString().split('');
                                       return Column(
@@ -449,6 +452,15 @@ class _AdminPageState extends State<AdminPage> {
     var response = await http.get(Uri.parse("$url/db/get_WinLottery"));
     if (response.statusCode == 200) {
       win_lotterys = getLotteryNumbersFromJson(response.body);
+
+      log(context.read<ShareData>().winlotto.toString());
+      log(win_lotterys.toString() + "llllllllllllllllllllllllllllllllllllll");
+
+      if (context.read<ShareData>().winlotto.isEmpty) {
+        context.read<ShareData>().winlotto = win_lotterys;
+      }
+
+      log(context.read<ShareData>().winlotto.toString());
       log(win_lotterys.toString());
       for (var lottery in win_lotterys) {
         log(lottery.numbers.toString());
@@ -681,6 +693,7 @@ class _AdminPageState extends State<AdminPage> {
 
       if (checkPasswordResponse.statusCode == 200) {
         // ถ้ารหัสผ่านถูกต้อง ให้ทำการรีเซ็ต
+        context.read<ShareData>().winlotto = [];
         var resetResponse = await http.delete(
           Uri.parse("$url/db/reset"),
           headers: {"Content-Type": "application/json; charset=utf-8"},

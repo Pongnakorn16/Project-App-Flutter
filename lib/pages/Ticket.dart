@@ -630,9 +630,8 @@ class _TicketPageState extends State<TicketPage> {
                   onPressed: () {
                     // เรียกใช้ฟังก์ชัน Cash_out และอัปเดตสถานะ
                     Cash_out(lid, Prize);
-                    setState(() {
-                      loadDataAsync();
-                    });
+                    setState(() {});
+                    loadDataAsync();
                   },
                   child: const Text(
                     'ตกลง',
