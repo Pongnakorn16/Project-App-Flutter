@@ -216,7 +216,7 @@ class _LoginPageState extends State<LoginPage> {
       context.read<ShareData>().user_info = User;
       log(res.image);
 
-      if (res.uid == 1) {
+      if (res.typeId == 1) {
         log("Admin User Logged In");
         Navigator.push(
             context,
