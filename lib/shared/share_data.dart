@@ -3,7 +3,7 @@ import 'package:mobile_miniproject_app/models/response/GetLotteryNumbers_Res.dar
 
 class ShareData with ChangeNotifier {
   //Shared data
-  int check_prizeOut = 3;
+  int check_prizeOut = 1;
   late User_info user_info;
 
   List<GetLotteryNumbers> winlotto = [];
