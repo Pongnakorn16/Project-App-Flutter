@@ -31,6 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   intl: ^0.17.0
+  geocoding: ^2.0.0
   font_awesome_flutter: ^10.0.0
 
 
@@ -85,7 +86,8 @@ flutter:
     - assets/images/GlassBeach.jpg
     - assets/images/ThreeNatural.jpg
     - assets/images/Unseen.jpg
-    - assets/images/
+    - assets/images/BG_delivery_register.png
+    - assets/images/BG_delivery_login.png
     - assets/config/
   #   - images/a_dot_ham.jpeg
 

@@ -21,13 +21,12 @@ import 'package:provider/provider.dart';
 class AdminPage extends StatefulWidget {
   int uid = 0;
   int wallet = 0;
-  String username = '';
+  String name = '';
   int selectedIndex = 0;
   AdminPage(
       {super.key,
       required this.uid,
-      required this.wallet,
-      required this.username,
+      required this.name,
       required this.selectedIndex});
 
   @override
@@ -72,7 +71,7 @@ class _AdminPageState extends State<AdminPage> {
                           color: Colors.black), // สีของข้อความที่เหลือ
                     ),
                     TextSpan(
-                      text: widget.username,
+                      text: widget.name,
                       style: const TextStyle(
                           fontSize: 20,
                           color: Colors.blue,

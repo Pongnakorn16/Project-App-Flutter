@@ -5,6 +5,7 @@ class ShareData with ChangeNotifier {
   //Shared data
   int check_prizeOut = 1;
   late User_info user_info;
+  late User_Info user_Info;
 
   List<GetLotteryNumbers> winlotto = [];
 }
@@ -14,4 +15,10 @@ class User_info {
   int wallet = 0;
   String username = '';
   int cart_length = 0;
+}
+
+class User_Info {
+  int uid = 0;
+  String name = '';
+  String user_type = '';
 }
