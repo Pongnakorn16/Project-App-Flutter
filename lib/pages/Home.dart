@@ -42,10 +42,10 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void initState() {
-    uid = context.read<ShareData>().user_info.uid;
-    username = context.read<ShareData>().user_info.username;
-    wallet = context.read<ShareData>().user_info.wallet;
-    cart_length = context.read<ShareData>().user_info.cart_length;
+    uid = context.read<ShareData>().user_Info.uid;
+    username = context.read<ShareData>().user_Info.name;
+    // wallet = context.read<ShareData>().user_info.wallet;
+    // cart_length = context.read<ShareData>().user_info.cart_length;
     super.initState();
     _selectedIndex = widget.selectedIndex;
     loadData = loadDataAsync();

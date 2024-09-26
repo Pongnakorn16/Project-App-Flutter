@@ -324,7 +324,7 @@ class _RegisterUserState extends State<RegisterUser> {
       var responseBody = jsonDecode(Value.body);
       setState(() {
         Fluttertoast.showToast(
-            msg: "Email นี้เป็นสมาชิกแล้ว!!!",
+            msg: "หมายเลขโทรศัพท์นี้เป็นสมาชิกแล้ว!!!",
             toastLength: Toast.LENGTH_SHORT,
             gravity: ToastGravity.CENTER,
             timeInSecForIosWeb: 1,

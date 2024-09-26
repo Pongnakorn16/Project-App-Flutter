@@ -16,10 +16,10 @@ class UserLoginPostResponse {
   String name;
   String password;
   String user_image;
-  String address;
-  String coordinates;
+  String? address;
+  String? coordinates;
   String user_type;
-  String license_plate;
+  String? license_plate;
 
   UserLoginPostResponse({
     required this.uid,
@@ -36,9 +36,9 @@ class UserLoginPostResponse {
   factory UserLoginPostResponse.fromJson(Map<String, dynamic> json) =>
       UserLoginPostResponse(
         uid: json["uid"],
-        phone: json["Phone"],
-        name: json["Name"],
-        password: json["Password"],
+        phone: json["phone"],
+        name: json["name"],
+        password: json["password"],
         user_image: json["user_image"],
         address: json["address"],
         coordinates: json["coordinates"],
@@ -48,13 +48,13 @@ class UserLoginPostResponse {
 
   Map<String, dynamic> toJson() => {
         "uid": uid,
-        "Phone": phone,
-        "Name": name,
-        "Password": password,
-        "User_image": user_image,
-        "Address": address,
-        "Coordinates": coordinates,
-        "User_type": user_type,
-        "License_plate": license_plate,
+        "phone": phone,
+        "name": name,
+        "password": password,
+        "user_image": user_image,
+        "address": address,
+        "coordinates": coordinates,
+        "user_type": user_type,
+        "license_plate": license_plate,
       };
 }
