@@ -2,13 +2,16 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:ui';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/user_regis_post_req.dart';
 import 'package:mobile_miniproject_app/pages/Login.dart';
-import 'package:mobile_miniproject_app/pages/Home.dart';
+import 'package:mobile_miniproject_app/pages/Home_Send.dart';
 import 'package:mobile_miniproject_app/pages/Register_Rider.dart';
 
 class RegisterUser extends StatefulWidget {
@@ -24,8 +27,10 @@ class _RegisterUserState extends State<RegisterUser> {
   TextEditingController nameCtl = TextEditingController();
   TextEditingController passwordCtl = TextEditingController();
   TextEditingController conPassCtl = TextEditingController();
-  TextEditingController AddressCtl = TextEditingController();
+  TextEditingController addressCtl = TextEditingController();
   String url = '';
+  GetStorage gs = GetStorage();
+  late LatLng coor;
 
   @override
   void initState() {
@@ -61,9 +66,9 @@ class _RegisterUserState extends State<RegisterUser> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'Create Account',
+                          'Create "User" Account',
                           style: TextStyle(
-                            fontSize: 30,
+                            fontSize: 28,
                             color: Color.fromARGB(255, 79, 78, 78),
                           ),
                         ),
@@ -197,7 +202,7 @@ class _RegisterUserState extends State<RegisterUser> {
                           padding:
                               const EdgeInsets.only(top: 8.0, bottom: 16.0),
                           child: TextField(
-                            controller: AddressCtl,
+                            controller: addressCtl,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: Color.fromARGB(255, 228, 225, 225),
@@ -276,11 +281,12 @@ class _RegisterUserState extends State<RegisterUser> {
   }
 
   void register() async {
+    gs.remove('Phone');
     if (phoneCtl.text.isEmpty ||
         nameCtl.text.isEmpty ||
         passwordCtl.text.isEmpty ||
         conPassCtl.text.isEmpty ||
-        AddressCtl.text.isEmpty ||
+        addressCtl.text.isEmpty ||
         passwordCtl.text != conPassCtl.text) {
       Fluttertoast.showToast(
           msg: "ข้อมูลไม่ถูกต้องโปรดตรวจสอบความถูกต้อง แล้วลองอีกครั้ง",
@@ -294,6 +300,16 @@ class _RegisterUserState extends State<RegisterUser> {
       return;
     }
 
+    // LatLng coor = await getCoordinatesFromAddress(addressCtl);
+
+    try {
+      List<Location> locations = await locationFromAddress(addressCtl.text);
+      coor = LatLng(locations.first.latitude, locations.first.longitude);
+    } catch (e) {
+      print('Error occurred while fetching coordinates: $e');
+      coor = LatLng(0, 0); // ค่าพื้นฐานเมื่อเกิดข้อผิดพลาด
+    }
+
     // if (walletCtl.text.isEmpty) {
     //   walletCtl.text = "1000";
     // }
@@ -302,7 +318,8 @@ class _RegisterUserState extends State<RegisterUser> {
         phone: phoneCtl.text,
         name: nameCtl.text,
         password: passwordCtl.text,
-        address: AddressCtl.text,
+        address: addressCtl.text,
+        coordinate: "${coor.latitude},${coor.longitude}",
         user_type: "user",
         license_plate: null,
         user_image:
@@ -342,6 +359,7 @@ class _RegisterUserState extends State<RegisterUser> {
   }
 
   void login() {
+    gs.remove('Phone');
     Get.to(() => const LoginPage());
   }
 }

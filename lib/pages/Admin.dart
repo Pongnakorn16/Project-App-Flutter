@@ -11,7 +11,7 @@ import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/GetCart_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetLotteryNumbers_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
-import 'package:mobile_miniproject_app/pages/Home.dart';
+import 'package:mobile_miniproject_app/pages/Home_Send.dart';
 import 'package:mobile_miniproject_app/pages/Shop.dart';
 import 'package:mobile_miniproject_app/pages/Ticket.dart';
 import 'package:mobile_miniproject_app/pages/Profile.dart';

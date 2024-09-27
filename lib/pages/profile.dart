@@ -10,7 +10,7 @@ import 'package:mobile_miniproject_app/models/response/GetCart_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetHistory_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/models/response/customers_idx_get_res.dart';
-import 'package:mobile_miniproject_app/pages/Home.dart';
+import 'package:mobile_miniproject_app/pages/Home_Send.dart';
 import 'package:mobile_miniproject_app/pages/Shop.dart';
 import 'package:mobile_miniproject_app/pages/Ticket.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
@@ -22,9 +22,11 @@ class ProfilePage extends StatefulWidget {
   String username = '';
   int selectedIndex = 0;
   int cart_length = 0;
+  final VoidCallback onClose;
 
   ProfilePage({
     super.key,
+    required this.onClose,
     required this.selectedIndex,
   });
 
@@ -363,29 +365,30 @@ class _ProfilePageState extends State<ProfilePage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => HomePage(
+                    builder: (context) => Home_SendPage(
                           selectedIndex: _selectedIndex,
+                          onClose: () {},
                         )),
               );
               break;
-            case 1:
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => ShopPage(
-                          selectedIndex: _selectedIndex,
-                        )),
-              );
-              break;
-            case 2:
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => TicketPage(
-                          selectedIndex: _selectedIndex,
-                        )),
-              );
-              break;
+            // case 1:
+            //   Navigator.push(
+            //     context,
+            //     MaterialPageRoute(
+            //         builder: (context) => ShopPage(
+            //               selectedIndex: _selectedIndex,
+            //             )),
+            //   );
+            //   break;
+            // case 2:
+            //   Navigator.push(
+            //     context,
+            //     MaterialPageRoute(
+            //         builder: (context) => TicketPage(
+            //               selectedIndex: _selectedIndex,
+            //             )),
+            //   );
+            //   break;
             case 3:
               showModalBottomSheet(
                 context: context,
@@ -403,6 +406,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             MaterialPageRoute(
                               builder: (context) => ProfilePage(
                                 selectedIndex: _selectedIndex,
+                                onClose: () {},
                               ),
                             ),
                           );

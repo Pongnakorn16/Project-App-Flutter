@@ -3,12 +3,13 @@ import 'dart:developer';
 import 'dart:ui';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/user_regis_post_req.dart';
 import 'package:mobile_miniproject_app/pages/Login.dart';
-import 'package:mobile_miniproject_app/pages/Home.dart';
+import 'package:mobile_miniproject_app/pages/Home_Send.dart';
 import 'package:mobile_miniproject_app/pages/Register_User.dart';
 
 class RegisterRider extends StatefulWidget {
@@ -25,6 +26,7 @@ class _RegisterRiderState extends State<RegisterRider> {
   TextEditingController passwordCtl = TextEditingController();
   TextEditingController conPassCtl = TextEditingController();
   TextEditingController licenseCtl = TextEditingController();
+  GetStorage gs = GetStorage();
   String url = '';
 
   @override
@@ -61,9 +63,9 @@ class _RegisterRiderState extends State<RegisterRider> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'Create Account',
+                          'Create "Rider" Account',
                           style: TextStyle(
-                            fontSize: 30,
+                            fontSize: 28,
                             color: Color.fromARGB(255, 79, 78, 78),
                           ),
                         ),
@@ -276,6 +278,7 @@ class _RegisterRiderState extends State<RegisterRider> {
   }
 
   void register() async {
+    gs.remove('Phone');
     if (phoneCtl.text.isEmpty ||
         nameCtl.text.isEmpty ||
         passwordCtl.text.isEmpty ||
@@ -303,6 +306,7 @@ class _RegisterRiderState extends State<RegisterRider> {
         name: nameCtl.text,
         password: passwordCtl.text,
         address: null,
+        coordinate: null,
         user_type: "rider",
         license_plate: licenseCtl.text,
         user_image:
@@ -346,6 +350,7 @@ class _RegisterRiderState extends State<RegisterRider> {
   }
 
   void login() {
+    gs.remove('Phone');
     Navigator.push(
         context,
         MaterialPageRoute(

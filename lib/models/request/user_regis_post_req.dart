@@ -15,6 +15,7 @@ class UserRegisterPostRequest {
   String name;
   String password;
   String? address;
+  String? coordinate;
   String user_image;
   String user_type;
   String? license_plate;
@@ -24,6 +25,7 @@ class UserRegisterPostRequest {
     required this.name,
     required this.password,
     required this.address,
+    required this.coordinate,
     required this.user_image,
     required this.user_type,
     required this.license_plate,
@@ -36,6 +38,7 @@ class UserRegisterPostRequest {
         password: json["Password"],
         user_image: json["User_image"],
         address: json["Address"],
+        coordinate: json["Coordinate"],
         user_type: json["User_type"],
         license_plate: json["license_plate"],
       );
@@ -46,6 +49,7 @@ class UserRegisterPostRequest {
         "Password": password,
         "User_image": user_image,
         "Address": address,
+        "Coordinate": coordinate,
         "User_type": user_type,
         "License_plate": license_plate,
       };
