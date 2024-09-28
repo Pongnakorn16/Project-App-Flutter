@@ -216,6 +216,7 @@ class _LoginPageState extends State<LoginPage> {
       User_Info User = User_Info();
       User.uid = res.uid;
       User.name = res.name;
+      User.user_type = res.user_type;
 
       ///เดี๋ยวมาเพิ่มทีหลัง
 
@@ -230,7 +231,7 @@ class _LoginPageState extends State<LoginPage> {
                 uid: res.uid,
                 name: res.name,
                 selectedIndex: 0,
-              ), // ไปยังหน้า Admin
+              ),
             ));
       } else {
         // นำไปยังหน้า HomePage ตามปกติ

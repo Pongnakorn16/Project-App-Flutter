@@ -1,5 +1,8 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_navigation/get_navigation.dart';
+import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/Home_Receive.dart';
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
 import 'package:mobile_miniproject_app/pages/Profile.dart';
@@ -7,13 +10,17 @@ import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  HomePage({
+    super.key,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
+  int uid = 0;
+  String name = '';
   int _selectedIndex = 0;
   int _currentPage = 0;
   late PageController _pageController;
@@ -72,6 +79,7 @@ class _HomePageState extends State<HomePage> {
         width: 80,
         child: FloatingActionButton(
           onPressed: () {
+            Get.to(() => AddItemPage());
             log("ADDD");
           },
           backgroundColor: Colors.yellow,
