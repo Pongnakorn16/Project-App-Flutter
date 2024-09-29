@@ -42,8 +42,8 @@ class _Home_ReceivePageState extends State<Home_ReceivePage>
   @override
   void initState() {
     super.initState();
-    uid = context.read<ShareData>().user_Info.uid;
-    username = context.read<ShareData>().user_Info.name;
+    uid = context.read<ShareData>().user_info_send.uid;
+    username = context.read<ShareData>().user_info_send.name;
     _selectedIndex = widget.selectedIndex;
     loadData = loadDataAsync();
 

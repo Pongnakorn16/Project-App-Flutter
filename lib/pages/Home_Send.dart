@@ -3,6 +3,8 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
+import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home_Receive.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_miniproject_app/models/response/GetCart_Res.dart';
@@ -23,15 +25,24 @@ class Home_SendPage extends StatefulWidget {
 
 class _Home_SendPageState extends State<Home_SendPage>
     with SingleTickerProviderStateMixin {
-  List<GetLotteryNumbers> winlotto = [];
-  int uid = 0;
+  int send_uid = 0;
+  String send_user_name = '';
+  String send_user_type = '';
+  String send_user_image = '';
+
+  int receive_uid = 0;
+  String receive_user_name = '';
+  String receive_user_type = '';
+  String receive_user_image = '';
   String username = '';
   int wallet = 0;
   int cart_length = 0;
   GetStorage gs = GetStorage();
   String url = '';
   List<GetCartRes> all_cart = [];
-  List<GetLotteryNumbers> win_lotterys = [];
+  List<GetSendOrder> send_Orders = [];
+  List<GetUserSearchRes> send_user = [];
+  List<GetUserSearchRes> receive_user = [];
   late Future<void> loadData;
   int _selectedIndex = 0;
   bool _showReceivePage = false;
@@ -40,24 +51,17 @@ class _Home_SendPageState extends State<Home_SendPage>
 
   @override
   void initState() {
-    super.initState();
+    send_uid = context.read<ShareData>().user_info_send.uid;
+    send_user_name = context.read<ShareData>().user_info_send.name;
+    send_user_type = context.read<ShareData>().user_info_send.user_type;
+    send_user_image = context.read<ShareData>().user_info_send.user_image;
 
-    uid = context.read<ShareData>().user_Info.uid;
-    username = context.read<ShareData>().user_Info.name;
-    _selectedIndex = widget.selectedIndex;
+    receive_uid = context.read<ShareData>().user_info_send.uid;
+    receive_user_name = context.read<ShareData>().user_info_send.name;
+    receive_user_type = context.read<ShareData>().user_info_send.user_type;
+    receive_user_image = context.read<ShareData>().user_info_send.user_image;
+
     loadData = loadDataAsync();
-
-    _animationController = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: 300),
-    );
-    _pageSlideAnimation = Tween<Offset>(
-      begin: Offset(1.0, 0.0),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
   }
 
   @override
@@ -87,34 +91,72 @@ class _Home_SendPageState extends State<Home_SendPage>
                               child: CircularProgressIndicator());
                         }
                         return SingleChildScrollView(
-                          child: Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(5.0),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  if (context
+                          // child: Row(
+                          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          //   children: [
+                          //     Column(
+                          //       children: [Text("Hello")],
+                          //     ),
+                          //     Column()
+                          //   ],
+                          // ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(5.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                if (context
+                                    .read<ShareData>()
+                                    .send_order_share
+                                    .isEmpty)
+                                  const Center(
+                                    child: Text(
+                                      "Please press the Add button below to include the items you wish to ship.",
+                                      style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  )
+                                else
+                                  ...context
                                       .read<ShareData>()
-                                      .winlotto
-                                      .isEmpty)
-                                    const Center(
-                                      child: Text(
-                                        "Please press the Add button below to include the items you wish to ship.",
-                                        style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                    )
-                                  else
-                                    ...context
-                                        .read<ShareData>()
-                                        .winlotto
-                                        .map((lottery) =>
-                                            buildLotteryItem(lottery))
-                                        .toList(),
-                                ],
-                              ),
+                                      .send_order_share
+                                      .map((orders) => Card(
+                                          elevation: 4.0, // ความลึกเงาของ Card
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                                10.0), // กำหนดความโค้งของขอบ
+                                          ),
+                                          margin: EdgeInsets.all(
+                                              8.0), // กำหนดระยะห่าง
+                                          child: FutureBuilder(
+                                            future: buildOrderItem(
+                                                orders), // รอผลลัพธ์จาก Future
+                                            builder: (BuildContext context,
+                                                AsyncSnapshot<Widget>
+                                                    snapshot) {
+                                              if (snapshot.connectionState ==
+                                                  ConnectionState.waiting) {
+                                                // แสดง loading เมื่อกำลังโหลดข้อมูล
+                                                return CircularProgressIndicator();
+                                              } else if (snapshot.hasError) {
+                                                // แสดงข้อความเมื่อเกิดข้อผิดพลาด
+                                                return Text(
+                                                    'Error: ${snapshot.error}');
+                                              } else if (snapshot.hasData) {
+                                                // แสดง Widget เมื่อมีข้อมูล
+                                                return snapshot.data!;
+                                              } else {
+                                                // กรณีที่ไม่มีข้อมูล
+                                                return Text(
+                                                    'No data available');
+                                              }
+                                            },
+                                          ) // Widget ที่ต้องการแสดงใน Card
+                                          ))
+                                      .toList(),
+                              ],
                             ),
                           ),
                         );
@@ -170,39 +212,28 @@ class _Home_SendPageState extends State<Home_SendPage>
     );
   }
 
-  Widget buildLotteryItem(GetLotteryNumbers lottery) {
-    List<String> numberList = lottery.numbers.toString().split('');
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            buildPrizeStatus(lottery.status_prize),
-            buildPrizeAmount(lottery.status_prize),
-          ],
+  Future<Widget> buildOrderItem(GetSendOrder orders) async {
+    var value = await Configuration.getConfig();
+    String url = value['apiEndpoint'];
+    log(url);
+    log(send_uid.toString());
+    log(orders.toString());
+    log(send_Orders.length.toString());
+
+    var response =
+        await http.get(Uri.parse("$url/db/get_Receive/${orders.re_Uid}"));
+    receive_user = getUserSearchResFromJson(response.body);
+
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Column(
+          children: [Text(send_user_name), Text(receive_user.first.name)],
         ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: IntrinsicWidth(
-            child: Card(
-              color: const Color.fromARGB(255, 254, 137, 69),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30.0)),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: numberList
-                        .map((number) => buildNumberCard(number))
-                        .toList(),
-                  ),
-                ),
-              ),
-            ),
-          ),
+        Column(
+          children: [Text("Detail")],
         )
-      ],
+      ]),
     );
   }
 
@@ -298,23 +329,27 @@ class _Home_SendPageState extends State<Home_SendPage>
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
     log(url);
+    log(send_uid.toString());
 
-    var response = await http.get(Uri.parse("$url/db/get_WinLottery"));
+    var response =
+        await http.get(Uri.parse("$url/db/get_Send_Order/${send_uid}"));
     if (response.statusCode == 200) {
-      win_lotterys = getLotteryNumbersFromJson(response.body);
-      if (context.read<ShareData>().winlotto.isEmpty) {
-        context.read<ShareData>().winlotto = win_lotterys;
+      send_Orders = getSendOrderFromJson(response.body);
+      log(jsonEncode(send_Orders));
+      if (context.read<ShareData>().send_order_share.isEmpty) {
+        context.read<ShareData>().send_order_share = send_Orders;
+        setState(() {});
       }
     } else {
       log('Failed to load lottery numbers. Status code: ${response.statusCode}');
     }
 
-    var get_cart = await http.get(Uri.parse("$url/db/get_cart/${uid}"));
-    if (get_cart.statusCode == 200) {
-      all_cart = getCartResFromJson(get_cart.body);
-      context.read<ShareData>().user_info.cart_length = all_cart.length;
-    } else {
-      log('Failed to load cart. Status code: ${get_cart.statusCode}');
-    }
+    // var get_cart = await http.get(Uri.parse("$url/db/get_cart/${uid}"));
+    // if (get_cart.statusCode == 200) {
+    //   all_cart = getCartResFromJson(get_cart.body);
+    //   context.read<ShareData>().user_info.cart_length = all_cart.length;
+    // } else {
+    //   log('Failed to load cart. Status code: ${get_cart.statusCode}');
+    // }
   }
 }

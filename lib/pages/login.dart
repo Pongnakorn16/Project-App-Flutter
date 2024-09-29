@@ -213,14 +213,15 @@ class _LoginPageState extends State<LoginPage> {
 
       List<dynamic> jsonResponse = json.decode(Value.body);
       var res = UserLoginPostResponse.fromJson(jsonResponse.first);
-      User_Info User = User_Info();
+      User_Info_Send User = User_Info_Send();
       User.uid = res.uid;
       User.name = res.name;
       User.user_type = res.user_type;
+      User.user_image = res.user_image;
 
       ///เดี๋ยวมาเพิ่มทีหลัง
 
-      context.read<ShareData>().user_Info = User;
+      context.read<ShareData>().user_info_send = User;
 
       if (res.user_type == 'rider') {
         log("Admin User Logged In");

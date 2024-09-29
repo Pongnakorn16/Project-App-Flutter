@@ -42,7 +42,7 @@ class _HomePageState extends State<HomePage> {
               TextSpan(
                 text: context
                     .read<ShareData>()
-                    .user_Info
+                    .user_info_send
                     .name, // ข้อความที่ต้องการเปลี่ยนสี
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
