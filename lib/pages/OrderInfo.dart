@@ -23,7 +23,6 @@ class OrderinfoPage extends StatefulWidget {
 }
 
 class _OrderinfoPageState extends State<OrderinfoPage> {
-  LatLng latLng = const LatLng(16.43975309178151, 102.82754949093136);
   MapController mapController = MapController();
   List<GetUserSearchRes> send_Info = [];
   List<GetUserSearchRes> receive_Info = [];
@@ -31,6 +30,11 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
   int receiver_uid = 0;
   String sender_address = "";
   String receiver_address = "";
+  LatLng send_latLng = LatLng(0, 0);
+  LatLng receive_latLng = LatLng(0, 0);
+  List<LatLng> polylinePoints = [];
+
+  double distanceInKm = 0;
 
   @override
   void initState() {
@@ -46,41 +50,56 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
       body: Column(
         children: [
           Expanded(
-            child: FlutterMap(
-              mapController: mapController,
-              options: MapOptions(
-                initialCenter: latLng,
-                initialZoom: 15.0,
+              child: FlutterMap(
+            mapController: mapController,
+            options: MapOptions(
+              initialCenter: send_latLng,
+              initialZoom: 15.0,
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.example.app',
+                maxNativeZoom: 19,
               ),
-              children: [
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.example.app',
-                  maxNativeZoom: 19,
-                ),
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: latLng,
-                      width: 40,
-                      height: 40,
-                      child: SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: Container(
-                          child: Icon(
-                            Icons.motorcycle,
-                            color: Colors.red,
-                          ),
-                        ),
-                      ),
-                      alignment: Alignment.center,
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: send_latLng,
+                    width: 40,
+                    height: 40,
+                    child: Icon(
+                      Icons.location_on,
+                      color: Colors.red,
+                      size: 40,
+                    ),
+                    alignment: Alignment.center,
+                  ),
+                  Marker(
+                    point: receive_latLng,
+                    width: 40,
+                    height: 40,
+                    child: Icon(
+                      Icons.location_on,
+                      color: Colors.green,
+                      size: 40,
+                    ),
+                    alignment: Alignment.center,
+                  ),
+                ],
+              ),
+              if (polylinePoints.isNotEmpty)
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: polylinePoints, // แสดงเส้นทางที่คำนวณได้
+                      strokeWidth: 4.0,
+                      color: Colors.blue,
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+            ],
+          )),
           Container(
             padding: const EdgeInsets.all(8.0), // เพิ่ม Padding รอบๆ Card
             child: Card(
@@ -112,6 +131,7 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
                         Text(receiver_address.toString()),
                       ],
                     ),
+                    Text('Distance: ${distanceInKm.toStringAsFixed(2)} km'),
                   ],
                 ),
               ),
@@ -129,24 +149,75 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
     var sender = await http.get(Uri.parse("$url/db/get_Send/${sender_uid}"));
     if (sender.statusCode == 200) {
       send_Info = getUserSearchResFromJson(sender.body);
-      log("sddddddddddddddd");
-      log(jsonEncode(send_Info));
       sender_address = send_Info.first.address.toString();
-      setState(() {});
-    } else {
-      log('Failed to load lottery numbers. Status code: ${sender.statusCode}');
+
+      String? send_coordinates = send_Info.first.coordinates;
+      if (send_coordinates != null) {
+        List<String> latLngList = send_coordinates.split(',');
+        if (latLngList.length == 2) {
+          double send_latitude = double.parse(latLngList[0]);
+          double send_longitude = double.parse(latLngList[1]);
+          send_latLng = LatLng(send_latitude, send_longitude);
+        }
+      }
     }
 
     var receiver =
         await http.get(Uri.parse("$url/db/get_Receive/${receiver_uid}"));
     if (receiver.statusCode == 200) {
       receive_Info = getUserSearchResFromJson(receiver.body);
-      log("sddddddddddddddd");
-      log(jsonEncode(receive_Info));
       receiver_address = receive_Info.first.address.toString();
-      setState(() {});
+
+      String? re_coordinates = receive_Info.first.coordinates;
+      if (re_coordinates != null) {
+        List<String> latLngList = re_coordinates.split(',');
+        if (latLngList.length == 2) {
+          double re_latitude = double.parse(latLngList[0]);
+          double re_longitude = double.parse(latLngList[1]);
+          receive_latLng = LatLng(re_latitude, re_longitude);
+        }
+      }
+    }
+
+    // เรียก getRouteCoordinates หลังจากได้รับค่า latLng ของผู้ส่งและผู้รับ
+    if (send_latLng != null && receive_latLng != null) {
+      await getRouteCoordinates();
+    }
+
+    setState(() {});
+  }
+
+  Future<void> getRouteCoordinates() async {
+    // Move the map to the sender's location
+    mapController.move(send_latLng, mapController.camera.zoom);
+
+    final url =
+        'https://router.project-osrm.org/route/v1/driving/${send_latLng.longitude},${send_latLng.latitude};${receive_latLng.longitude},${receive_latLng.latitude}?geometries=geojson';
+    final response = await http.get(Uri.parse(url));
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+
+      // Get route distance
+      final distance = data['routes'][0]['distance'];
+
+      // Convert distance from meters to kilometers
+      distanceInKm = distance / 1000;
+
+      // Print distance (or you can display it on the UI)
+      print('Distance: ${distanceInKm.toStringAsFixed(2)} km');
+
+      // Get route coordinates for polyline
+      final coordinates = data['routes'][0]['geometry']['coordinates'];
+      List<LatLng> routePoints = coordinates.map<LatLng>((coord) {
+        return LatLng(coord[1], coord[0]);
+      }).toList();
+
+      setState(() {
+        polylinePoints = routePoints;
+      });
     } else {
-      log('Failed to load lottery numbers. Status code: ${receiver.statusCode}');
+      print('Error getting route');
     }
   }
 }

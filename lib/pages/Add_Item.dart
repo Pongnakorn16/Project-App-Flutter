@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -12,6 +14,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_miniproject_app/models/request/user_order_post_req.dart';
+import 'package:mobile_miniproject_app/models/response/GetNewOid_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
@@ -26,6 +29,8 @@ class AddItemPage extends StatefulWidget {
 
 class _AddItemPageState extends State<AddItemPage> {
   int uid = 0;
+  int orderNo = 0;
+  int orderStatus = 0;
   String send_user_name = '';
   String send_user_type = '';
   String send_user_image = '';
@@ -40,6 +45,8 @@ class _AddItemPageState extends State<AddItemPage> {
   String To_userImage = '';
   String To_userName = '';
   int To_uid = 0;
+  var db = FirebaseFirestore.instance;
+  String product_imgUrl = '';
 
   @override
   void initState() {
@@ -119,7 +126,6 @@ class _AddItemPageState extends State<AddItemPage> {
                           ),
                           iconSize: 90.0,
                           onPressed: () async {
-                            // การทำงานเมื่อกดปุ่ม
                             image = await picker.pickImage(
                                 source: ImageSource.camera);
                             if (image != null) {
@@ -307,7 +313,7 @@ class _AddItemPageState extends State<AddItemPage> {
                         width: 220,
                         height: 50,
                         child: FilledButton(
-                          onPressed: () {
+                          onPressed: () async {
                             send();
                           },
                           style: ButtonStyle(
@@ -448,7 +454,8 @@ class _AddItemPageState extends State<AddItemPage> {
 
     if (product_nameCtl.text.isEmpty ||
         product_detailCtl.text.isEmpty ||
-        receive_nameCtl.text.isEmpty) {
+        receive_nameCtl.text.isEmpty ||
+        image == null) {
       Fluttertoast.showToast(
           msg: "ข้อมูลไม่ถูกต้องโปรดตรวจสอบความถูกต้อง แล้วลองอีกครั้ง",
           toastLength: Toast.LENGTH_SHORT,
@@ -475,6 +482,42 @@ class _AddItemPageState extends State<AddItemPage> {
         body: userOrderPostReqToJson(model));
 
     if (Value.statusCode == 200) {
+      final storageRef = FirebaseStorage.instance.ref();
+      final imageRef = storageRef
+          .child('images/${DateTime.now().millisecondsSinceEpoch}.jpg');
+
+      await imageRef.putFile(File(image!.path));
+
+      // รับ URL ของภาพที่อัปโหลด
+      product_imgUrl = await imageRef.getDownloadURL();
+      log(product_imgUrl.toString());
+
+      var response = await http.get(Uri.parse("$url/db/get_NewOrder"));
+      if (response.statusCode == 200) {
+        // แปลง JSON เป็น List<Map<String, dynamic>>
+        List<dynamic> data_oid = jsonDecode(response.body);
+        // เข้าถึงค่า oid จาก List
+        if (data_oid.isNotEmpty) {
+          var oid = data_oid[0]['oid']; // เข้าถึง oid ของแถวแรก
+          log(oid.toString() +
+              "oooooooooooooooooooooooooooooooooooooooooooooooooo"); // แสดงค่า oid
+
+          orderStatus = 1;
+
+          var doc = "order${oid}";
+          var data = {
+            'product_img': product_imgUrl,
+            'Order_time_at': DateTime.timestamp(),
+            'Order_status': orderStatus
+          };
+
+          db.collection('Order_Info').doc(doc).set(data);
+        } else {
+          log('No data found');
+        }
+      } else {
+        log('Error: ${response.statusCode}');
+      }
       log('Registration is successful');
       Get.to(() => HomePage());
     } else {

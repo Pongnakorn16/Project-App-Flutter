@@ -305,14 +305,11 @@ class _RegisterUserState extends State<RegisterUser> {
     try {
       List<Location> locations = await locationFromAddress(addressCtl.text);
       coor = LatLng(locations.first.latitude, locations.first.longitude);
+      log("${coor.latitude},${coor.longitude}");
     } catch (e) {
       print('Error occurred while fetching coordinates: $e');
       coor = LatLng(0, 0); // ค่าพื้นฐานเมื่อเกิดข้อผิดพลาด
     }
-
-    // if (walletCtl.text.isEmpty) {
-    //   walletCtl.text = "1000";
-    // }
 
     var model = UserRegisterPostRequest(
         phone: phoneCtl.text,
