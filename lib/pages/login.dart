@@ -247,7 +247,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         Fluttertoast.showToast(
             msg:
-                "Email หรือ Password ไม่ถูกต้องโปรดตรวจสอบความถูกต้อง แล้วลองอีกครั้ง",
+                "เบอร์โทรศํพท์ หรือ รหัสผ่าน ไม่ถูกต้องโปรดตรวจสอบความถูกต้อง แล้วลองอีกครั้ง",
             toastLength: Toast.LENGTH_SHORT,
             gravity: ToastGravity.CENTER,
             timeInSecForIosWeb: 1,

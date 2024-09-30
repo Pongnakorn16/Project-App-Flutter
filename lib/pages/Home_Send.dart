@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home_Receive.dart';
+import 'package:mobile_miniproject_app/pages/OrderInfo.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_miniproject_app/models/response/GetCart_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetLotteryNumbers_Res.dart';
@@ -26,6 +28,8 @@ class Home_SendPage extends StatefulWidget {
 class _Home_SendPageState extends State<Home_SendPage>
     with SingleTickerProviderStateMixin {
   int send_uid = 0;
+  int info_send_uid = 0;
+  int info_receive_uid = 0;
   String send_user_name = '';
   String send_user_type = '';
   String send_user_image = '';
@@ -91,15 +95,6 @@ class _Home_SendPageState extends State<Home_SendPage>
                               child: CircularProgressIndicator());
                         }
                         return SingleChildScrollView(
-                          // child: Row(
-                          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          //   children: [
-                          //     Column(
-                          //       children: [Text("Hello")],
-                          //     ),
-                          //     Column()
-                          //   ],
-                          // ),
                           child: Padding(
                             padding: const EdgeInsets.all(5.0),
                             child: Column(
@@ -215,10 +210,9 @@ class _Home_SendPageState extends State<Home_SendPage>
   Future<Widget> buildOrderItem(GetSendOrder orders) async {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
-    log(url);
-    log(send_uid.toString());
-    log(orders.toString());
-    log(send_Orders.length.toString());
+    // log(url);
+    // log(send_uid.toString());
+    // log(send_Orders.length.toString());
 
     var response =
         await http.get(Uri.parse("$url/db/get_Receive/${orders.re_Uid}"));
@@ -227,11 +221,105 @@ class _Home_SendPageState extends State<Home_SendPage>
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Column(
-          children: [Text(send_user_name), Text(receive_user.first.name)],
+        IntrinsicWidth(
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.location_on,
+                      color: Colors.red, size: 14), // ปรับขนาดไอคอน
+                  SizedBox(width: 5),
+                  Text(send_user_name),
+                ],
+              ),
+              Row(
+                children: [
+                  Icon(Icons.location_on,
+                      color: Color.fromARGB(255, 79, 252, 10),
+                      size: 14), // ปรับขนาดไอคอน
+                  SizedBox(width: 5),
+                  Text(receive_user.first.name),
+                ],
+              ),
+              Padding(
+                  padding: const EdgeInsets.only(top: 18, left: 2),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.circle,
+                        color: orders.dv_Status == 1
+                            ? Colors.grey
+                            : orders.dv_Status == 2
+                                ? Colors.yellow
+                                : orders.dv_Status == 3
+                                    ? Colors.yellow
+                                    : orders.dv_Status == 4
+                                        ? Colors.purple
+                                        : Colors.black, // กำหนดสีตาม dv_Status
+                        size: 9,
+                      ),
+                      SizedBox(width: 5),
+                      Text(
+                        orders.dv_Status == 1
+                            ? 'รอไรเดอร์มารับสินค้า'
+                            : orders.dv_Status == 2
+                                ? 'ไรเดอร์รับงาน'
+                                : orders.dv_Status == 3
+                                    ? 'ไรเดอร์รับสินค้าแล้วและกำลังเดินทาง'
+                                    : orders.dv_Status == 4
+                                        ? 'ไรเดอร์นำส่งสินค้าแล้ว'
+                                        : 'สถานะไม่ถูกต้อง', // กำหนดข้อความตาม dv_Status
+                      ),
+                    ],
+                  )),
+            ],
+          ),
         ),
         Column(
-          children: [Text("Detail")],
+          children: [
+            FilledButton(
+              onPressed: () {
+                Get.to(() => OrderinfoPage(
+                      info_send_uid: orders.se_Uid,
+                      info_receive_uid: orders.re_Uid,
+                    ));
+              },
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.all<Color>(
+                    Colors.amber.shade100), // สีพื้นหลัง
+                shape: WidgetStateProperty.all<RoundedRectangleBorder>(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30.0), // ขอบโค้งมน
+                  ),
+                ),
+                padding: WidgetStateProperty.all<EdgeInsets>(
+                  EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8), // ปรับลดระยะห่างรอบข้อความและไอคอน
+                ),
+              ),
+              child: Row(
+                mainAxisSize:
+                    MainAxisSize.min, // ขนาดของ Row จะปรับตามเนื้อหาภายใน
+                children: [
+                  Text(
+                    "Details",
+                    style: TextStyle(
+                      color:
+                          const Color.fromARGB(255, 255, 172, 7), // สีข้อความ
+                      fontSize: 16,
+                    ),
+                  ),
+                  SizedBox(width: 8), // เพิ่มระยะห่างระหว่างข้อความกับไอคอน
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    color: const Color.fromARGB(255, 255, 172, 7), // สีไอคอน
+                    size: 18,
+                  ),
+                ],
+              ),
+            )
+          ],
         )
       ]),
     );
@@ -330,26 +418,21 @@ class _Home_SendPageState extends State<Home_SendPage>
     String url = value['apiEndpoint'];
     log(url);
     log(send_uid.toString());
+    log("sddddddddddddddd");
+    log(send_Orders.length.toString());
 
     var response =
         await http.get(Uri.parse("$url/db/get_Send_Order/${send_uid}"));
     if (response.statusCode == 200) {
       send_Orders = getSendOrderFromJson(response.body);
       log(jsonEncode(send_Orders));
-      if (context.read<ShareData>().send_order_share.isEmpty) {
+      log("sddddddddddddddd");
+      log(send_Orders.length.toString());
+      setState(() {
         context.read<ShareData>().send_order_share = send_Orders;
-        setState(() {});
-      }
+      });
     } else {
       log('Failed to load lottery numbers. Status code: ${response.statusCode}');
     }
-
-    // var get_cart = await http.get(Uri.parse("$url/db/get_cart/${uid}"));
-    // if (get_cart.statusCode == 200) {
-    //   all_cart = getCartResFromJson(get_cart.body);
-    //   context.read<ShareData>().user_info.cart_length = all_cart.length;
-    // } else {
-    //   log('Failed to load cart. Status code: ${get_cart.statusCode}');
-    // }
   }
 }
