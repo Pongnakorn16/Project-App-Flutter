@@ -9,7 +9,6 @@ import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home_Receive.dart';
 import 'package:mobile_miniproject_app/pages/OrderInfo.dart';
 import 'package:provider/provider.dart';
-import 'package:mobile_miniproject_app/models/response/GetCart_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetLotteryNumbers_Res.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
@@ -43,7 +42,6 @@ class _Home_SendPageState extends State<Home_SendPage>
   int cart_length = 0;
   GetStorage gs = GetStorage();
   String url = '';
-  List<GetCartRes> all_cart = [];
   List<GetSendOrder> send_Orders = [];
   List<GetUserSearchRes> send_user = [];
   List<GetUserSearchRes> receive_user = [];
@@ -280,9 +278,9 @@ class _Home_SendPageState extends State<Home_SendPage>
             FilledButton(
               onPressed: () {
                 Get.to(() => OrderinfoPage(
-                      info_send_uid: orders.se_Uid,
-                      info_receive_uid: orders.re_Uid,
-                    ));
+                    info_send_uid: orders.se_Uid,
+                    info_receive_uid: orders.re_Uid,
+                    info_oid: orders.oid));
               },
               style: ButtonStyle(
                 backgroundColor: WidgetStateProperty.all<Color>(

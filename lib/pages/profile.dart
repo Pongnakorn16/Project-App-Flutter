@@ -6,7 +6,6 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
-import 'package:mobile_miniproject_app/models/response/GetCart_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetHistory_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/models/response/customers_idx_get_res.dart';
@@ -41,7 +40,6 @@ class _ProfilePageState extends State<ProfilePage> {
   int cart_length = 0;
   GetStorage gs = GetStorage();
   List<GetOneUserRes> user_Info = [];
-  List<GetCartRes> all_cart = [];
   List<GetHistoryRes> all_history = [];
   TextEditingController nameCtl = TextEditingController();
   TextEditingController walletCtl = TextEditingController();

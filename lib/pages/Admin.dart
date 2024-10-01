@@ -8,7 +8,6 @@ import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
-import 'package:mobile_miniproject_app/models/response/GetCart_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetLotteryNumbers_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
@@ -37,7 +36,6 @@ class _AdminPageState extends State<AdminPage> {
   int check_prizeOut = 0;
   GetStorage gs = GetStorage();
   String url = '';
-  List<GetCartRes> all_cart = [];
   List<GetLotteryNumbers> win_lotterys = [];
   late Future<void> loadData;
   int _selectedIndex = 0;

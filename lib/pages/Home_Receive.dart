@@ -5,7 +5,6 @@ import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
 import 'package:provider/provider.dart';
-import 'package:mobile_miniproject_app/models/response/GetCart_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetLotteryNumbers_Res.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
@@ -31,7 +30,6 @@ class _Home_ReceivePageState extends State<Home_ReceivePage>
   int cart_length = 0;
   GetStorage gs = GetStorage();
   String url = '';
-  List<GetCartRes> all_cart = [];
   List<GetLotteryNumbers> win_lotterys = [];
   late Future<void> loadData;
   int _selectedIndex = 0;
@@ -312,8 +310,8 @@ class _Home_ReceivePageState extends State<Home_ReceivePage>
 
     var get_cart = await http.get(Uri.parse("$url/db/get_cart/${uid}"));
     if (get_cart.statusCode == 200) {
-      all_cart = getCartResFromJson(get_cart.body);
-      context.read<ShareData>().user_info.cart_length = all_cart.length;
+      // all_cart = getCartResFromJson(get_cart.body);
+      // context.read<ShareData>().user_info.cart_length = all_cart.length;
     } else {
       log('Failed to load cart. Status code: ${get_cart.statusCode}');
     }

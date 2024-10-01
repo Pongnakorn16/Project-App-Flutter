@@ -269,6 +269,12 @@ class _AddItemPageState extends State<AddItemPage> {
                     ),
                     child: TextField(
                       controller: receive_nameCtl,
+                      onChanged: (query) {
+                        if (query.length >= 1) {
+                          // Or whatever minimum length you prefer
+                          showNameSearchPopup(context, query, receive_nameCtl);
+                        }
+                      },
                       decoration: InputDecoration(
                         prefixIcon: Padding(
                           padding: const EdgeInsets.all(8.0),
@@ -448,7 +454,93 @@ class _AddItemPageState extends State<AddItemPage> {
     }
   }
 
+  Future<void> showNameSearchPopup(BuildContext context, String query,
+      TextEditingController searchController) async {
+    var value = await Configuration.getConfig();
+    String url = value['apiEndpoint'];
+
+    var response = await http.get(Uri.parse("$url/db/get_userSearch/${uid}"));
+
+    if (response.statusCode == 200) {
+      all_userSearch = getUserSearchResFromJson(response.body);
+      log(jsonEncode(all_userSearch));
+
+      var searchResults =
+          all_userSearch.where((user) => user.name.startsWith(query)).toList();
+
+      // ตรวจสอบว่ามีผลลัพธ์การค้นหาหรือไม่
+      if (searchResults.isNotEmpty) {
+        OverlayEntry? overlayEntry;
+
+        overlayEntry = OverlayEntry(
+          builder: (context) => Positioned(
+            top: 290, // ปรับค่านี้ตามความสูงของ app bar ของคุณ
+            left: 20,
+            right: 20,
+            child: Material(
+              elevation: 4.0,
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                constraints:
+                    BoxConstraints(maxHeight: 300), // จำกัดความสูงสูงสุด
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: searchResults.length,
+                  itemBuilder: (context, index) {
+                    var searchResult = searchResults[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundImage: NetworkImage(searchResult.userImage),
+                      ),
+                      title: Text(searchResult.name),
+                      onTap: () {
+                        ////////////////////////////
+                        User_Info_Receive User_Re = User_Info_Receive();
+                        User_Re.uid = searchResult.uid;
+                        User_Re.name = searchResult.name;
+                        User_Re.user_type = searchResult.userType;
+                        User_Re.user_image = searchResult.userImage;
+
+                        ///เดี๋ยวมาเพิ่มทีหลัง
+
+                        context.read<ShareData>().user_info_receive = User_Re;
+                        log(context.read<ShareData>().user_info_receive.name);
+                        To_userImage = searchResult.userImage;
+                        To_userName = searchResult.name;
+                        receive_nameCtl.text = searchResult.name;
+                        To_uid = searchResult.uid;
+                        setState(() {});
+                        searchController.text = searchResult.name;
+                        overlayEntry?.remove();
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+
+        // แทรก overlay ลงในต้นไม้ widget
+        Overlay.of(context).insert(overlayEntry);
+
+        // เพิ่ม listener เพื่อลบ overlay เมื่อข้อความค้นหาเปลี่ยน
+        searchController.addListener(() {
+          if (searchController.text != query) {
+            overlayEntry?.remove();
+          }
+        });
+      } else {
+        // ไม่มีผลลัพธ์การค้นหา ไม่ต้องทำอะไร
+        log('ไม่พบผลลัพธ์การค้นหาสำหรับ: $query');
+      }
+    } else {
+      log('ไม่สามารถโหลดข้อมูล userSearch ได้ รหัสสถานะ: ${response.statusCode}');
+    }
+  }
+
   void send() async {
+    await uploadAndNavigate();
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
 
@@ -465,6 +557,7 @@ class _AddItemPageState extends State<AddItemPage> {
           backgroundColor: Color.fromARGB(255, 255, 0, 0),
           textColor: Colors.white,
           fontSize: 15.0);
+      Navigator.of(context).pop();
       return;
     }
 
@@ -508,7 +601,11 @@ class _AddItemPageState extends State<AddItemPage> {
           var data = {
             'product_img': product_imgUrl,
             'Order_time_at': DateTime.timestamp(),
-            'Order_status': orderStatus
+            'Order_status': orderStatus,
+            'status3_product_img': null,
+            'status4_product_img': null,
+            'rider_dev_day': null,
+            'rider_coordinates': null,
           };
 
           db.collection('Order_Info').doc(doc).set(data);
@@ -518,6 +615,7 @@ class _AddItemPageState extends State<AddItemPage> {
       } else {
         log('Error: ${response.statusCode}');
       }
+      Navigator.of(context).pop(); // ปิด dialog
       log('Registration is successful');
       Get.to(() => HomePage());
     } else {
@@ -525,7 +623,7 @@ class _AddItemPageState extends State<AddItemPage> {
       var responseBody = jsonDecode(Value.body);
       setState(() {
         Fluttertoast.showToast(
-            msg: "หมายเลขโทรศัพท์นี้เป็นสมาชิกแล้ว!!!",
+            msg: "เกิดข้อผิดพลาด!!!",
             toastLength: Toast.LENGTH_SHORT,
             gravity: ToastGravity.CENTER,
             timeInSecForIosWeb: 1,
@@ -536,5 +634,46 @@ class _AddItemPageState extends State<AddItemPage> {
       });
       log(responseBody['error']);
     }
+  }
+
+  Future<void> uploadAndNavigate() async {
+    // แสดงวงโหลด
+    showDialog(
+      context: context,
+      barrierDismissible: false, // ไม่ให้ปิดเมื่อแตะนอก
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12), // เปลี่ยนรูปทรงของ Dialog
+          ),
+          child: Container(
+            padding: EdgeInsets.all(24), // เพิ่ม Padding
+            height: 120, // กำหนดความสูง
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 50),
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                        const Color.fromARGB(
+                            255, 139, 15, 188)), // เปลี่ยนสีของวงโหลด
+                  ),
+                ),
+                SizedBox(width: 15),
+                Text(
+                  'Loading...', // ข้อความที่จะแสดง
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.amber),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }
