@@ -604,7 +604,6 @@ class _AddItemPageState extends State<AddItemPage> {
             'Order_status': orderStatus,
             'status3_product_img': null,
             'status4_product_img': null,
-            'rider_dev_day': null,
             'rider_coordinates': null,
           };
 
