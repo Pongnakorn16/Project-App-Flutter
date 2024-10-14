@@ -89,6 +89,7 @@ flutter:
     - assets/images/Unseen.jpg
     - assets/images/BG_delivery_register.png
     - assets/images/BG_delivery_login.png
+    - assets/images/BG_delivery_profile.png
     - assets/config/
   #   - images/a_dot_ham.jpeg
 

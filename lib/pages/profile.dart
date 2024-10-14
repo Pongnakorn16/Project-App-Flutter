@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:developer';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_navigation/get_navigation.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
@@ -8,8 +10,12 @@ import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/GetHistory_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
+import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/models/response/customers_idx_get_res.dart';
+import 'package:mobile_miniproject_app/pages/Add_Item.dart';
+import 'package:mobile_miniproject_app/pages/Home.dart';
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
+import 'package:mobile_miniproject_app/pages/Login.dart';
 import 'package:mobile_miniproject_app/pages/Shop.dart';
 import 'package:mobile_miniproject_app/pages/Ticket.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
@@ -36,13 +42,19 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   int uid = 0;
   int wallet = 0;
+  TextEditingController phoneCtl = TextEditingController();
+  TextEditingController nameCtl = TextEditingController();
+  TextEditingController passwordCtl = TextEditingController();
+  TextEditingController conPassCtl = TextEditingController();
+  TextEditingController addressCtl = TextEditingController();
+  String send_user_name = '';
+  String send_user_type = '';
+  String send_user_image = '';
   String username = '';
   int cart_length = 0;
   GetStorage gs = GetStorage();
-  List<GetOneUserRes> user_Info = [];
+  List<GetUserSearchRes> user_Info = [];
   List<GetHistoryRes> all_history = [];
-  TextEditingController nameCtl = TextEditingController();
-  TextEditingController walletCtl = TextEditingController();
   TextEditingController imageCtl = TextEditingController();
   int _selectedIndex = 0;
 
@@ -52,401 +64,252 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    uid = context.read<ShareData>().user_info.uid;
-    username = context.read<ShareData>().user_info.username;
-    wallet = context.read<ShareData>().user_info.wallet;
-    cart_length = context.read<ShareData>().user_info.cart_length;
+    uid = context.read<ShareData>().user_info_send.uid;
+    send_user_name = context.read<ShareData>().user_info_send.name;
+    send_user_type = context.read<ShareData>().user_info_send.user_type;
+    send_user_image = context.read<ShareData>().user_info_send.user_image;
     // log(widget.uid.toString());
     _selectedIndex = widget.selectedIndex;
     loadData = loadDataAsync();
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(''),
-        actions: [],
-        automaticallyImplyLeading: false,
-      ),
-      body: FutureBuilder(
-          future: loadData,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
-            }
-            return SingleChildScrollView(
-              child: SizedBox(
-                width: MediaQuery.of(context).size.width,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16.0, bottom: 8),
-                      child: user_Info.isNotEmpty
-                          ? GestureDetector(
-                              onTap: () {
-                                change_image(); // ฟังก์ชันที่จะถูกเรียกเมื่อกดที่รูป
-                              },
-                              child: Stack(
-                                alignment: Alignment
-                                    .center, // จัดตำแหน่งของไอคอนกลางรูป
-                                children: [
-                                  // รูปภาพหลัก
-                                  Image.network(
-                                    user_Info[0].image,
-                                    width: 150,
-                                    height:
-                                        150, // กำหนดความสูงเพื่อให้รูปเป็นสี่เหลี่ยมจัตุรัส
-                                    fit: BoxFit
-                                        .cover, // ครอบคลุมรูปให้เต็มพื้นที่
-                                  ),
-                                  // ไอคอนที่บ่งบอกการแก้ไข
-                                  Positioned(
-                                    bottom: 8,
-                                    right: 8,
-                                    child: Container(
-                                      padding: EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(50),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color:
-                                                Colors.black.withOpacity(0.5),
-                                            spreadRadius: 2,
-                                            blurRadius: 5,
-                                          ),
-                                        ],
-                                      ),
-                                      child: Icon(
-                                        Icons
-                                            .add_a_photo, // เปลี่ยนไอคอนที่นี่หากต้องการ
-                                        color: Colors.blue,
-                                        size: 24,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : const Text(
-                              'No Image Available'), // หรือ placeholder อื่นๆ
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          left: 16.0, right: 16.0, bottom: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(user_Info.isNotEmpty
-                              ? user_Info[0].email
-                              : 'No email available'),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                          left: 16.0, right: 16.0, bottom: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(left: 40.0),
-                                child: Text(
-                                  user_Info.isNotEmpty
-                                      ? user_Info[0].username
-                                      : 'No email available',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16.0,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(right: 10.0),
-                                child: IconButton(
-                                  icon: Icon(Icons.edit),
-                                  onPressed: () {
-                                    edit_profile();
-                                  },
-                                  color: const Color.fromARGB(255, 254, 137,
-                                      69), // Change the icon color if needed
-                                  iconSize:
-                                      24.0, // Change the icon size if needed
-                                ),
-                              ),
-                            ],
+      body: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: Stack(
+          children: [
+            // รูปพื้นหลัง
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/BG_delivery_profile.png', // ลิงค์ของรูปพื้นหลัง
+                fit: BoxFit.cover,
+              ),
+            ),
+            // เพิ่ม Padding เพื่อไม่ให้รูปภาพชนกับขอบ
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12.0),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 80.0, bottom: 30.0),
+                    child: ClipOval(
+                      child: Container(
+                        width: 100, // ขนาดกว้างของวงกลม
+                        height: 100, // ขนาดสูงของวงกลม
+                        decoration: BoxDecoration(
+                          image: DecorationImage(
+                            image: NetworkImage(
+                                user_Info.first.userImage), // รูปโปรไฟล์
+                            fit: BoxFit.cover, // ทำให้รูปภาพพอดีกับวงกลม
                           ),
-                        ],
-                      ),
-                    ),
-                    Card(
-                      margin:
-                          EdgeInsets.zero, // ยกเลิก margin ของ Card หากต้องการ
-                      child: Padding(
-                        padding: const EdgeInsets.all(
-                            16.0), // เพิ่ม padding รอบๆ Card
-                        child: Column(
-                          mainAxisSize:
-                              MainAxisSize.min, // ใช้ขนาดของเนื้อหาภายใน Column
-                          children: [
-                            // แสดงยอดเงิน
-                            RichText(
-                              text: TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: '${wallet}',
-                                    style: TextStyle(
-                                      fontSize: 40,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: '.00 THB',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 20),
-                              child: FilledButton(
-                                onPressed: () {
-                                  top_up();
-                                },
-                                style: ButtonStyle(
-                                  backgroundColor:
-                                      WidgetStateProperty.all(Colors.blue),
-                                  padding: WidgetStateProperty.all(
-                                    const EdgeInsets.symmetric(
-                                      vertical: 2.0,
-                                      horizontal: 8.0,
-                                    ),
-                                  ),
-                                  minimumSize:
-                                      WidgetStateProperty.all(Size(0, 10)),
-                                ),
-                                child: const Text(
-                                  'เติมเงินเข้าระบบ',
-                                  style: TextStyle(fontSize: 13),
-                                ),
-                              ),
-                            ),
-                            // แสดงหัวข้อ 'ประวัติ'
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 10),
-                                  child: RichText(
-                                    text: TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: 'ประวัติ',
-                                          style: TextStyle(
-                                            fontSize: 22,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                        TextSpan(
-                                          text: ' การซื้อและขึ้นเงิน Lotterys',
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Divider(
-                              color: Colors.black,
-                              thickness: 2,
-                              indent: 10,
-                              endIndent: 10,
-                            ),
-                            // แสดงข้อมูลใน all_history
-                            ...all_history.asMap().entries.map((entry) {
-                              GetHistoryRes item =
-                                  entry.value; // item เป็น GetHistoryRes
-                              return Column(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 8.0, horizontal: 10.0),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        RichText(
-                                          text: TextSpan(
-                                            children: [
-                                              TextSpan(
-                                                text:
-                                                    '${item.hNumber.toString()} - ',
-                                                style: TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors
-                                                      .black, // กำหนดสีที่ต้องการสำหรับ hNumber
-                                                ),
-                                              ),
-                                              TextSpan(
-                                                text:
-                                                    '${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors
-                                                      .black, // กำหนดสีที่ต้องการสำหรับวันที่
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Text(
-                                          item.hWallet > 100
-                                              ? '+${item.hWallet.toString()}'
-                                              : '-${item.hWallet.toString()}',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            color: item.hWallet > 100
-                                                ? Colors.green
-                                                : Colors
-                                                    .red, // กำหนดสีตามเงื่อนไข
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Divider(
-                                    color: Colors.black,
-                                    thickness: 2,
-                                    indent: 10,
-                                    endIndent: 10,
-                                  ),
-                                ],
-                              );
-                            }).toList(),
-                          ],
                         ),
                       ),
-                    )
-                  ],
-                ),
-              ),
-            );
-          }),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
+                    ),
+                  ),
 
-          switch (index) {
-            case 0:
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => Home_SendPage(
-                          selectedIndex: _selectedIndex,
-                          onClose: () {},
-                        )),
-              );
-              break;
-            // case 1:
-            //   Navigator.push(
-            //     context,
-            //     MaterialPageRoute(
-            //         builder: (context) => ShopPage(
-            //               selectedIndex: _selectedIndex,
-            //             )),
-            //   );
-            //   break;
-            // case 2:
-            //   Navigator.push(
-            //     context,
-            //     MaterialPageRoute(
-            //         builder: (context) => TicketPage(
-            //               selectedIndex: _selectedIndex,
-            //             )),
-            //   );
-            //   break;
-            case 3:
-              showModalBottomSheet(
-                context: context,
-                builder: (context) {
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ListTile(
-                        leading: Icon(Icons.account_circle),
-                        title: Text('Profile'),
-                        onTap: () {
-                          Navigator.pop(context); // ปิด BottomSheet ก่อน
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ProfilePage(
-                                selectedIndex: _selectedIndex,
-                                onClose: () {},
-                              ),
+                  // เพิ่ม Padding รอบ ๆ ฟิลด์กรอกข้อมูล
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: phoneCtl,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Color.fromARGB(255, 228, 225, 225),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30.0),
+                              borderSide: BorderSide(width: 1),
                             ),
-                          );
-                        },
-                      ),
-                      ListTile(
-                        leading: Icon(Icons.logout),
-                        title: Text('Logout'),
-                        onTap: () {
-                          gs.remove('Email'); // ปิด BottomSheet ก่อน
-                          Navigator.of(context)
-                              .popUntil((route) => route.isFirst);
-                        },
-                      ),
-                    ],
-                  );
-                },
-              );
-              break;
-          }
-        },
-        selectedItemColor: const Color.fromARGB(255, 250, 150, 44),
-        unselectedItemColor: Colors.grey,
-        backgroundColor: Colors.white,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
+                            prefixIcon: Icon(Icons.phone),
+                            hintText: user_Info.first.phone,
+                          ),
+                        ),
+                        SizedBox(height: 15.0), // เพิ่มระยะห่างระหว่างฟิลด์
+                        TextField(
+                          controller: nameCtl,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Color.fromARGB(255, 228, 225, 225),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30.0),
+                              borderSide: BorderSide(width: 1),
+                            ),
+                            prefixIcon: Icon(Icons.person),
+                            hintText: user_Info.first.name,
+                          ),
+                        ),
+                        SizedBox(height: 15.0), // เพิ่มระยะห่างระหว่างฟิลด์
+                        TextField(
+                          obscureText: true,
+                          controller: passwordCtl,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Color.fromARGB(255, 228, 225, 225),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30.0),
+                              borderSide: BorderSide(width: 1),
+                            ),
+                            prefixIcon: Icon(Icons.lock),
+                            hintText: user_Info
+                                .first.password, // ทำให้ hintText ว่างไปเลย
+                          ),
+                        ),
+                        SizedBox(height: 15.0), // เพิ่มระยะห่างระหว่างฟิลด์
+                        TextField(
+                          obscureText: true,
+                          controller: conPassCtl,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Color.fromARGB(255, 228, 225, 225),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30.0),
+                              borderSide: BorderSide(width: 1),
+                            ),
+                            prefixIcon: Icon(Icons.lock),
+                            hintText: user_Info
+                                .first.password, // ทำให้ hintText ว่างไปเลย
+                          ),
+                        ),
+
+                        SizedBox(height: 15.0), // เพิ่มระยะห่างระหว่างฟิลด์
+                        TextField(
+                          controller: addressCtl,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Color.fromARGB(255, 228, 225, 225),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30.0),
+                              borderSide: BorderSide(width: 1),
+                            ),
+                            prefixIcon: Icon(Icons.location_on),
+                            hintText: user_Info.first.address,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 20, horizontal: 10),
+                          child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                FilledButton(
+                                  onPressed: () {
+                                    // ฟังก์ชันเมื่อกดปุ่ม
+                                  },
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: Colors
+                                        .green, // เปลี่ยนสีพื้นหลังของปุ่ม
+                                    padding: EdgeInsets.symmetric(
+                                        vertical: 10.0,
+                                        horizontal: 35.0), // กำหนดขนาดของปุ่ม
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                          30.0), // กำหนดรูปแบบมุมปุ่ม
+                                    ),
+                                  ),
+                                  child: Text(
+                                    "Save",
+                                    style: TextStyle(
+                                      color: Colors.white, // เปลี่ยนสีตัวอักษร
+                                      fontSize: 18.0, // ขนาดตัวอักษร
+                                    ),
+                                  ),
+                                ),
+                                FilledButton(
+                                  onPressed: () {
+                                    Get.to(() => LoginPage());
+                                    gs.remove('Phone');
+                                  },
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor:
+                                        Colors.red, // เปลี่ยนสีพื้นหลังของปุ่ม
+                                    padding: EdgeInsets.symmetric(
+                                        vertical: 10.0,
+                                        horizontal: 26.0), // กำหนดขนาดของปุ่ม
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                          30.0), // กำหนดรูปแบบมุมปุ่ม
+                                    ),
+                                  ),
+                                  child: Text(
+                                    "Logout",
+                                    style: TextStyle(
+                                      color: Colors.white, // เปลี่ยนสีตัวอักษร
+                                      fontSize: 18.0, // ขนาดตัวอักษร
+                                    ),
+                                  ),
+                                )
+                              ]),
+                        )
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: buildBottomNavigationBar(),
+      floatingActionButton: Container(
+        height: 80,
+        width: 80,
+        child: FloatingActionButton(
+          onPressed: () {
+            Get.to(() => AddItemPage());
+            log("ADDD");
+          },
+          backgroundColor: Colors.yellow,
+          child: Icon(Icons.add, size: 50, color: Colors.white),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(40),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart),
-            label: 'Shop',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.card_giftcard),
-            label: 'Ticket',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.more_horiz),
-            label: 'More',
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+    );
+  }
+
+  Widget buildBottomNavigationBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(40.0),
+          topRight: Radius.circular(40.0),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            spreadRadius: 2,
+            blurRadius: 8,
+            offset: Offset(0, -2),
           ),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(40.0),
+          topRight: Radius.circular(40.0),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          selectedItemColor: Color.fromARGB(255, 115, 28, 168),
+          unselectedItemColor: Colors.grey,
+          backgroundColor: Colors.white,
+          iconSize: 20,
+          selectedLabelStyle:
+              TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          unselectedLabelStyle: TextStyle(fontSize: 10),
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          ],
+        ),
       ),
     );
   }
@@ -456,42 +319,43 @@ class _ProfilePageState extends State<ProfilePage> {
     String url = value['apiEndpoint'];
 
     try {
-      var res = await http.get(Uri.parse("$url/db/user/${uid}"));
+      var res = await http.get(Uri.parse("$url/db/get_Profile/${uid}"));
       if (res.statusCode == 200) {
-        user_Info = getOneUserResFromJson(res.body);
+        user_Info = getUserSearchResFromJson(res.body);
         if (user_Info != null) {
           log("user_Info : " + user_Info.toString());
+          log(user_Info.first.name.toString());
         } else {
           log("Failed to parse user info.");
         }
       } else {
         log('Failed to load user info. Status code: ${res.statusCode}');
       }
-
-      // var get_cart = await http.get(Uri.parse("$url/db/get_cart/${uid}"));
-      // if (get_cart.statusCode == 200) {
-      //   all_cart = getCartResFromJson(get_cart.body);
-      //   log(all_cart.toString());
-      //   for (var cart in all_cart) {
-      //     log('lidddddddddddddddddddddd' + cart.cLid.toString());
-      //   }
-      // } else {
-      //   log('Failed to load lottery numbers. Status code: ${get_cart.statusCode}');
-      // }
-
-      var get_history = await http.get(Uri.parse("$url/db/get_history/${uid}"));
-      if (get_history.statusCode == 200) {
-        all_history = getHistoryResFromJson(get_history.body);
-        log(all_history.toString());
-        for (var history in all_history) {
-          log('HISTORY_LID' + history.hNumber.toString());
-        }
-      } else {
-        log('Failed to load lottery numbers. Status code: ${get_history.statusCode}');
-      }
     } catch (e) {
       log("Error occurred: $e");
     }
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+      if (index == 0) {
+        // Navigate to Home page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => HomePage()), // สมมติว่ามี HomePage
+        );
+      } else if (index == 1) {
+        // Navigate to Profile page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProfilePage(onClose: () {}, selectedIndex: 1),
+          ),
+        );
+      }
+    });
   }
 
   void edit_profile() async {
@@ -542,7 +406,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   borderSide: const BorderSide(width: 1),
                 ),
                 hintText: user_Info.first
-                    .username, // กำหนดให้ hintText เป็นค่าของ user_Info.Username
+                    .name, // กำหนดให้ hintText เป็นค่าของ user_Info.Username
               ),
             ),
           ],
@@ -587,7 +451,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     var res = await http.get(Uri.parse("$url/db/user/${uid}"));
     if (res.statusCode == 200) {
-      user_Info = getOneUserResFromJson(res.body);
+      user_Info = getUserSearchResFromJson(res.body);
       if (user_Info != null) {
         log("user_Info: " + user_Info.toString());
       } else {
@@ -599,133 +463,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
     if (res.statusCode == 200) {
       setState(() {
-        username = user_Info.first.username;
+        username = user_Info.first.name;
         loadDataAsync();
       });
 
       Fluttertoast.showToast(
           msg: "Name has changed !!!",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.CENTER,
-          timeInSecForIosWeb: 1,
-          // backgroundColor: Color.fromARGB(120, 0, 0, 0),
-          backgroundColor: Color.fromARGB(255, 250, 150, 44),
-          textColor: Colors.white,
-          fontSize: 15.0);
-    } else {
-      // จัดการกับ error ถ้า update ไม่สำเร็จ
-      print('Failed to change name: ${res.body}');
-    }
-  }
-
-  void top_up() async {
-    walletCtl.clear();
-    showDialog(
-      context: context,
-      barrierDismissible: false, // กำหนดให้ dialog ไม่หายเมื่อแตะบริเวณรอบนอก
-      builder: (context) => AlertDialog(
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('เติมเงิน'),
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Icon(
-                Icons.close,
-                size: 25,
-              ),
-              style: ButtonStyle(
-                backgroundColor: WidgetStateProperty.all(Colors.red),
-                foregroundColor: WidgetStateProperty.all(Colors.white),
-                padding: WidgetStateProperty.all<EdgeInsets>(EdgeInsets.zero),
-                minimumSize: WidgetStateProperty.all<Size>(const Size(30, 30)),
-                shape: WidgetStateProperty.all<RoundedRectangleBorder>(
-                  RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('ระบุจำนวน Wallet ที่ต้องการจะเติม'),
-            const SizedBox(height: 10),
-            TextField(
-              controller: walletCtl,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: const Color.fromARGB(255, 228, 225, 225),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30.0),
-                  borderSide: const BorderSide(width: 1),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          Row(
-            mainAxisAlignment:
-                MainAxisAlignment.center, // ปรับตำแหน่งปุ่มให้ตรงกลาง
-            children: [
-              FilledButton(
-                onPressed: () {
-                  wallet_add();
-                  setState(() {
-                    loadDataAsync();
-                  });
-                  Navigator.pop(context);
-                },
-                child: const Text('ยืนยัน'),
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.all(Colors.blue),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void wallet_add() async {
-    var value = await Configuration.getConfig();
-    String url = value['apiEndpoint'];
-
-    var body = jsonEncode({"Wallet": walletCtl.text});
-
-    var Top_up = await http.put(
-      Uri.parse('$url/db/user/top_up/${uid}'),
-      headers: {"Content-Type": "application/json; charset=utf-8"},
-      body: body,
-    );
-
-    var res = await http.get(Uri.parse("$url/db/user/${uid}"));
-    if (res.statusCode == 200) {
-      user_Info = getOneUserResFromJson(res.body);
-      if (user_Info != null) {
-        log("user_Info: " + user_Info.toString());
-      } else {
-        log("Failed to parse user info.");
-      }
-    } else {
-      log('Failed to load user info. Status code: ${res.statusCode}');
-    }
-
-    if (res.statusCode == 200) {
-      setState(() {
-        wallet = user_Info.first.wallet;
-        context.read<ShareData>().user_info.wallet = user_Info.first.wallet;
-        loadDataAsync();
-      });
-
-      Fluttertoast.showToast(
-          msg: "Wallet has added !!!",
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.CENTER,
           timeInSecForIosWeb: 1,
@@ -828,7 +571,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     var res = await http.get(Uri.parse("$url/db/user/${uid}"));
     if (res.statusCode == 200) {
-      user_Info = getOneUserResFromJson(res.body);
+      user_Info = getUserSearchResFromJson(res.body);
       if (user_Info != null) {
         log("user_Info: " + user_Info.toString());
       } else {

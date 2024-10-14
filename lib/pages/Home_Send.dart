@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -50,6 +51,8 @@ class _Home_SendPageState extends State<Home_SendPage>
   bool _showReceivePage = false;
   late AnimationController _animationController;
   late Animation<Offset> _pageSlideAnimation;
+  var db = FirebaseFirestore.instance;
+  var New_Dv_status;
 
   @override
   void initState() {
@@ -212,6 +215,47 @@ class _Home_SendPageState extends State<Home_SendPage>
     // log(send_uid.toString());
     // log(send_Orders.length.toString());
 
+    if (context.read<ShareData>().listener != null) {
+      context.read<ShareData>().listener!.cancel();
+      context.read<ShareData>().listener = null;
+      log("listener stopped");
+    }
+    log("Realtime Started!!!!!!!!!!!!!!!!");
+    final collectionRef = db.collection("Order_Info");
+    context.read<ShareData>().listener = collectionRef.snapshots().listen(
+      (snapshot) {
+        for (var docChange in snapshot.docChanges) {
+          // ตรวจสอบเฉพาะการเปลี่ยนแปลง (modified) เท่านั้น
+          if (docChange.type == DocumentChangeType.modified) {
+            var data = docChange.doc.data();
+            var docId = docChange.doc.id; // ชื่อเอกสารที่มีการเปลี่ยนแปลง
+
+            // แสดง Snackbar เฉพาะเมื่อมีการเปลี่ยนแปลงข้อมูล พร้อมแสดงชื่อเอกสาร
+            Get.snackbar(
+              "Document: $docId | Status: ${data!['Order_status']}",
+              "Order Time: ${data['Order_time_at'].toString()}",
+            );
+
+            setState(() {});
+
+            // ตรวจสอบการเปลี่ยนแปลงสถานะใหม่
+            if (New_Dv_status != data['Order_status'] ||
+                New_Dv_status == null) {
+              New_Dv_status = data['Order_status'];
+              log("${New_Dv_status}+NEWNEWNENWNEDVVVVVVVVVVVVVVVVSTATATUS (Document: $docId)");
+            }
+          }
+        }
+      },
+      onError: (error) => log("Listen failed: $error"),
+    );
+
+    var result =
+        await db.collection('Order_Info').doc("order${orders.oid}").get();
+    var data = result.data();
+    log(data!['Order_status'].toString());
+    var Dv_status = data!['Order_status'];
+
     var response =
         await http.get(Uri.parse("$url/db/get_Receive/${orders.re_Uid}"));
     receive_user = getUserSearchResFromJson(response.body);
@@ -245,28 +289,31 @@ class _Home_SendPageState extends State<Home_SendPage>
                     children: [
                       Icon(
                         Icons.circle,
-                        color: orders.dv_Status == 1
+                        color: Dv_status == 1
                             ? Colors.grey
-                            : orders.dv_Status == 2
+                            : Dv_status == 2
                                 ? Colors.yellow
-                                : orders.dv_Status == 3
+                                : Dv_status == 3
                                     ? Colors.yellow
-                                    : orders.dv_Status == 4
+                                    : Dv_status == 4
                                         ? Colors.purple
                                         : Colors.black, // กำหนดสีตาม dv_Status
                         size: 9,
                       ),
                       SizedBox(width: 5),
                       Text(
-                        orders.dv_Status == 1
+                        Dv_status == 1
                             ? 'รอไรเดอร์มารับสินค้า'
-                            : orders.dv_Status == 2
+                            : Dv_status == 2
                                 ? 'ไรเดอร์รับงาน'
-                                : orders.dv_Status == 3
+                                : Dv_status == 3
                                     ? 'ไรเดอร์รับสินค้าแล้วและกำลังเดินทาง'
-                                    : orders.dv_Status == 4
+                                    : Dv_status == 4
                                         ? 'ไรเดอร์นำส่งสินค้าแล้ว'
                                         : 'สถานะไม่ถูกต้อง', // กำหนดข้อความตาม dv_Status
+                        style: TextStyle(
+                          fontSize: Dv_status == 3 ? 10 : 15, // กำหนดขนาดฟอนต์
+                        ),
                       ),
                     ],
                   )),
@@ -426,6 +473,7 @@ class _Home_SendPageState extends State<Home_SendPage>
       log(jsonEncode(send_Orders));
       log("sddddddddddddddd");
       log(send_Orders.length.toString());
+
       setState(() {
         context.read<ShareData>().send_order_share = send_Orders;
       });
