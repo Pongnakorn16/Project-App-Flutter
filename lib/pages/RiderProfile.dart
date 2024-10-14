@@ -19,29 +19,31 @@ import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
 import 'package:mobile_miniproject_app/pages/Login.dart';
+import 'package:mobile_miniproject_app/pages/RiderHistory.dart';
+import 'package:mobile_miniproject_app/pages/RiderHome.dart';
 import 'package:mobile_miniproject_app/pages/Shop.dart';
 import 'package:mobile_miniproject_app/pages/Ticket.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 
-class ProfilePage extends StatefulWidget {
+class RiderProfilePage extends StatefulWidget {
   int uid = 0;
   String username = '';
   int selectedIndex = 0;
   int cart_length = 0;
   final VoidCallback onClose;
 
-  ProfilePage({
+  RiderProfilePage({
     super.key,
     required this.onClose,
     required this.selectedIndex,
   });
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  State<RiderProfilePage> createState() => _RiderProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _RiderProfilePageState extends State<RiderProfilePage> {
   int uid = 0;
   int wallet = 0;
   TextEditingController phoneCtl = TextEditingController();
@@ -276,21 +278,6 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
       bottomNavigationBar: buildBottomNavigationBar(),
-      floatingActionButton: Container(
-        height: 80,
-        width: 80,
-        child: FloatingActionButton(
-          onPressed: () {
-            Get.to(() => AddItemPage());
-            log("ADDD");
-          },
-          backgroundColor: Colors.yellow,
-          child: Icon(Icons.add, size: 50, color: Colors.white),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(40),
-          ),
-        ),
-      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
@@ -320,7 +307,7 @@ class _ProfilePageState extends State<ProfilePage> {
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
-          selectedItemColor: Color.fromARGB(255, 115, 28, 168),
+          selectedItemColor: Colors.yellow,
           unselectedItemColor: Colors.grey,
           backgroundColor: Colors.white,
           iconSize: 20,
@@ -329,11 +316,45 @@ class _ProfilePageState extends State<ProfilePage> {
           unselectedLabelStyle: TextStyle(fontSize: 10),
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.history_edu_outlined), // Icon for the Add button
+              label: 'History', // Label for the Add button
+            ),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
         ),
       ),
     );
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      if (index == 0) {
+        // Navigate to Home page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => RiderHomePage()), // สมมติว่ามี HomePage
+        );
+      } else if (index == 1) {
+        // Navigate to Add page
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (context) =>
+                  RiderHistoryPage()), // เปลี่ยนเป็น AddPage()
+        );
+      } else if (index == 2) {
+        // Navigate to Profile page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                RiderProfilePage(onClose: () {}, selectedIndex: 2),
+          ),
+        );
+      }
+    });
   }
 
   Future<void> loadDataAsync() async {
@@ -365,28 +386,6 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (e) {
       log("Error occurred: $e");
     }
-  }
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-      if (index == 0) {
-        // Navigate to Home page
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-              builder: (context) => HomePage()), // สมมติว่ามี HomePage
-        );
-      } else if (index == 1) {
-        // Navigate to Profile page
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ProfilePage(onClose: () {}, selectedIndex: 1),
-          ),
-        );
-      }
-    });
   }
 
   void updateProfile() async {

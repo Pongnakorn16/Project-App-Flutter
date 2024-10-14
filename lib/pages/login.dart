@@ -6,11 +6,11 @@ import 'package:get_storage/get_storage.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/user_login_post_req.dart';
 import 'package:mobile_miniproject_app/models/response/UserLoginPostRes.dart';
-import 'package:mobile_miniproject_app/pages/Admin.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
 import 'package:mobile_miniproject_app/pages/Register_User.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
+import 'package:mobile_miniproject_app/pages/RiderHome.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 
@@ -228,11 +228,7 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => AdminPage(
-                uid: res.uid,
-                name: res.name,
-                selectedIndex: 0,
-              ),
+              builder: (context) => RiderHomePage(),
             ));
       } else {
         // นำไปยังหน้า HomePage ตามปกติ

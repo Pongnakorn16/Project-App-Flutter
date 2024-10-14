@@ -12,14 +12,17 @@ import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
 import 'package:mobile_miniproject_app/pages/Profile.dart';
+import 'package:mobile_miniproject_app/pages/RiderHistory.dart';
+import 'package:mobile_miniproject_app/pages/RiderHome.dart';
+import 'package:mobile_miniproject_app/pages/RiderProfile.dart';
 
-class OrderinfoPage extends StatefulWidget {
+class RiderOrderinfoPage extends StatefulWidget {
   int info_send_uid; // ประกาศตัวแปรในคลาสนี้
   int selectedIndex = 0;
   int info_receive_uid; // ประกาศตัวแปรในคลาสนี้
   int info_oid;
 
-  OrderinfoPage({
+  RiderOrderinfoPage({
     super.key,
     required this.info_send_uid,
     required this.info_receive_uid,
@@ -28,10 +31,10 @@ class OrderinfoPage extends StatefulWidget {
   });
 
   @override
-  State<OrderinfoPage> createState() => _OrderinfoPageState();
+  State<RiderOrderinfoPage> createState() => _RiderOrderinfoPageState();
 }
 
-class _OrderinfoPageState extends State<OrderinfoPage> {
+class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
   MapController mapController = MapController();
   List<GetUserSearchRes> send_Info = [];
   List<GetUserSearchRes> receive_Info = [];
@@ -330,23 +333,24 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
           topRight: Radius.circular(40.0),
         ),
         child: BottomNavigationBar(
-          currentIndex: _selectedIndex,
+          currentIndex: 2,
           onTap: _onItemTapped,
-          selectedItemColor: const Color.fromARGB(255, 115, 28, 168),
-          unselectedItemColor: Colors.grey,
+          selectedItemColor: Colors.black, // สีของ icon ที่เลือก
+          unselectedItemColor: Colors.grey, // สีของ icon ที่ไม่ได้เลือก
           backgroundColor: Colors.white,
           iconSize: 20,
-          selectedLabelStyle:
-              TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          selectedLabelStyle: TextStyle(
+              fontSize: 15, fontWeight: FontWeight.normal), // ปรับขนาดฟอนต์
           unselectedLabelStyle: TextStyle(fontSize: 10),
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
             BottomNavigationBarItem(
-              icon: Icon(Icons.add_circle_outline), // Icon for the Add button
-              label: 'Add', // Label for the Add button
+              icon: Icon(Icons.history_edu_outlined), // Icon for the Add button
+              label: 'History', // Label for the Add button
             ),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
+          type: BottomNavigationBarType.fixed, // ใช้ประเภท Fixed
         ),
       ),
     );
@@ -359,21 +363,23 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-              builder: (context) => HomePage()), // สมมติว่ามี HomePage
+              builder: (context) => RiderHomePage()), // สมมติว่ามี HomePage
         );
       } else if (index == 1) {
         // Navigate to Add page
         Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (context) => AddItemPage()), // เปลี่ยนเป็น AddPage()
+              builder: (context) =>
+                  RiderHistoryPage()), // เปลี่ยนเป็น AddPage()
         );
       } else if (index == 2) {
         // Navigate to Profile page
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => ProfilePage(onClose: () {}, selectedIndex: 1),
+            builder: (context) =>
+                RiderProfilePage(onClose: () {}, selectedIndex: 2),
           ),
         );
       }

@@ -14,6 +14,7 @@ class ShareData with ChangeNotifier {
   List<GetLotteryNumbers> winlotto = [];
   List<GetSendOrder> send_order_share = [];
   List<GetSendOrder> receive_order_share = [];
+  List<GetSendOrder> rider_order_share = [];
 
   StreamSubscription? listener;
 }

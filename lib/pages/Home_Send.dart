@@ -327,7 +327,8 @@ class _Home_SendPageState extends State<Home_SendPage>
                 Get.to(() => OrderinfoPage(
                     info_send_uid: orders.se_Uid,
                     info_receive_uid: orders.re_Uid,
-                    info_oid: orders.oid));
+                    info_oid: orders.oid,
+                    selectedIndex: 1));
               },
               style: ButtonStyle(
                 backgroundColor: WidgetStateProperty.all<Color>(

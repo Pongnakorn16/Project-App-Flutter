@@ -17,7 +17,7 @@ class GetUserSearchRes {
   String password;
   String name;
   String userImage;
-  String? address;
+  String address;
   String? coordinates;
   String userType;
   String? licensePlate;
