@@ -33,7 +33,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'DOK lotterys',
+      title: 'PARCELPRO DELIVERY',
       theme: ThemeData(
         textTheme: GoogleFonts.pridiTextTheme(),
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),

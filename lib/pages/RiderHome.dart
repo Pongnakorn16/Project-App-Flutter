@@ -16,6 +16,7 @@ import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
+import 'package:mobile_miniproject_app/pages/RiderReceive.dart';
 import 'package:mobile_miniproject_app/pages/RiderHistory.dart';
 import 'package:mobile_miniproject_app/pages/RiderOrderInfo.dart';
 import 'package:mobile_miniproject_app/pages/RiderProfile.dart';
@@ -258,9 +259,12 @@ class _RiderHomePageState extends State<RiderHomePage> {
         );
       } else if (index == 1) {
         // Navigate to Add page
-        Navigator.push(
+        Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => RiderHistoryPage()),
+          MaterialPageRoute(
+            builder: (context) =>
+                RiderHistoryPage(onClose: () {}, selectedIndex: 1),
+          ),
         );
       } else if (index == 2) {
         // Navigate to Profile page
@@ -361,39 +365,25 @@ class _RiderHomePageState extends State<RiderHomePage> {
                 ],
               ),
               Padding(
-                  padding: const EdgeInsets.only(top: 18, left: 2),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.circle,
-                        color: Dv_status == 1
-                            ? Colors.grey
-                            : Dv_status == 2
-                                ? Colors.yellow
-                                : Dv_status == 3
-                                    ? Colors.yellow
-                                    : Dv_status == 4
-                                        ? Colors.purple
-                                        : Colors.black, // กำหนดสีตาม dv_Status
-                        size: 9,
+                padding: const EdgeInsets.only(top: 10),
+                child: Row(
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Get.to(() => RiderOrderinfoPage(
+                            info_send_uid: orders.se_Uid,
+                            info_receive_uid: orders.re_Uid,
+                            info_oid: orders.oid,
+                            selectedIndex: 1));
+                      },
+                      child: Text("Click for details"),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red, // ตั้งค่าสีของข้อความ
                       ),
-                      SizedBox(width: 5),
-                      Text(
-                        Dv_status == 1
-                            ? 'รอไรเดอร์มารับสินค้า'
-                            : Dv_status == 2
-                                ? 'ไรเดอร์รับงาน'
-                                : Dv_status == 3
-                                    ? 'ไรเดอร์รับสินค้าแล้วและกำลังเดินทาง'
-                                    : Dv_status == 4
-                                        ? 'ไรเดอร์นำส่งสินค้าแล้ว'
-                                        : 'สถานะไม่ถูกต้อง', // กำหนดข้อความตาม dv_Status
-                        style: TextStyle(
-                          fontSize: Dv_status == 3 ? 10 : 15, // กำหนดขนาดฟอนต์
-                        ),
-                      ),
-                    ],
-                  )),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -401,7 +391,8 @@ class _RiderHomePageState extends State<RiderHomePage> {
           children: [
             FilledButton(
               onPressed: () {
-                Get.to(() => RiderOrderinfoPage(
+                UpdateStatus(orders.oid);
+                Get.to(() => RiderReceivePage(
                     info_send_uid: orders.se_Uid,
                     info_receive_uid: orders.re_Uid,
                     info_oid: orders.oid,
@@ -426,17 +417,11 @@ class _RiderHomePageState extends State<RiderHomePage> {
                     MainAxisSize.min, // ขนาดของ Row จะปรับตามเนื้อหาภายใน
                 children: [
                   Text(
-                    "Details",
+                    "Hire",
                     style: TextStyle(
                       color: Color.fromARGB(255, 90, 4, 134), // สีข้อความ
                       fontSize: 16,
                     ),
-                  ),
-                  SizedBox(width: 8), // เพิ่มระยะห่างระหว่างข้อความกับไอคอน
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    color: const Color.fromARGB(255, 90, 4, 134), // สีไอคอน
-                    size: 18,
                   ),
                 ],
               ),
@@ -468,5 +453,25 @@ class _RiderHomePageState extends State<RiderHomePage> {
     } else {
       log('Failed to load lottery numbers. Status code: ${response.statusCode}');
     }
+  }
+
+  void UpdateStatus(int oid) async {
+    var value = await Configuration.getConfig();
+    String url = value['apiEndpoint'];
+
+    http.put(
+      Uri.parse("$url/db/update_status/${oid}/${2}"),
+      headers: {"Content-Type": "application/json; charset=utf-8"},
+    );
+
+    var doc = "order${oid}";
+
+    // ข้อมูลที่ต้องการอัปเดต
+    var dataToUpdate = {
+      'Order_status': 2,
+    };
+
+    // อัปเดตข้อมูลใน Firebase
+    await db.collection('Order_Info').doc(doc).update(dataToUpdate);
   }
 }
