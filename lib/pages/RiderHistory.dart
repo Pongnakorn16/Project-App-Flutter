@@ -16,6 +16,7 @@ import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
+import 'package:mobile_miniproject_app/pages/RiderHistoryDetail.dart';
 import 'package:mobile_miniproject_app/pages/RiderHome.dart';
 import 'package:mobile_miniproject_app/pages/RiderReceive.dart';
 import 'package:mobile_miniproject_app/pages/RiderHistory.dart';
@@ -60,7 +61,7 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
   int cart_length = 0;
   GetStorage gs = GetStorage();
   String url = '';
-  List<GetSendOrder> rider_Orders = [];
+  List<GetSendOrder> rider_History = [];
   List<GetUserSearchRes> order_user = [];
   late Future<void> loadData;
   int _selectedIndex = 0;
@@ -68,7 +69,7 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
   late AnimationController _animationController;
   late Animation<Offset> _pageSlideAnimation;
   var db = FirebaseFirestore.instance;
-  var New_Dv_status;
+  var Dv_date;
 
   @override
   void initState() {
@@ -92,7 +93,7 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
         children: [
           // Main content
           Padding(
-            padding: const EdgeInsets.all(10.0),
+            padding: const EdgeInsets.all(5.0),
             child: Column(
               children: [
                 Expanded(
@@ -118,7 +119,7 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
                                     .isEmpty)
                                   const Center(
                                     child: Text(
-                                      "There are no orders at the moment,please wait a moment...",
+                                      "There are no history at the moment,please wait a moment...",
                                       style: TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold),
@@ -315,7 +316,7 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
               children: [
                 FilledButton(
                   onPressed: () {
-                    Get.to(() => RiderReceivePage(
+                    Get.to(() => RiderHistoryDetail(
                         info_send_uid: orders.se_Uid,
                         info_receive_uid: orders.re_Uid,
                         info_oid: orders.oid,
@@ -352,6 +353,7 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
           Padding(
             padding: const EdgeInsets.only(top: 10),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 TextButton(
                   onPressed: () {
@@ -366,6 +368,7 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
                     foregroundColor: Colors.black,
                   ),
                 ),
+                Text("${Dv_date}")
               ],
             ),
           ),
@@ -380,20 +383,35 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
     log(url);
     log(send_uid.toString());
     log("sddddddddddddddd");
-    log(rider_Orders.length.toString());
+    log(rider_History.length.toString());
 
-    var response = await http.get(Uri.parse("$url/db/get_Rider_Order"));
+    var response = await http.get(Uri.parse("$url/db/get_Rider_History"));
     if (response.statusCode == 200) {
-      rider_Orders = getSendOrderFromJson(response.body);
-      log(jsonEncode(rider_Orders));
+      rider_History = getSendOrderFromJson(response.body);
+      log(jsonEncode(rider_History));
       log("sdddddddddddddddxxxxxxxxxxxxxxxxxx");
-      log(rider_Orders.length.toString());
+      log(rider_History.length.toString());
 
       setState(() {
-        context.read<ShareData>().rider_order_share = rider_Orders;
+        context.read<ShareData>().rider_order_share = rider_History;
       });
     } else {
       log('Failed to load lottery numbers. Status code: ${response.statusCode}');
     }
+
+    var result = await db
+        .collection('Order_Info')
+        .doc("order${rider_History.first.oid}")
+        .get();
+    var data = result.data();
+    log(data!['Order_time_at'].toString());
+    var timestamp = data!['Order_time_at'];
+    DateTime orderDate = timestamp.toDate(); // แปลง Timestamp เป็น DateTime
+    // ฟอร์แมตวันที่เป็น DD/MM/YYYY
+    String formattedDate = DateFormat('dd/MM/yyyy').format(orderDate);
+    log(formattedDate); // แสดงวันที่ที่ฟอร์แมตแล้ว
+
+    Dv_date = formattedDate; // เก็บวันที่ในตัวแปร Dv_date
+    log(Dv_date.toString());
   }
 }
