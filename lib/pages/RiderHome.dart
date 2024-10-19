@@ -460,7 +460,8 @@ class _RiderHomePageState extends State<RiderHomePage> {
     String url = value['apiEndpoint'];
 
     http.put(
-      Uri.parse("$url/db/update_status/${oid}/${2}"),
+      Uri.parse(
+          "$url/db/update_status/${oid}/${2}/${context.read<ShareData>().user_info_send.uid}"),
       headers: {"Content-Type": "application/json; charset=utf-8"},
     );
 

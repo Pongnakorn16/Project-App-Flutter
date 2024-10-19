@@ -6,6 +6,7 @@ import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/get_navigation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
@@ -18,6 +19,8 @@ import 'package:mobile_miniproject_app/pages/RiderReceive.dart';
 import 'package:mobile_miniproject_app/pages/RiderHistory.dart';
 import 'package:mobile_miniproject_app/pages/RiderHome.dart';
 import 'package:mobile_miniproject_app/pages/RiderProfile.dart';
+import 'package:mobile_miniproject_app/shared/share_data.dart';
+import 'package:provider/provider.dart';
 
 class RiderHistoryDetail extends StatefulWidget {
   int info_send_uid; // ประกาศตัวแปรในคลาสนี้
@@ -41,6 +44,7 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
   MapController mapController = MapController();
   List<GetUserSearchRes> send_Info = [];
   List<GetUserSearchRes> receive_Info = [];
+  List<GetUserSearchRes> rider_Info = [];
   List<GetSendOrder> order_one = [];
   int sender_uid = 0; // ประกาศตัวแปรเพื่อเก็บค่า
   int receiver_uid = 0;
@@ -51,12 +55,13 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
   String product_name = "";
   String product_detail = "";
   String product_imgUrl = "";
-  LatLng send_latLng = LatLng(0, 0);
-  LatLng receive_latLng = LatLng(0, 0);
-  List<LatLng> polylinePoints = [];
+  String product_imgUrl3 = "";
+  String product_imgUrl4 = "";
+
   var db = FirebaseFirestore.instance;
+  var Dv_date;
+  var Dv_status;
   int _selectedIndex = 0;
-  double distanceInKm = 0;
 
   @override
   void initState() {
@@ -64,7 +69,7 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
     sender_uid = widget.info_send_uid;
     receiver_uid = widget.info_receive_uid;
     _selectedIndex = widget.selectedIndex;
-    loadDataAsync(); // กำหนดค่าใน initState
+    loadDataAsync();
   }
 
   @override
@@ -96,13 +101,13 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '${product_name}',
+                                  product_name ?? 'N/A',
                                   style: TextStyle(fontSize: 30),
                                   softWrap: true,
                                   overflow: TextOverflow.visible,
                                 ),
                                 Text(
-                                  '${product_detail}',
+                                  product_detail ?? 'N/A',
                                   style: TextStyle(fontSize: 15),
                                   softWrap: true,
                                   overflow: TextOverflow.visible,
@@ -204,30 +209,33 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'จัดส่งโดย : ${product_name}',
-                                    style: TextStyle(fontSize: 13),
-                                  ),
-                                  SizedBox(height: 10),
-                                  Text(
-                                    'ทะเบียน : ${product_detail}',
-                                    style: TextStyle(fontSize: 13),
-                                  ),
-                                ],
+                              Padding(
+                                padding: const EdgeInsets.only(right: 130),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'จัดส่งโดย : ${rider_Info.isNotEmpty ? rider_Info.first.name : "N/A"}',
+                                      style: TextStyle(fontSize: 13),
+                                    ),
+                                    SizedBox(height: 10),
+                                    Text(
+                                      'ทะเบียน : ${rider_Info.isNotEmpty ? rider_Info.first.licensePlate : "N/A"}',
+                                      style: TextStyle(fontSize: 13),
+                                    ),
+                                  ],
+                                ),
                               ),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Text(
-                                    'เดี๋ยวใส่เบอร์ไรเดอร์',
+                                    '${rider_Info.isNotEmpty ? rider_Info.first.phone : "N/A"}',
                                     style: TextStyle(fontSize: 13),
                                   ),
                                   SizedBox(height: 10),
                                   Text(
-                                    'เดี๋ยวใส่ DD//MM//YYYY',
+                                    '${Dv_date ?? "N/A"}',
                                     style: TextStyle(fontSize: 13),
                                   ),
                                 ],
@@ -265,7 +273,7 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
                             Padding(
                               padding: const EdgeInsets.only(right: 20),
                               child: FutureBuilder(
-                                future: _loadImage(product_imgUrl),
+                                future: _loadImage3(product_imgUrl3),
                                 builder: (BuildContext context,
                                     AsyncSnapshot<Image> snapshot) {
                                   if (snapshot.connectionState ==
@@ -275,7 +283,7 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
                                     return Text('Error loading image');
                                   } else {
                                     return Image.network(
-                                      product_imgUrl,
+                                      product_imgUrl3,
                                       height: 100,
                                       width: 70,
                                     );
@@ -286,7 +294,7 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
                             Padding(
                               padding: const EdgeInsets.only(right: 10),
                               child: FutureBuilder(
-                                future: _loadImage(product_imgUrl),
+                                future: _loadImage4(product_imgUrl4),
                                 builder: (BuildContext context,
                                     AsyncSnapshot<Image> snapshot) {
                                   if (snapshot.connectionState ==
@@ -296,7 +304,7 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
                                     return Text('Error loading image');
                                   } else {
                                     return Image.network(
-                                      product_imgUrl,
+                                      product_imgUrl4,
                                       height: 100,
                                       width: 70,
                                     );
@@ -312,7 +320,41 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            Text("เดี๋ยวมาใส่ STATUS"),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.circle,
+                                  color: Dv_status == 1
+                                      ? Colors.grey
+                                      : Dv_status == 2
+                                          ? Colors.yellow
+                                          : Dv_status == 3
+                                              ? Colors.yellow
+                                              : Dv_status == 4
+                                                  ? Colors.green
+                                                  : Colors
+                                                      .black, // กำหนดสีตาม dv_Status
+                                  size: 9,
+                                ),
+                                SizedBox(width: 5),
+                                Text(
+                                  Dv_status == 1
+                                      ? 'รอไรเดอร์มารับสินค้า'
+                                      : Dv_status == 2
+                                          ? 'ไรเดอร์รับงาน'
+                                          : Dv_status == 3
+                                              ? 'ไรเดอร์รับสินค้าแล้วและกำลังเดินทาง'
+                                              : Dv_status == 4
+                                                  ? 'จัดส่งสำเร็จ'
+                                                  : 'สถานะไม่ถูกต้อง', // กำหนดข้อความตาม dv_Status
+                                  style: TextStyle(
+                                    fontSize: Dv_status == 3
+                                        ? 10
+                                        : 15, // กำหนดขนาดฟอนต์
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -351,9 +393,9 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
           topRight: Radius.circular(40.0),
         ),
         child: BottomNavigationBar(
-          currentIndex: 2,
+          currentIndex: 1,
           onTap: _onItemTapped,
-          selectedItemColor: Colors.black, // สีของ icon ที่เลือก
+          selectedItemColor: Colors.yellow, // สีของ icon ที่เลือก
           unselectedItemColor: Colors.grey, // สีของ icon ที่ไม่ได้เลือก
           backgroundColor: Colors.white,
           iconSize: 20,
@@ -406,68 +448,68 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
   }
 
   Future<void> loadDataAsync() async {
-    var value = await Configuration.getConfig();
-    String url = value['apiEndpoint'];
+    try {
+      var value = await Configuration.getConfig();
+      String url = value['apiEndpoint'];
 
-    var sender = await http.get(Uri.parse("$url/db/get_Send/${sender_uid}"));
-    if (sender.statusCode == 200) {
-      send_Info = getUserSearchResFromJson(sender.body);
-      sender_name = send_Info.first.name.toString();
-      sender_address = send_Info.first.address.toString();
-
-      String? send_coordinates = send_Info.first.coordinates;
-      if (send_coordinates != null) {
-        List<String> latLngList = send_coordinates.split(',');
-        if (latLngList.length == 2) {
-          double send_latitude = double.parse(latLngList[0]);
-          double send_longitude = double.parse(latLngList[1]);
-          send_latLng = LatLng(send_latitude, send_longitude);
+      var sender = await http.get(Uri.parse("$url/db/get_Send/${sender_uid}"));
+      if (sender.statusCode == 200) {
+        send_Info = getUserSearchResFromJson(sender.body);
+        if (send_Info.isNotEmpty) {
+          sender_name = send_Info.first.name ?? "N/A";
+          sender_address = send_Info.first.address ?? "N/A";
         }
       }
-    }
 
-    var receiver =
-        await http.get(Uri.parse("$url/db/get_Receive/${receiver_uid}"));
-    if (receiver.statusCode == 200) {
-      receive_Info = getUserSearchResFromJson(receiver.body);
-      receiver_name = receive_Info.first.name.toString();
-      receiver_address = receive_Info.first.address.toString();
-
-      String? re_coordinates = receive_Info.first.coordinates;
-      if (re_coordinates != null) {
-        List<String> latLngList = re_coordinates.split(',');
-        if (latLngList.length == 2) {
-          double re_latitude = double.parse(latLngList[0]);
-          double re_longitude = double.parse(latLngList[1]);
-          receive_latLng = LatLng(re_latitude, re_longitude);
+      var receiver =
+          await http.get(Uri.parse("$url/db/get_Receive/${receiver_uid}"));
+      if (receiver.statusCode == 200) {
+        receive_Info = getUserSearchResFromJson(receiver.body);
+        if (receive_Info.isNotEmpty) {
+          receiver_name = receive_Info.first.name ?? "N/A";
+          receiver_address = receive_Info.first.address ?? "N/A";
         }
       }
-    }
 
-    var order =
-        await http.get(Uri.parse("$url/db/get_OneOrder/${widget.info_oid}"));
-    if (order.statusCode == 200) {
-      order_one = getSendOrderFromJson(order.body);
-      product_name = order_one.first.p_Name.toString();
-      product_detail = order_one.first.p_Detail.toString();
+      var order =
+          await http.get(Uri.parse("$url/db/get_OneOrder/${widget.info_oid}"));
+      if (order.statusCode == 200) {
+        order_one = getSendOrderFromJson(order.body);
+        if (order_one.isNotEmpty) {
+          product_name = order_one.first.p_Name ?? "N/A";
+          product_detail = order_one.first.p_Detail ?? "N/A";
 
-      String? re_coordinates = receive_Info.first.coordinates;
-      if (re_coordinates != null) {
-        List<String> latLngList = re_coordinates.split(',');
-        if (latLngList.length == 2) {
-          double re_latitude = double.parse(latLngList[0]);
-          double re_longitude = double.parse(latLngList[1]);
-          receive_latLng = LatLng(re_latitude, re_longitude);
+          var rider = await http
+              .get(Uri.parse("$url/db/get_Rider/${order_one.first.ri_Uid}"));
+          if (rider.statusCode == 200) {
+            rider_Info = getUserSearchResFromJson(rider.body);
+          }
         }
       }
-    }
 
-    // เรียก getRouteCoordinates หลังจากได้รับค่า latLng ของผู้ส่งและผู้รับ
-    if (send_latLng != null && receive_latLng != null) {
-      await getRouteCoordinates();
-    }
+      var result = await db
+          .collection('Order_Info')
+          .doc("order${widget.info_oid}")
+          .get();
+      if (result.exists) {
+        var data = result.data();
+        if (data != null) {
+          Dv_status = data['Order_status'] ?? 0;
+          var timestamp = data['Order_time_at'];
+          if (timestamp != null) {
+            DateTime orderDate = timestamp.toDate();
+            Dv_date = DateFormat('dd/MM/yyyy').format(orderDate);
+          } else {
+            Dv_date = "N/A";
+          }
+        }
+      }
 
-    setState(() {});
+      setState(() {});
+    } catch (e) {
+      log("Error in loadDataAsync: $e");
+      // Handle error appropriately
+    }
   }
 
   Future<Image> _loadImage(String url) async {
@@ -480,60 +522,35 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
     final image = Image.network(product_imgUrl);
     // รอให้ภาพโหลด
     await precacheImage(image.image, context);
+
     return image;
   }
 
-  Future<void> getRouteCoordinates() async {
-    // Move the map to the sender's location
-    mapController.move(send_latLng, mapController.camera.zoom);
+  Future<Image> _loadImage3(String url) async {
+    var inboxRef = db.collection("Order_Info");
+    var document = await inboxRef.doc(
+        "order${widget.info_oid}"); // ดึงเอกสารที่มีชื่อ document ตรงกับค่าที่กรอก
+    var result = await document.get();
+    log(result.data()!['product_img'].toString());
+    product_imgUrl3 = result.data()!['status3_product_img'].toString();
+    final image = Image.network(product_imgUrl3);
+    // รอให้ภาพโหลด
+    await precacheImage(image.image, context);
 
-    final url =
-        'https://router.project-osrm.org/route/v1/driving/${send_latLng.longitude},${send_latLng.latitude};${receive_latLng.longitude},${receive_latLng.latitude}?geometries=geojson';
-    final response = await http.get(Uri.parse(url));
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-
-      // Get route distance
-      final distance = data['routes'][0]['distance'];
-
-      // Convert distance from meters to kilometers
-      distanceInKm = distance / 1000;
-
-      // Print distance (or you can display it on the UI)
-      print('Distance: ${distanceInKm.toStringAsFixed(2)} km');
-
-      // Get route coordinates for polyline
-      final coordinates = data['routes'][0]['geometry']['coordinates'];
-      List<LatLng> routePoints = coordinates.map<LatLng>((coord) {
-        return LatLng(coord[1], coord[0]);
-      }).toList();
-
-      setState(() {
-        polylinePoints = routePoints;
-      });
-    } else {
-      print('Error getting route');
-    }
+    return image;
   }
 
-  void UpdateStatus(int oid) async {
-    var value = await Configuration.getConfig();
-    String url = value['apiEndpoint'];
+  Future<Image> _loadImage4(String url) async {
+    var inboxRef = db.collection("Order_Info");
+    var document = await inboxRef.doc(
+        "order${widget.info_oid}"); // ดึงเอกสารที่มีชื่อ document ตรงกับค่าที่กรอก
+    var result = await document.get();
+    log(result.data()!['product_img'].toString());
+    product_imgUrl4 = result.data()!['status4_product_img'].toString();
+    final image = Image.network(product_imgUrl4);
+    // รอให้ภาพโหลด
+    await precacheImage(image.image, context);
 
-    http.put(
-      Uri.parse("$url/db/update_status/${oid}/${2}"),
-      headers: {"Content-Type": "application/json; charset=utf-8"},
-    );
-
-    var doc = "order${oid}";
-
-    // ข้อมูลที่ต้องการอัปเดต
-    var dataToUpdate = {
-      'Order_status': 2,
-    };
-
-    // อัปเดตข้อมูลใน Firebase
-    await db.collection('Order_Info').doc(doc).update(dataToUpdate);
+    return image;
   }
 }

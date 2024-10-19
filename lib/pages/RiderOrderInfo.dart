@@ -18,6 +18,8 @@ import 'package:mobile_miniproject_app/pages/RiderReceive.dart';
 import 'package:mobile_miniproject_app/pages/RiderHistory.dart';
 import 'package:mobile_miniproject_app/pages/RiderHome.dart';
 import 'package:mobile_miniproject_app/pages/RiderProfile.dart';
+import 'package:mobile_miniproject_app/shared/share_data.dart';
+import 'package:provider/provider.dart';
 
 class RiderOrderinfoPage extends StatefulWidget {
   int info_send_uid; // ประกาศตัวแปรในคลาสนี้
@@ -509,7 +511,8 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
     String url = value['apiEndpoint'];
 
     http.put(
-      Uri.parse("$url/db/update_status/${oid}/${2}"),
+      Uri.parse(
+          "$url/db/update_status/${oid}/${2}/${context.read<ShareData>().user_info_send.uid}"),
       headers: {"Content-Type": "application/json; charset=utf-8"},
     );
 

@@ -355,18 +355,9 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                TextButton(
-                  onPressed: () {
-                    Get.to(() => RiderOrderinfoPage(
-                        info_send_uid: orders.se_Uid,
-                        info_receive_uid: orders.re_Uid,
-                        info_oid: orders.oid,
-                        selectedIndex: 1));
-                  },
+                Padding(
+                  padding: const EdgeInsets.only(left: 5),
                   child: Text(orders.p_Name),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.black,
-                  ),
                 ),
                 Text("${Dv_date}")
               ],
