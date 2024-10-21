@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
@@ -35,6 +36,7 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
   MapController mapController = MapController();
   List<GetUserSearchRes> send_Info = [];
   List<GetUserSearchRes> receive_Info = [];
+  List<GetUserSearchRes> rider_Info = [];
   List<GetSendOrder> order_one = [];
   int sender_uid = 0; // ประกาศตัวแปรเพื่อเก็บค่า
   int receiver_uid = 0;
@@ -43,12 +45,18 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
   String product_name = "";
   String product_detail = "";
   String product_imgUrl = "";
+  String? licence_plate = "";
+  String rider_phone = "";
+  String rider_name = "";
+  String product_imgUrl3 = "";
+  String product_imgUrl4 = "";
   LatLng send_latLng = LatLng(0, 0);
   LatLng receive_latLng = LatLng(0, 0);
   List<LatLng> polylinePoints = [];
   var db = FirebaseFirestore.instance;
   int _selectedIndex = 0;
   double distanceInKm = 0;
+  var Dv_date;
 
   @override
   void initState() {
@@ -231,41 +239,42 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
                     Padding(
                       padding: const EdgeInsets.only(left: 10),
                       child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'จัดส่งโดย : ${product_name}',
-                                  style: TextStyle(fontSize: 13),
-                                ),
-                                SizedBox(height: 10),
-                                Text(
-                                  'ทะเบียน : ${product_detail}',
-                                  style: TextStyle(fontSize: 13),
-                                ),
-                              ],
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  'เดี๋ยวใส่เบอร์ไรเดอร์',
-                                  style: TextStyle(fontSize: 13),
-                                ),
-                                SizedBox(height: 10),
-                                Text(
-                                  'เดี๋ยวใส่ DD//MM//YYYY',
-                                  style: TextStyle(fontSize: 13),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                children: [
+                                  Text(
+                                    'จัดส่งโดย : ${rider_name}',
+                                    style: TextStyle(fontSize: 13),
+                                  ),
+                                  SizedBox(height: 10),
+                                  Text(
+                                    'ทะเบียน : ${licence_plate}',
+                                    style: TextStyle(fontSize: 13),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(
+                                width: 30,
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    'Rider tel. : ${rider_phone}',
+                                    style: TextStyle(fontSize: 13),
+                                  ),
+                                  SizedBox(height: 10),
+                                  Text(
+                                    'Delivery date : ${Dv_date}',
+                                    style: TextStyle(fontSize: 13),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          )),
                     ),
                     Padding(
                       padding:
@@ -276,21 +285,53 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.image,
-                                color: Colors.black,
-                                size: 80,
-                              )
+                              Padding(
+                                padding: const EdgeInsets.only(right: 20),
+                                child: FutureBuilder(
+                                  future: _loadImage3(product_imgUrl3),
+                                  builder: (BuildContext context,
+                                      AsyncSnapshot<Image> snapshot) {
+                                    if (snapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return CircularProgressIndicator();
+                                    } else if (snapshot.hasError) {
+                                      return Text('Error loading image');
+                                    } else {
+                                      return Image.network(
+                                        product_imgUrl3,
+                                        height: 100,
+                                        width: 70,
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
                             ],
                           ),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.image,
-                                color: Colors.black,
-                                size: 80,
-                              )
+                              Padding(
+                                padding: const EdgeInsets.only(right: 10),
+                                child: FutureBuilder(
+                                  future: _loadImage4(product_imgUrl4),
+                                  builder: (BuildContext context,
+                                      AsyncSnapshot<Image> snapshot) {
+                                    if (snapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return CircularProgressIndicator();
+                                    } else if (snapshot.hasError) {
+                                      return Text('Error loading image');
+                                    } else {
+                                      return Image.network(
+                                        product_imgUrl4,
+                                        height: 100,
+                                        width: 70,
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -423,14 +464,28 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
       order_one = getSendOrderFromJson(order.body);
       product_name = order_one.first.p_Name.toString();
       product_detail = order_one.first.p_Detail.toString();
+    }
 
-      String? re_coordinates = receive_Info.first.coordinates;
-      if (re_coordinates != null) {
-        List<String> latLngList = re_coordinates.split(',');
-        if (latLngList.length == 2) {
-          double re_latitude = double.parse(latLngList[0]);
-          double re_longitude = double.parse(latLngList[1]);
-          receive_latLng = LatLng(re_latitude, re_longitude);
+    var rider = await http
+        .get(Uri.parse("$url/db/get_Rider/${order_one.first.ri_Uid}"));
+    if (rider.statusCode == 200) {
+      rider_Info = getUserSearchResFromJson(rider.body);
+      licence_plate = rider_Info.first.licensePlate;
+      rider_phone = rider_Info.first.phone;
+      rider_name = rider_Info.first.name;
+    }
+
+    var result =
+        await db.collection('Order_Info').doc("order${widget.info_oid}").get();
+    if (result.exists) {
+      var data = result.data();
+      if (data != null) {
+        var timestamp = data['Order_time_at'];
+        if (timestamp != null) {
+          DateTime orderDate = timestamp.toDate();
+          Dv_date = DateFormat('dd/MM/yyyy').format(orderDate);
+        } else {
+          Dv_date = "N/A";
         }
       }
     }
@@ -453,6 +508,35 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
     final image = Image.network(product_imgUrl);
     // รอให้ภาพโหลด
     await precacheImage(image.image, context);
+
+    return image;
+  }
+
+  Future<Image> _loadImage3(String url) async {
+    var inboxRef = db.collection("Order_Info");
+    var document = await inboxRef.doc(
+        "order${widget.info_oid}"); // ดึงเอกสารที่มีชื่อ document ตรงกับค่าที่กรอก
+    var result = await document.get();
+    log(result.data()!['product_img'].toString());
+    product_imgUrl3 = result.data()!['status3_product_img'].toString();
+    final image = Image.network(product_imgUrl3);
+    // รอให้ภาพโหลด
+    await precacheImage(image.image, context);
+
+    return image;
+  }
+
+  Future<Image> _loadImage4(String url) async {
+    var inboxRef = db.collection("Order_Info");
+    var document = await inboxRef.doc(
+        "order${widget.info_oid}"); // ดึงเอกสารที่มีชื่อ document ตรงกับค่าที่กรอก
+    var result = await document.get();
+    log(result.data()!['product_img'].toString());
+    product_imgUrl4 = result.data()!['status4_product_img'].toString();
+    final image = Image.network(product_imgUrl4);
+    // รอให้ภาพโหลด
+    await precacheImage(image.image, context);
+
     return image;
   }
 

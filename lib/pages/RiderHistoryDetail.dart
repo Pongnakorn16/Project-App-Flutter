@@ -209,33 +209,33 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.only(right: 130),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'จัดส่งโดย : ${rider_Info.isNotEmpty ? rider_Info.first.name : "N/A"}',
-                                      style: TextStyle(fontSize: 13),
-                                    ),
-                                    SizedBox(height: 10),
-                                    Text(
-                                      'ทะเบียน : ${rider_Info.isNotEmpty ? rider_Info.first.licensePlate : "N/A"}',
-                                      style: TextStyle(fontSize: 13),
-                                    ),
-                                  ],
-                                ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'จัดส่งโดย : ${rider_Info.isNotEmpty ? rider_Info.first.name : "N/A"}',
+                                    style: TextStyle(fontSize: 13),
+                                  ),
+                                  SizedBox(height: 10),
+                                  Text(
+                                    'ทะเบียน : ${rider_Info.isNotEmpty ? rider_Info.first.licensePlate : "N/A"}',
+                                    style: TextStyle(fontSize: 13),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(
+                                width: 30,
                               ),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Text(
-                                    '${rider_Info.isNotEmpty ? rider_Info.first.phone : "N/A"}',
+                                    'Rider tel. : ${rider_Info.isNotEmpty ? rider_Info.first.phone : "N/A"}',
                                     style: TextStyle(fontSize: 13),
                                   ),
                                   SizedBox(height: 10),
                                   Text(
-                                    '${Dv_date ?? "N/A"}',
+                                    'Delivery date : ${Dv_date ?? "N/A"}',
                                     style: TextStyle(fontSize: 13),
                                   ),
                                 ],
