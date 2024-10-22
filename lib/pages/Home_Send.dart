@@ -170,8 +170,8 @@ class _Home_SendPageState extends State<Home_SendPage>
                                     style: FilledButton.styleFrom(
                                       backgroundColor:
                                           Colors.yellow, // สีพื้นหลังของปุ่ม
-                                      foregroundColor:
-                                          Colors.white, // สีของข้อความในปุ่ม
+                                      foregroundColor: const Color.fromARGB(255,
+                                          115, 28, 168), // สีของข้อความในปุ่ม
                                       padding: EdgeInsets.symmetric(
                                           horizontal: 20,
                                           vertical: 15), // ระยะห่างภายในปุ่ม

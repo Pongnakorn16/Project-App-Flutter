@@ -24,13 +24,13 @@ import 'package:mobile_miniproject_app/pages/RiderProfile.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 
-class SendAllMapPage extends StatefulWidget {
+class ReceiveAllMapPage extends StatefulWidget {
   int info_send_uid; // ประกาศตัวแปรในคลาสนี้
   int selectedIndex = 0;
   int info_receive_uid; // ประกาศตัวแปรในคลาสนี้
   int info_oid;
 
-  SendAllMapPage({
+  ReceiveAllMapPage({
     super.key,
     required this.info_send_uid,
     required this.info_receive_uid,
@@ -39,14 +39,14 @@ class SendAllMapPage extends StatefulWidget {
   });
 
   @override
-  State<SendAllMapPage> createState() => _SendAllMapPageState();
+  State<ReceiveAllMapPage> createState() => _ReceiveAllMapPageState();
 }
 
-class _SendAllMapPageState extends State<SendAllMapPage> {
+class _ReceiveAllMapPageState extends State<ReceiveAllMapPage> {
   MapController mapController = MapController();
   List<GetUserSearchRes> send_Info = [];
   List<GetUserSearchRes> receive_Info = [];
-  List<GetSendOrder> allSend_order = [];
+  List<GetSendOrder> allReceive_order = [];
   List<LatLng> riderLatLngs = [];
 
   int sender_uid = 0; // ประกาศตัวแปรเพื่อเก็บค่า
@@ -109,7 +109,7 @@ class _SendAllMapPageState extends State<SendAllMapPage> {
                     markers: [
                       for (int i = 0; i < allSendLatLngs.length; i++) ...[
                         Marker(
-                          point: allSendLatLngs[i],
+                          point: allReceiveLatLngs[i],
                           width: 40,
                           height: 40,
                           child: Icon(
@@ -119,7 +119,7 @@ class _SendAllMapPageState extends State<SendAllMapPage> {
                           ),
                         ),
                         Marker(
-                          point: allReceiveLatLngs[i],
+                          point: allSendLatLngs[i],
                           width: 40,
                           height: 40,
                           child: Icon(
@@ -246,9 +246,9 @@ class _SendAllMapPageState extends State<SendAllMapPage> {
                             fontSize: 17, fontWeight: FontWeight.bold),
                       ),
                       style: FilledButton.styleFrom(
-                        backgroundColor: Colors.yellow, // สีพื้นหลังของปุ่ม
-                        foregroundColor: const Color.fromARGB(
-                            255, 115, 28, 168), // สีของข้อความในปุ่ม
+                        backgroundColor: const Color.fromARGB(
+                            255, 115, 28, 168), // สีพื้นหลังของปุ่ม
+                        foregroundColor: Colors.yellow, // สีของข้อความในปุ่ม
                         padding: EdgeInsets.symmetric(
                             horizontal: 20, vertical: 15), // ระยะห่างภายในปุ่ม
                         shape: RoundedRectangleBorder(
@@ -307,12 +307,12 @@ class _SendAllMapPageState extends State<SendAllMapPage> {
     );
 
     var order = await http
-        .get(Uri.parse("$url/db/get_SendOrder/${widget.info_send_uid}"));
+        .get(Uri.parse("$url/db/get_ReceiveOrder/${widget.info_receive_uid}"));
 
     if (order.statusCode == 200) {
-      allSend_order = getSendOrderFromJson(order.body);
+      allReceive_order = getSendOrderFromJson(order.body);
 
-      for (var singleOrder in allSend_order) {
+      for (var singleOrder in allReceive_order) {
         loadRiderLocation(singleOrder.oid);
         if (send_latLng != null && receive_latLng != null) {
           await getRouteCoordinates(singleOrder.se_Uid, singleOrder.re_Uid);
@@ -340,7 +340,7 @@ class _SendAllMapPageState extends State<SendAllMapPage> {
 
   Future<void> getRouteCoordinates(int se_uid, int re_uid) async {
     // Move the map to the sender's location
-    mapController.move(send_latLng, mapController.camera.zoom);
+    mapController.move(receive_latLng, mapController.camera.zoom);
 
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
@@ -408,9 +408,9 @@ class _SendAllMapPageState extends State<SendAllMapPage> {
   Future<void> loadRiderLocation(int oid) async {
     var riderDoc = await db.collection('Order_Info').doc('order${oid}').get();
     if (riderDoc.exists) {
-      String riderCoordinates = riderDoc.data()?['rider_coordinates'];
-      print('Rider Coordinates: $riderCoordinates'); // เพิ่มการพิมพ์ข้อมูลพิกัด
+      String? riderCoordinates = riderDoc.data()?['rider_coordinates'];
       if (riderCoordinates != null) {
+        // ตรวจสอบว่ามีค่าหรือไม่
         List<String> latLngList = riderCoordinates.split(',');
         if (latLngList.length == 2) {
           double riderLat = double.parse(latLngList[0]);
@@ -427,6 +427,8 @@ class _SendAllMapPageState extends State<SendAllMapPage> {
         }
       }
       setState(() {}); // เรียก setState เพื่ออัปเดต UI
+    } else {
+      print('ไม่พบเอกสารไรเดอร์');
     }
   }
 }

@@ -9,6 +9,7 @@ import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home_Receive.dart';
 import 'package:mobile_miniproject_app/pages/OrderInfo.dart';
+import 'package:mobile_miniproject_app/pages/Receive_AllMap.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_miniproject_app/models/response/GetLotteryNumbers_Res.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
@@ -34,6 +35,10 @@ class _Home_ReceivePageState extends State<Home_ReceivePage>
   String send_user_name = '';
   String send_user_type = '';
   String send_user_image = '';
+
+  int sender_uid = 0;
+  int receiver_uid = 0;
+  int order_oid = 0;
 
   int receive_uid = 0;
   String receive_user_name = '';
@@ -153,6 +158,39 @@ class _Home_ReceivePageState extends State<Home_ReceivePage>
                                           ) // Widget ที่ต้องการแสดงใน Card
                                           ))
                                       .toList(),
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 10),
+                                  child: FilledButton(
+                                    onPressed: () {
+                                      Get.to(ReceiveAllMapPage(
+                                          info_send_uid: receive_uid,
+                                          info_receive_uid: receiver_uid,
+                                          info_oid: order_oid,
+                                          selectedIndex: 1));
+                                    },
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: const Color.fromARGB(255,
+                                          115, 28, 168), // สีพื้นหลังของปุ่ม
+                                      foregroundColor:
+                                          Colors.yellow, // สีของข้อความในปุ่ม
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                          vertical: 15), // ระยะห่างภายในปุ่ม
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                            12), // ขอบปุ่มโค้งมน
+                                      ),
+                                      elevation: 5, // เงาของปุ่มเพื่อเพิ่มมิติ
+                                    ),
+                                    child: Text(
+                                      "Show All In One Map",
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight
+                                              .bold), // ขนาดและน้ำหนักของข้อความ
+                                    ),
+                                  ),
+                                )
                               ],
                             ),
                           ),
@@ -267,6 +305,10 @@ class _Home_ReceivePageState extends State<Home_ReceivePage>
     var response =
         await http.get(Uri.parse("$url/db/get_Receive/${orders.se_Uid}"));
     receive_user = getUserSearchResFromJson(response.body);
+
+    sender_uid = orders.se_Uid;
+    receiver_uid = orders.re_Uid;
+    order_oid = orders.oid;
 
     return Padding(
       padding: const EdgeInsets.all(20.0),

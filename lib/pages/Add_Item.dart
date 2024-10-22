@@ -6,11 +6,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/get_navigation.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_miniproject_app/models/request/user_order_post_req.dart';
@@ -34,7 +36,11 @@ class _AddItemPageState extends State<AddItemPage> {
   String send_user_name = '';
   String send_user_type = '';
   String send_user_image = '';
+  String receiver_address = "";
+  List<GetUserSearchRes> receive_Info = [];
+  LatLng receive_latLng = LatLng(0, 0);
   List<GetUserSearchRes> all_userSearch = [];
+  MapController mapController = MapController();
   TextEditingController searchCtl = TextEditingController();
   TextEditingController send_nameCtl = TextEditingController();
   TextEditingController product_nameCtl = TextEditingController();
@@ -111,66 +117,77 @@ class _AddItemPageState extends State<AddItemPage> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(top: 30, left: 10, right: 10),
-                  child: image != null
-                      ? Image.file(
-                          File(image!.path), // แสดงรูปที่เลือก
-                          width: 90.0, // กำหนดขนาดของรูปภาพ
-                          height: 90.0,
-                          fit: BoxFit.cover, // ทำให้รูปเต็มกรอบ
-                        )
-                      : IconButton(
-                          icon: Icon(
-                            Icons.add_photo_alternate_rounded,
-                            color: Color.fromARGB(255, 255, 222, 78),
-                          ),
-                          iconSize: 90.0,
-                          onPressed: () async {
-                            image = await picker.pickImage(
-                                source: ImageSource.camera);
-                            if (image != null) {
-                              log(image!.path.toString());
-                              setState(() {}); // อัพเดต UI เมื่อเลือกรูป
-                            } else {
-                              log('No Image');
-                            }
-                            print('Icon button pressed');
-                          },
-                        ),
-                ),
-                Padding(
                   padding: const EdgeInsets.only(top: 20, left: 10, right: 10),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Color.fromARGB(
-                          255, 228, 225, 225), // สีพื้นหลังของ TextField
-                      borderRadius: BorderRadius.circular(30.0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.5), // สีของเงา
-                          spreadRadius: 2,
-                          blurRadius: 7,
-                          offset: Offset(0, 3), // การเยื้องของเงา
+                  child: Row(
+                    children: [
+                      // TextField ขนาดเต็มที่ขยายเต็มที่ของ Row
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Color.fromARGB(
+                                255, 228, 225, 225), // สีพื้นหลังของ TextField
+                            borderRadius: BorderRadius.circular(30.0),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.5), // สีของเงา
+                                spreadRadius: 2,
+                                blurRadius: 7,
+                                offset: Offset(0, 3), // การเยื้องของเงา
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: product_nameCtl,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: Colors
+                                  .transparent, // เนื่องจากเราตั้งสีใน Container แล้ว
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30.0),
+                                borderSide: BorderSide.none, // ไม่มีขอบ
+                              ),
+                              hintText: 'Product Name', // ใส่ placeholder
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: product_nameCtl,
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors
-                            .transparent, // เนื่องจากเราตั้งสีใน Container แล้ว
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30.0),
-                          borderSide: BorderSide.none, // ไม่มีขอบ
-                        ), // ใส่ไอคอนโทรศัพท์ที่ด้านซ้าย
-                        hintText: 'Product Name', // ใส่ placeholder
                       ),
-                    ),
+                      SizedBox(
+                          width:
+                              10), // เว้นระยะห่างระหว่าง TextField กับปุ่มรูปภาพ
+                      // ปุ่มรูปภาพหรือไอคอน
+                      Padding(
+                        padding: const EdgeInsets.only(left: 10, right: 10),
+                        child: image != null
+                            ? Image.file(
+                                File(image!.path), // แสดงรูปที่เลือก
+                                width: 90.0, // กำหนดขนาดของรูปภาพ
+                                height: 90.0,
+                                fit: BoxFit.cover, // ทำให้รูปเต็มกรอบ
+                              )
+                            : IconButton(
+                                icon: Icon(
+                                  Icons.add_photo_alternate_rounded,
+                                  color: Color.fromARGB(255, 255, 222, 78),
+                                ),
+                                iconSize: 90.0,
+                                onPressed: () async {
+                                  image = await picker.pickImage(
+                                      source: ImageSource.camera);
+                                  if (image != null) {
+                                    log(image!.path.toString());
+                                    setState(() {}); // อัพเดต UI เมื่อเลือกรูป
+                                  } else {
+                                    log('No Image');
+                                  }
+                                  print('Icon button pressed');
+                                },
+                              ),
+                      ),
+                    ],
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(top: 20, left: 10, right: 10),
+                  padding: const EdgeInsets.only(top: 5, left: 10, right: 10),
                   child: Container(
                     decoration: BoxDecoration(
                       color: Color.fromARGB(
@@ -224,15 +241,20 @@ class _AddItemPageState extends State<AddItemPage> {
                       controller: send_nameCtl,
                       decoration: InputDecoration(
                         prefixIcon: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: SizedBox(
-                            width: 20, // กำหนดความกว้างของรูปภาพ
-                            height: 20, // กำหนดความสูงของรูปภาพ
-                            child: Image.network(
-                              send_user_image, // URL ของรูปภาพ
-                            ),
-                          ),
-                        ),
+                            padding: const EdgeInsets.all(8.0),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(
+                                  30.0), // กำหนดความโค้งของขอบ
+                              child: SizedBox(
+                                width: 20, // กำหนดความกว้างของรูปภาพ
+                                height: 20, // กำหนดความสูงของรูปภาพ
+                                child: Image.network(
+                                  send_user_image, // URL ของรูปภาพ
+                                  fit: BoxFit
+                                      .cover, // ทำให้ภาพพอดีกับขนาดที่กำหนด
+                                ),
+                              ),
+                            )),
                         suffixIcon: Padding(
                           padding: const EdgeInsets.all(10.0),
                           child: FaIcon(
@@ -253,65 +275,114 @@ class _AddItemPageState extends State<AddItemPage> {
                 ),
                 Padding(
                   padding: const EdgeInsets.only(top: 20, left: 10, right: 10),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Color.fromARGB(
-                          255, 228, 225, 225), // สีพื้นหลังของ TextField
-                      borderRadius: BorderRadius.circular(30.0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.5), // สีของเงา
-                          spreadRadius: 2,
-                          blurRadius: 7,
-                          offset: Offset(0, 3), // การเยื้องของเงา
+                  child: Column(
+                    children: [
+                      // TextField
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Color.fromARGB(
+                              255, 228, 225, 225), // สีพื้นหลังของ TextField
+                          borderRadius: BorderRadius.circular(30.0),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.5), // สีของเงา
+                              spreadRadius: 2,
+                              blurRadius: 7,
+                              offset: Offset(0, 3), // การเยื้องของเงา
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: receive_nameCtl,
-                      onChanged: (query) {
-                        if (query.length >= 1) {
-                          // Or whatever minimum length you prefer
-                          showNameSearchPopup(context, query, receive_nameCtl);
-                        }
-                      },
-                      decoration: InputDecoration(
-                        prefixIcon: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: SizedBox(
-                            width: 20, // กำหนดความกว้างของรูปภาพ
-                            height: 20, // กำหนดความสูงของรูปภาพ
-                            child: To_userImage.isNotEmpty
-                                ? Image.network(
-                                    To_userImage, // URL ของรูปภาพ
-                                    fit: BoxFit
-                                        .cover, // ปรับรูปภาพให้พอดีกับขนาดที่กำหนด
-                                  )
-                                : Container(), // ถ้า To_userImage ว่าง ให้แสดง Container ว่าง
+                        child: TextField(
+                          controller: receive_nameCtl,
+                          onChanged: (query) {
+                            if (query.length >= 1) {
+                              // Or whatever minimum length you prefer
+                              showNameSearchPopup(
+                                  context, query, receive_nameCtl);
+                            }
+                          },
+                          decoration: InputDecoration(
+                            prefixIcon: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(
+                                    8.0), // กำหนดความโค้งของขอบ
+                                child: SizedBox(
+                                  width: 20, // กำหนดความกว้างของรูปภาพ
+                                  height: 20, // กำหนดความสูงของรูปภาพ
+                                  child: To_userImage.isNotEmpty
+                                      ? Image.network(
+                                          To_userImage, // URL ของรูปภาพ
+                                          fit: BoxFit
+                                              .cover, // ปรับรูปภาพให้พอดีกับขนาดที่กำหนด
+                                        )
+                                      : Container(), // ถ้า To_userImage ว่าง ให้แสดง Container ว่าง
+                                ),
+                              ),
+                            ),
+                            filled: true,
+                            fillColor: Colors
+                                .transparent, // เนื่องจากเราตั้งสีใน Container แล้ว
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30.0),
+                              borderSide: BorderSide.none, // ไม่มีขอบ
+                            ),
+                            hintText:
+                                To_userName.isNotEmpty ? To_userName : 'To',
+                            suffixIcon: Padding(
+                              padding: const EdgeInsets.all(10.0),
+                              child: FaIcon(
+                                FontAwesomeIcons.circleChevronLeft,
+                                color: Colors.green,
+                              ), // ไอคอนที่ด้านขวา
+                            ),
                           ),
                         ),
-
-                        filled: true,
-                        fillColor: Colors
-                            .transparent, // เนื่องจากเราตั้งสีใน Container แล้ว
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30.0),
-                          borderSide: BorderSide.none, // ไม่มีขอบ
-                        ), // ใส่ไอคอนโทรศัพท์ที่ด้านซ้าย
-                        hintText: To_userName.isNotEmpty ? To_userName : 'To',
-                        suffixIcon: Padding(
-                          padding: const EdgeInsets.all(10.0),
-                          child: FaIcon(
-                            FontAwesomeIcons.circleChevronLeft,
-                            color: Colors.green,
-                          ), // ไอคอนที่ด้านขวา
-                        ), // ใส่ placeholder
                       ),
-                    ),
+
+                      SizedBox(
+                          height:
+                              20), // เว้นระยะห่างระหว่าง TextField กับแผนที่
+
+                      // FlutterMap
+                      Container(
+                        height: 100, // กำหนดความสูงของแผนที่
+                        child: FlutterMap(
+                          mapController: mapController,
+                          options: MapOptions(
+                            initialCenter: receive_latLng,
+                            initialZoom: 15.0,
+                          ),
+                          children: [
+                            TileLayer(
+                              urlTemplate:
+                                  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                              userAgentPackageName: 'com.example.app',
+                              maxNativeZoom: 19,
+                            ),
+                            MarkerLayer(
+                              markers: [
+                                Marker(
+                                  point: receive_latLng,
+                                  width: 40,
+                                  height: 40,
+                                  child: Icon(
+                                    Icons.location_on,
+                                    color: Colors.green,
+                                    size: 40,
+                                  ),
+                                  alignment: Alignment.center,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(top: 30),
+                  padding: const EdgeInsets.only(top: 10),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -408,7 +479,7 @@ class _AddItemPageState extends State<AddItemPage> {
                         backgroundImage: NetworkImage(searchResult.userImage),
                       ),
                       title: Text(searchResult.name),
-                      onTap: () {
+                      onTap: () async {
                         ////////////////////////////
                         User_Info_Receive User_Re = User_Info_Receive();
                         User_Re.uid = searchResult.uid;
@@ -418,6 +489,49 @@ class _AddItemPageState extends State<AddItemPage> {
 
                         ///เดี๋ยวมาเพิ่มทีหลัง
 
+                        // เพิ่มส่วนการเรียก API แบบ async
+                        try {
+                          var receiver = await http.get(
+                            Uri.parse(
+                                "$url/db/get_Receive/${searchResult.uid}"),
+                          );
+
+                          if (receiver.statusCode == 200) {
+                            receive_Info =
+                                getUserSearchResFromJson(receiver.body);
+                            if (receive_Info.isNotEmpty) {
+                              receiver_address =
+                                  receive_Info.first.address.toString();
+
+                              String? re_coordinates =
+                                  receive_Info.first.coordinates;
+                              if (re_coordinates != null) {
+                                List<String> latLngList =
+                                    re_coordinates.split(',');
+                                if (latLngList.length == 2) {
+                                  double re_latitude =
+                                      double.parse(latLngList[0]);
+                                  double re_longitude =
+                                      double.parse(latLngList[1]);
+                                  receive_latLng =
+                                      LatLng(re_latitude, re_longitude);
+                                }
+                              }
+                            } else {
+                              print(
+                                  'receive_Info is empty'); // จัดการกรณีที่ไม่มีข้อมูล
+                            }
+                          } else {
+                            print(
+                                'Failed to load receiver info: ${receiver.statusCode}');
+                          }
+                        } catch (error) {
+                          print('Error: $error'); // จัดการข้อผิดพลาด
+                        }
+                        mapController.move(
+                            receive_latLng, mapController.camera.zoom);
+
+                        // อัพเดต context และ UI
                         context.read<ShareData>().user_info_receive = User_Re;
                         log(context.read<ShareData>().user_info_receive.name);
                         To_userImage = searchResult.userImage;
@@ -425,7 +539,8 @@ class _AddItemPageState extends State<AddItemPage> {
                         receive_nameCtl.text = searchResult.name;
                         To_uid = searchResult.uid;
                         setState(() {});
-                        searchController.text = searchResult.phone;
+                        searchController.text = searchResult
+                            .phone; // เปลี่ยนจาก searchResult.name เป็น phone
                         overlayEntry?.remove();
                       },
                     );
@@ -493,7 +608,7 @@ class _AddItemPageState extends State<AddItemPage> {
                         backgroundImage: NetworkImage(searchResult.userImage),
                       ),
                       title: Text(searchResult.name),
-                      onTap: () {
+                      onTap: () async {
                         ////////////////////////////
                         User_Info_Receive User_Re = User_Info_Receive();
                         User_Re.uid = searchResult.uid;
@@ -503,6 +618,49 @@ class _AddItemPageState extends State<AddItemPage> {
 
                         ///เดี๋ยวมาเพิ่มทีหลัง
 
+                        try {
+                          // ทำการเรียก API และรอการตอบกลับจากเซิร์ฟเวอร์
+                          var receiver = await http.get(
+                            Uri.parse(
+                                "$url/db/get_Receive/${searchResult.uid}"),
+                          );
+
+                          if (receiver.statusCode == 200) {
+                            receive_Info =
+                                getUserSearchResFromJson(receiver.body);
+                            if (receive_Info.isNotEmpty) {
+                              receiver_address =
+                                  receive_Info.first.address.toString();
+
+                              String? re_coordinates =
+                                  receive_Info.first.coordinates;
+                              if (re_coordinates != null) {
+                                List<String> latLngList =
+                                    re_coordinates.split(',');
+                                if (latLngList.length == 2) {
+                                  double re_latitude =
+                                      double.parse(latLngList[0]);
+                                  double re_longitude =
+                                      double.parse(latLngList[1]);
+                                  receive_latLng =
+                                      LatLng(re_latitude, re_longitude);
+                                }
+                              }
+                            } else {
+                              print(
+                                  'receive_Info is empty'); // หรือจัดการกรณีที่ไม่มีข้อมูล
+                            }
+                          } else {
+                            print(
+                                'Failed to load receiver info: ${receiver.statusCode}');
+                          }
+                        } catch (error) {
+                          print('Error: $error'); // จัดการข้อผิดพลาด
+                        }
+                        mapController.move(
+                            receive_latLng, mapController.camera.zoom);
+
+                        // อัพเดต context และ UI
                         context.read<ShareData>().user_info_receive = User_Re;
                         log(context.read<ShareData>().user_info_receive.name);
                         To_userImage = searchResult.userImage;

@@ -46,12 +46,13 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
   String product_detail = "";
   String product_imgUrl = "";
   String? licence_plate = "";
-  String rider_phone = "";
-  String rider_name = "";
+  String? rider_phone = "";
+  String? rider_name = "";
   String product_imgUrl3 = "";
   String product_imgUrl4 = "";
   LatLng send_latLng = LatLng(0, 0);
   LatLng receive_latLng = LatLng(0, 0);
+  LatLng riderLatLng = LatLng(0, 0);
   List<LatLng> polylinePoints = [];
   var db = FirebaseFirestore.instance;
   int _selectedIndex = 0;
@@ -64,6 +65,7 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
     sender_uid = widget.info_send_uid;
     receiver_uid = widget.info_receive_uid;
     _selectedIndex = widget.selectedIndex;
+    loadRiderLocation();
     loadDataAsync(); // กำหนดค่าใน initState
   }
 
@@ -116,6 +118,16 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
                           size: 40,
                         ),
                         alignment: Alignment.center,
+                      ),
+                      Marker(
+                        point: riderLatLng,
+                        width: 60, // เพิ่มขนาดให้ใหญ่ขึ้น
+                        height: 60, // เพิ่มขนาดให้ใหญ่ขึ้น
+                        child: Icon(
+                          Icons.motorcycle,
+                          color: Colors.blue,
+                          size: 30, // เพิ่มขนาดไอคอน
+                        ),
                       ),
                     ],
                   ),
@@ -246,12 +258,12 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
                               Column(
                                 children: [
                                   Text(
-                                    'จัดส่งโดย : ${rider_name}',
+                                    'จัดส่งโดย : ${rider_name ?? 'null'}',
                                     style: TextStyle(fontSize: 13),
                                   ),
                                   SizedBox(height: 10),
                                   Text(
-                                    'ทะเบียน : ${licence_plate}',
+                                    'ทะเบียน : ${licence_plate ?? 'null'}',
                                     style: TextStyle(fontSize: 13),
                                   ),
                                 ],
@@ -263,7 +275,7 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Text(
-                                    'Rider tel. : ${rider_phone}',
+                                    'Rider tel. : ${rider_phone ?? 'null'}',
                                     style: TextStyle(fontSize: 13),
                                   ),
                                   SizedBox(height: 10),
@@ -282,7 +294,9 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
+                          Expanded(
+                              // ใช้ Expanded ที่นี่
+                              child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Padding(
@@ -290,49 +304,56 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
                                 child: FutureBuilder(
                                   future: _loadImage3(product_imgUrl3),
                                   builder: (BuildContext context,
-                                      AsyncSnapshot<Image> snapshot) {
+                                      AsyncSnapshot<Widget> snapshot) {
                                     if (snapshot.connectionState ==
                                         ConnectionState.waiting) {
                                       return CircularProgressIndicator();
                                     } else if (snapshot.hasError) {
                                       return Text('Error loading image');
                                     } else {
-                                      return Image.network(
-                                        product_imgUrl3,
-                                        height: 100,
-                                        width: 70,
+                                      return SizedBox(
+                                        // ใช้ SizedBox เพื่อกำหนดขนาดของรูป
+                                        width: 100, // กำหนดความกว้างของรูป
+                                        height: 100, // กำหนดความสูงของรูป
+                                        child:
+                                            snapshot.data!, // แสดงภาพที่โหลดได้
                                       );
                                     }
                                   },
                                 ),
                               ),
                             ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(right: 10),
-                                child: FutureBuilder(
-                                  future: _loadImage4(product_imgUrl4),
-                                  builder: (BuildContext context,
-                                      AsyncSnapshot<Image> snapshot) {
-                                    if (snapshot.connectionState ==
-                                        ConnectionState.waiting) {
-                                      return CircularProgressIndicator();
-                                    } else if (snapshot.hasError) {
-                                      return Text('Error loading image');
-                                    } else {
-                                      return Image.network(
-                                        product_imgUrl4,
-                                        height: 100,
-                                        width: 70,
-                                      );
-                                    }
-                                  },
+                          )),
+                          Expanded(
+                            // ใช้ Expanded ที่นี่
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 30),
+                                  child: FutureBuilder(
+                                    future: _loadImage4(product_imgUrl4),
+                                    builder: (BuildContext context,
+                                        AsyncSnapshot<Widget> snapshot) {
+                                      if (snapshot.connectionState ==
+                                          ConnectionState.waiting) {
+                                        return CircularProgressIndicator();
+                                      } else if (snapshot.hasError) {
+                                        return Text('Error loading image');
+                                      } else {
+                                        return SizedBox(
+                                          // ใช้ SizedBox เพื่อกำหนดขนาดของรูป
+                                          width: 100, // กำหนดความกว้างของรูป
+                                          height: 100, // กำหนดความสูงของรูป
+                                          child: snapshot
+                                              .data!, // แสดงภาพที่โหลดได้
+                                        ); // แสดงภาพหรือ Icon
+                                      }
+                                    },
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -425,54 +446,84 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
 
+    // ตรวจสอบ sender
     var sender = await http.get(Uri.parse("$url/db/get_Send/${sender_uid}"));
     if (sender.statusCode == 200) {
       send_Info = getUserSearchResFromJson(sender.body);
-      sender_address = send_Info.first.address.toString();
+      if (send_Info.isNotEmpty) {
+        sender_address = send_Info.first.address.toString();
 
-      String? send_coordinates = send_Info.first.coordinates;
-      if (send_coordinates != null) {
-        List<String> latLngList = send_coordinates.split(',');
-        if (latLngList.length == 2) {
-          double send_latitude = double.parse(latLngList[0]);
-          double send_longitude = double.parse(latLngList[1]);
-          send_latLng = LatLng(send_latitude, send_longitude);
+        String? send_coordinates = send_Info.first.coordinates;
+        if (send_coordinates != null) {
+          List<String> latLngList = send_coordinates.split(',');
+          if (latLngList.length == 2) {
+            double send_latitude = double.parse(latLngList[0]);
+            double send_longitude = double.parse(latLngList[1]);
+            send_latLng = LatLng(send_latitude, send_longitude);
+          }
         }
+      } else {
+        print('send_Info is empty'); // หรือจัดการกรณีที่ไม่มีข้อมูล
       }
     }
 
+    // ตรวจสอบ receiver
     var receiver =
         await http.get(Uri.parse("$url/db/get_Receive/${receiver_uid}"));
     if (receiver.statusCode == 200) {
       receive_Info = getUserSearchResFromJson(receiver.body);
-      receiver_address = receive_Info.first.address.toString();
+      if (receive_Info.isNotEmpty) {
+        receiver_address = receive_Info.first.address.toString();
 
-      String? re_coordinates = receive_Info.first.coordinates;
-      if (re_coordinates != null) {
-        List<String> latLngList = re_coordinates.split(',');
-        if (latLngList.length == 2) {
-          double re_latitude = double.parse(latLngList[0]);
-          double re_longitude = double.parse(latLngList[1]);
-          receive_latLng = LatLng(re_latitude, re_longitude);
+        String? re_coordinates = receive_Info.first.coordinates;
+        if (re_coordinates != null) {
+          List<String> latLngList = re_coordinates.split(',');
+          if (latLngList.length == 2) {
+            double re_latitude = double.parse(latLngList[0]);
+            double re_longitude = double.parse(latLngList[1]);
+            receive_latLng = LatLng(re_latitude, re_longitude);
+          }
         }
+      } else {
+        print('receive_Info is empty'); // หรือจัดการกรณีที่ไม่มีข้อมูล
       }
     }
 
+    // ตรวจสอบ order
     var order =
         await http.get(Uri.parse("$url/db/get_OneOrder/${widget.info_oid}"));
     if (order.statusCode == 200) {
       order_one = getSendOrderFromJson(order.body);
-      product_name = order_one.first.p_Name.toString();
-      product_detail = order_one.first.p_Detail.toString();
+      if (order_one.isNotEmpty) {
+        product_name = order_one.first.p_Name.toString();
+        product_detail = order_one.first.p_Detail.toString();
+      } else {
+        print('order_one is empty'); // หรือจัดการกรณีที่ไม่มีข้อมูล
+      }
     }
 
-    var rider = await http
-        .get(Uri.parse("$url/db/get_Rider/${order_one.first.ri_Uid}"));
+    // ตรวจสอบ rider
+    var rider = await http.get(Uri.parse(
+        "$url/db/get_Rider/${order_one.isNotEmpty ? order_one.first.ri_Uid : ''}"));
     if (rider.statusCode == 200) {
       rider_Info = getUserSearchResFromJson(rider.body);
-      licence_plate = rider_Info.first.licensePlate;
-      rider_phone = rider_Info.first.phone;
-      rider_name = rider_Info.first.name;
+      if (rider_Info.isNotEmpty) {
+        licence_plate = rider_Info.first.licensePlate;
+        rider_phone = rider_Info.first.phone;
+        rider_name = rider_Info.first.name;
+      } else {
+        print('rider_Info is empty'); // หรือจัดการกรณีที่ไม่มีข้อมูล
+      }
+      if (rider_Info.isNotEmpty) {
+        licence_plate = rider_Info.first.licensePlate;
+        rider_phone = rider_Info.first.phone;
+        rider_name = rider_Info.first.name;
+      } else {
+        // ถ้า rider_Info ว่าง ให้ตั้งค่าตัวแปรเป็น null
+        licence_plate = null;
+        rider_phone = null;
+        rider_name = null;
+      }
     }
 
     var result =
@@ -500,43 +551,48 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
 
   Future<Image> _loadImage(String url) async {
     var inboxRef = db.collection("Order_Info");
-    var document = await inboxRef.doc(
-        "order${widget.info_oid}"); // ดึงเอกสารที่มีชื่อ document ตรงกับค่าที่กรอก
+    var document = await inboxRef.doc("order${widget.info_oid}");
     var result = await document.get();
-    log(result.data()!['product_img'].toString());
-    product_imgUrl = result.data()!['product_img'].toString();
+
+    // ตรวจสอบว่าผลลัพธ์ไม่เป็น null และค่า URL มีค่า
+    product_imgUrl = result.data()?['product_img'] ?? '';
+    if (product_imgUrl.isEmpty) {
+      return Image.asset('assets/images/placeholder.png'); // หรือใช้ Icon แทน
+    }
     final image = Image.network(product_imgUrl);
-    // รอให้ภาพโหลด
     await precacheImage(image.image, context);
-
     return image;
   }
 
-  Future<Image> _loadImage3(String url) async {
+  Future<Widget> _loadImage3(String url) async {
     var inboxRef = db.collection("Order_Info");
-    var document = await inboxRef.doc(
-        "order${widget.info_oid}"); // ดึงเอกสารที่มีชื่อ document ตรงกับค่าที่กรอก
+    var document = await inboxRef.doc("order${widget.info_oid}");
     var result = await document.get();
-    log(result.data()!['product_img'].toString());
-    product_imgUrl3 = result.data()!['status3_product_img'].toString();
+
+    // ตรวจสอบว่าผลลัพธ์ไม่เป็น null และค่า URL มีค่า
+    product_imgUrl3 = result.data()?['status3_product_img'] ?? '';
+    if (product_imgUrl3.isEmpty) {
+      return Icon(Icons.image, size: 100); // ใช้ Icon แทน
+    }
+
     final image = Image.network(product_imgUrl3);
-    // รอให้ภาพโหลด
     await precacheImage(image.image, context);
-
     return image;
   }
 
-  Future<Image> _loadImage4(String url) async {
+  Future<Widget> _loadImage4(String url) async {
     var inboxRef = db.collection("Order_Info");
-    var document = await inboxRef.doc(
-        "order${widget.info_oid}"); // ดึงเอกสารที่มีชื่อ document ตรงกับค่าที่กรอก
+    var document = await inboxRef.doc("order${widget.info_oid}");
     var result = await document.get();
-    log(result.data()!['product_img'].toString());
-    product_imgUrl4 = result.data()!['status4_product_img'].toString();
-    final image = Image.network(product_imgUrl4);
-    // รอให้ภาพโหลด
-    await precacheImage(image.image, context);
 
+    // ตรวจสอบว่าผลลัพธ์ไม่เป็น null และค่า URL มีค่า
+    product_imgUrl4 = result.data()?['status4_product_img'] ?? '';
+    if (product_imgUrl4.isEmpty) {
+      return Icon(Icons.image, size: 100); // ใช้ Icon แทน
+    }
+
+    final image = Image.network(product_imgUrl4);
+    await precacheImage(image.image, context);
     return image;
   }
 
@@ -571,6 +627,26 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
       });
     } else {
       print('Error getting route');
+    }
+  }
+
+  Future<void> loadRiderLocation() async {
+    var riderDoc =
+        await db.collection('Order_Info').doc('order${widget.info_oid}').get();
+    if (riderDoc.exists) {
+      String riderCoordinates = riderDoc.data()?['rider_coordinates'];
+      print('Rider Coordinates: $riderCoordinates'); // เพิ่มการพิมพ์ข้อมูลพิกัด
+      if (riderCoordinates != null) {
+        List<String> latLngList = riderCoordinates.split(',');
+        if (latLngList.length == 2) {
+          double riderLat = double.parse(latLngList[0]);
+          double riderLng = double.parse(latLngList[1]);
+          riderLatLng = LatLng(riderLat, riderLng);
+          print(
+              'Parsed LatLngกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกก: $riderLatLng'); // ตรวจสอบพิกัด
+        }
+      }
+      setState(() {});
     }
   }
 }
