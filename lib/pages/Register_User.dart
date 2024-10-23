@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:ui';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
@@ -23,6 +25,9 @@ class RegisterUser extends StatefulWidget {
 
 class _RegisterUserState extends State<RegisterUser> {
   String txt = '';
+  LatLng? selectedLocation;
+  LatLng? currentLocation;
+  MapController mapController = MapController();
   TextEditingController phoneCtl = TextEditingController();
   TextEditingController nameCtl = TextEditingController();
   TextEditingController passwordCtl = TextEditingController();
@@ -39,6 +44,7 @@ class _RegisterUserState extends State<RegisterUser> {
     Configuration.getConfig().then((value) {
       url = value['apiEndpoint'];
     });
+    _getCurrentLocation();
   }
 
   Widget build(BuildContext context) {
@@ -210,8 +216,16 @@ class _RegisterUserState extends State<RegisterUser> {
                                 borderRadius: BorderRadius.circular(30.0),
                                 borderSide: BorderSide(width: 1),
                               ),
-                              prefixIcon: Icon(Icons.location_on),
+                              prefixIcon:
+                                  Icon(Icons.location_on), // ไอคอนด้านหน้า
                               hintText: 'Address',
+                              suffixIcon: IconButton(
+                                icon: Icon(Icons.map), // ไอคอนแผนที่ด้านท้าย
+                                onPressed: () {
+                                  // เรียกฟังก์ชันแผนที่เมื่อกดไอคอนนี้
+                                  showMapDialog();
+                                },
+                              ),
                             ),
                           ),
                         ),
@@ -358,5 +372,182 @@ class _RegisterUserState extends State<RegisterUser> {
   void login() {
     gs.remove('Phone');
     Get.to(() => const LoginPage());
+  }
+
+  Future<void> _getCurrentLocation() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        Fluttertoast.showToast(
+          msg: "ไม่สามารถใช้งาน GPS ได้ กรุณาอนุญาตการใช้งานตำแหน่ง",
+          backgroundColor: Colors.red,
+        );
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      Fluttertoast.showToast(
+        msg: "กรุณาเปิดการใช้งานตำแหน่งในการตั้งค่า",
+        backgroundColor: Colors.red,
+      );
+      return;
+    }
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // ใช้ mounted check ก่อนเรียก setState
+      if (!mounted) return;
+
+      setState(() {
+        currentLocation = LatLng(position.latitude, position.longitude);
+        // อัพเดท selectedLocation ด้วยถ้ายังไม่มีการเลือกตำแหน่ง
+        if (selectedLocation == null) {
+          selectedLocation = currentLocation;
+        }
+      });
+    } catch (e) {
+      print('Error getting current location: $e');
+      if (!mounted) return;
+
+      Fluttertoast.showToast(
+        msg: "ไม่สามารถดึงตำแหน่งปัจจุบันได้ กรุณาตรวจสอบการเชื่อมต่อ GPS",
+        backgroundColor: Colors.red,
+      );
+    }
+  }
+
+  void showMapDialog() async {
+    await _getCurrentLocation();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 400,
+                width: double.infinity,
+                child: Stack(
+                  children: [
+                    FlutterMap(
+                      mapController: mapController,
+                      options: MapOptions(
+                        // ใช้ตำแหน่งปัจจุบันถ้ามี ถ้าไม่มีใช้ค่าเริ่มต้น
+                        initialCenter:
+                            currentLocation ?? LatLng(13.7563, 100.5018),
+                        initialZoom: 15.0,
+                        onTap: (tapPosition, latLng) async {
+                          setState(() {
+                            selectedLocation = latLng;
+                            coor = latLng;
+                          });
+
+                          try {
+                            List<Placemark> placemarks =
+                                await placemarkFromCoordinates(
+                              latLng.latitude,
+                              latLng.longitude,
+                            );
+                            if (placemarks.isNotEmpty) {
+                              Placemark place = placemarks[0];
+                              String address =
+                                  "${place.street ?? ''} ${place.subLocality ?? ''} ";
+                              setState(() {
+                                addressCtl.text = address.trim();
+                              });
+                            }
+                          } catch (e) {
+                            print('Error getting address: $e');
+                          }
+
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.example.app',
+                          maxNativeZoom: 19,
+                        ),
+                        MarkerLayer(
+                          markers: [
+                            if (selectedLocation != null)
+                              Marker(
+                                point: selectedLocation!,
+                                width: 40,
+                                height: 40,
+                                child: Icon(
+                                  Icons.location_on,
+                                  color: Colors.red,
+                                  size: 40,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Positioned(
+                      top: 10,
+                      left: 10,
+                      right: 10,
+                      child: Container(
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'แตะที่แผนที่เพื่อเลือกตำแหน่ง',
+                          style: TextStyle(fontSize: 16),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                    // เพิ่มปุ่มกลับไปยังตำแหน่งปัจจุบัน
+                    Positioned(
+                      bottom: 16,
+                      right: 16,
+                      child: FloatingActionButton(
+                        mini: true,
+                        onPressed: () async {
+                          // เรียกดึงตำแหน่งปัจจุบันใหม่
+                          await _getCurrentLocation();
+                          if (currentLocation != null) {
+                            mapController.move(currentLocation!, 15.0);
+                            // บังคับให้ rebuild widget เพื่ออัพเดท marker
+                            setState(() {});
+                          }
+                        },
+                        child: Icon(Icons.my_location),
+                      ),
+                    )
+                  ],
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text('ยกเลิก'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

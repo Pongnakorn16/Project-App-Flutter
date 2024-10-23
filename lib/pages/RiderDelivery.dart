@@ -12,7 +12,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
-import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
@@ -435,7 +434,7 @@ class _RiderDeliveryPageState extends State<RiderDeliveryPage> {
     String url = value['apiEndpoint'];
 
     http.put(
-      Uri.parse("$url/db/update_status/${widget.info_oid}/${4}"),
+      Uri.parse("$url/db/update_status_more/${widget.info_oid}/${4}"),
       headers: {"Content-Type": "application/json; charset=utf-8"},
     );
 

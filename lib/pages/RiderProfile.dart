@@ -11,8 +11,6 @@ import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/user_edit_post_req.dart';
-import 'package:mobile_miniproject_app/models/response/GetHistory_Res.dart';
-import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetRiderInfo_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/models/response/customers_idx_get_res.dart';
@@ -58,7 +56,6 @@ class _RiderProfilePageState extends State<RiderProfilePage> {
   int cart_length = 0;
   GetStorage gs = GetStorage();
   List<GetRiderInfoRes> rider_Info = [];
-  List<GetHistoryRes> all_history = [];
   TextEditingController imageCtl = TextEditingController();
   int _selectedIndex = 0;
   late LatLng coor;

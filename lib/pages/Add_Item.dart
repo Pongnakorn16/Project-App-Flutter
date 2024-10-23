@@ -50,6 +50,7 @@ class _AddItemPageState extends State<AddItemPage> {
   XFile? image;
   String To_userImage = '';
   String To_userName = '';
+  String To_phone = '';
   int To_uid = 0;
   var db = FirebaseFirestore.instance;
   String product_imgUrl = '';
@@ -61,9 +62,6 @@ class _AddItemPageState extends State<AddItemPage> {
     send_user_type = context.read<ShareData>().user_info_send.user_type;
     send_user_image = context.read<ShareData>().user_info_send.user_image;
     send_nameCtl.text = send_user_name;
-    if (To_userName.isNotEmpty) {
-      receive_nameCtl.text = To_userName;
-    }
   }
 
   @override
@@ -244,7 +242,7 @@ class _AddItemPageState extends State<AddItemPage> {
                             padding: const EdgeInsets.all(8.0),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(
-                                  30.0), // กำหนดความโค้งของขอบ
+                                  100.0), // กำหนดความโค้งของขอบ
                               child: SizedBox(
                                 width: 20, // กำหนดความกว้างของรูปภาพ
                                 height: 20, // กำหนดความสูงของรูปภาพ
@@ -282,7 +280,7 @@ class _AddItemPageState extends State<AddItemPage> {
                         decoration: BoxDecoration(
                           color: Color.fromARGB(
                               255, 228, 225, 225), // สีพื้นหลังของ TextField
-                          borderRadius: BorderRadius.circular(30.0),
+                          borderRadius: BorderRadius.circular(100.0),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.grey.withOpacity(0.5), // สีของเงา
@@ -306,7 +304,7 @@ class _AddItemPageState extends State<AddItemPage> {
                               padding: const EdgeInsets.all(8.0),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(
-                                    8.0), // กำหนดความโค้งของขอบ
+                                    100.0), // กำหนดความโค้งของขอบ
                                 child: SizedBox(
                                   width: 20, // กำหนดความกว้างของรูปภาพ
                                   height: 20, // กำหนดความสูงของรูปภาพ
@@ -327,8 +325,9 @@ class _AddItemPageState extends State<AddItemPage> {
                               borderRadius: BorderRadius.circular(30.0),
                               borderSide: BorderSide.none, // ไม่มีขอบ
                             ),
-                            hintText:
-                                To_userName.isNotEmpty ? To_userName : 'To',
+                            hintText: To_userName.isNotEmpty
+                                ? "${To_userName} tel. ${To_phone}"
+                                : 'To',
                             suffixIcon: Padding(
                               padding: const EdgeInsets.all(10.0),
                               child: FaIcon(
@@ -536,7 +535,9 @@ class _AddItemPageState extends State<AddItemPage> {
                         log(context.read<ShareData>().user_info_receive.name);
                         To_userImage = searchResult.userImage;
                         To_userName = searchResult.name;
-                        receive_nameCtl.text = searchResult.name;
+                        To_phone = searchResult.phone;
+                        receive_nameCtl.text =
+                            "${searchResult.name} Tel. ${searchResult.phone}";
                         To_uid = searchResult.uid;
                         setState(() {});
                         searchController.text = searchResult
@@ -665,10 +666,12 @@ class _AddItemPageState extends State<AddItemPage> {
                         log(context.read<ShareData>().user_info_receive.name);
                         To_userImage = searchResult.userImage;
                         To_userName = searchResult.name;
+                        To_phone = searchResult.phone;
                         receive_nameCtl.text = searchResult.name;
                         To_uid = searchResult.uid;
                         setState(() {});
-                        searchController.text = searchResult.name;
+                        searchController.text =
+                            "${searchResult.name} Tel. ${searchResult.phone}";
                         overlayEntry?.remove();
                       },
                     );

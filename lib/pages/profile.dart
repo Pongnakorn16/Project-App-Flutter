@@ -11,8 +11,6 @@ import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/user_edit_post_req.dart';
-import 'package:mobile_miniproject_app/models/response/GetHistory_Res.dart';
-import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/models/response/customers_idx_get_res.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
@@ -56,7 +54,6 @@ class _ProfilePageState extends State<ProfilePage> {
   int cart_length = 0;
   GetStorage gs = GetStorage();
   List<GetUserSearchRes> user_Info = [];
-  List<GetHistoryRes> all_history = [];
   TextEditingController imageCtl = TextEditingController();
   int _selectedIndex = 0;
   late LatLng coor;

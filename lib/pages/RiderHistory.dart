@@ -11,8 +11,6 @@ import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
-import 'package:mobile_miniproject_app/models/response/GetLotteryNumbers_Res.dart';
-import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
@@ -29,9 +27,6 @@ import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 
 class RiderHistoryPage extends StatefulWidget {
-  int uid = 0;
-  int wallet = 0;
-  String name = '';
   int selectedIndex = 0;
   var onClose;
   RiderHistoryPage({
@@ -376,7 +371,8 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
     log("sddddddddddddddd");
     log(rider_History.length.toString());
 
-    var response = await http.get(Uri.parse("$url/db/get_Rider_History"));
+    var response = await http.get(Uri.parse(
+        "$url/db/get_Rider_History/${context.read<ShareData>().user_info_send.uid}"));
     if (response.statusCode == 200) {
       rider_History = getSendOrderFromJson(response.body);
       log(jsonEncode(rider_History));

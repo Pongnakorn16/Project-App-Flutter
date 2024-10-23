@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/get_navigation.dart';
 import 'package:http/http.dart' as http;
@@ -12,7 +13,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
-import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
@@ -240,15 +240,10 @@ class _SendAllMapPageState extends State<SendAllMapPage> {
                       onPressed: () {
                         Get.to(HomePage());
                       },
-                      child: Text(
-                        "Back to HomePage",
-                        style: TextStyle(
-                            fontSize: 17, fontWeight: FontWeight.bold),
-                      ),
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.yellow, // สีพื้นหลังของปุ่ม
                         foregroundColor: const Color.fromARGB(
-                            255, 115, 28, 168), // สีของข้อความในปุ่ม
+                            255, 115, 28, 168), // สีข้อความ
                         padding: EdgeInsets.symmetric(
                             horizontal: 20, vertical: 15), // ระยะห่างภายในปุ่ม
                         shape: RoundedRectangleBorder(
@@ -257,7 +252,29 @@ class _SendAllMapPageState extends State<SendAllMapPage> {
                         ),
                         elevation: 5, // เงาของปุ่มเพื่อเพิ่มมิติ
                       ),
-                    ),
+                      child: Row(
+                        mainAxisSize:
+                            MainAxisSize.min, // กำหนดขนาดให้ Row ตามเนื้อหา
+                        mainAxisAlignment:
+                            MainAxisAlignment.center, // จัดเรียงเนื้อหาใน Row
+                        children: [
+                          Text(
+                            "Back to HomePage",
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(width: 8), // ระยะห่างระหว่างข้อความและไอคอน
+                          Icon(
+                            FontAwesomeIcons.house, // ไอคอนที่คุณต้องการใช้
+                            size: 20, // ขนาดของไอคอน
+                            color: const Color.fromARGB(
+                                255, 115, 28, 168), // สีของไอคอน
+                          ),
+                        ],
+                      ),
+                    )
                   ],
                 ),
               ],

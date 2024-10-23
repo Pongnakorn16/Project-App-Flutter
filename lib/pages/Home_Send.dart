@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
@@ -11,7 +12,6 @@ import 'package:mobile_miniproject_app/pages/Home_Receive.dart';
 import 'package:mobile_miniproject_app/pages/OrderInfo.dart';
 import 'package:mobile_miniproject_app/pages/Send_AllMap.dart';
 import 'package:provider/provider.dart';
-import 'package:mobile_miniproject_app/models/response/GetLotteryNumbers_Res.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/pages/Profile.dart';
@@ -49,6 +49,7 @@ class _Home_SendPageState extends State<Home_SendPage>
   GetStorage gs = GetStorage();
   String url = '';
   List<GetSendOrder> send_Orders = [];
+  List<GetSendOrder> snack_Orders = [];
   List<GetUserSearchRes> send_user = [];
   List<GetUserSearchRes> receive_user = [];
   late Future<void> loadData;
@@ -104,94 +105,117 @@ class _Home_SendPageState extends State<Home_SendPage>
                           child: Padding(
                             padding: const EdgeInsets.all(5.0),
                             child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                if (context
-                                    .read<ShareData>()
-                                    .send_order_share
-                                    .isEmpty)
-                                  const Center(
-                                    child: Text(
-                                      "Please press the Add button below to include the items you wish to ship.",
-                                      style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                  )
-                                else
-                                  ...context
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  if (context
                                       .read<ShareData>()
                                       .send_order_share
-                                      .map((orders) => Card(
-                                          elevation: 4.0, // ความลึกเงาของ Card
+                                      .isEmpty)
+                                    const Center(
+                                      child: Text(
+                                        "Please press the Add button below to include the items you wish to ship.",
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    )
+                                  else ...[
+                                    ...context
+                                        .read<ShareData>()
+                                        .send_order_share
+                                        .map((orders) => Card(
+                                              elevation:
+                                                  4.0, // ความลึกเงาของ Card
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(
+                                                    10.0), // กำหนดความโค้งของขอบ
+                                              ),
+                                              margin: EdgeInsets.all(
+                                                  8.0), // กำหนดระยะห่าง
+                                              child: FutureBuilder(
+                                                future: buildOrderItem(
+                                                    orders), // รอผลลัพธ์จาก Future
+                                                builder: (BuildContext context,
+                                                    AsyncSnapshot<Widget>
+                                                        snapshot) {
+                                                  if (snapshot
+                                                          .connectionState ==
+                                                      ConnectionState.waiting) {
+                                                    return CircularProgressIndicator(); // แสดง loading
+                                                  } else if (snapshot
+                                                      .hasError) {
+                                                    return Text(
+                                                        'Error: ${snapshot.error}'); // แสดงข้อความเมื่อเกิดข้อผิดพลาด
+                                                  } else if (snapshot.hasData) {
+                                                    return snapshot
+                                                        .data!; // แสดงข้อมูลเมื่อมี
+                                                  } else {
+                                                    return Text(
+                                                        'No data available'); // กรณีไม่มีข้อมูล
+                                                  }
+                                                },
+                                              ),
+                                            ))
+                                        .toList(),
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 10),
+                                      child: FilledButton(
+                                        onPressed: () {
+                                          Get.to(SendAllMapPage(
+                                            info_send_uid: sender_uid,
+                                            info_receive_uid: receiver_uid,
+                                            info_oid: order_oid,
+                                            selectedIndex: 1,
+                                          ));
+                                        },
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor: Colors
+                                              .yellow, // สีพื้นหลังของปุ่ม
+                                          foregroundColor: const Color.fromARGB(
+                                              255, 115, 28, 168), // สีข้อความ
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 20,
+                                            vertical: 15,
+                                          ), // ระยะห่างภายในปุ่ม
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(
-                                                10.0), // กำหนดความโค้งของขอบ
+                                                12), // ขอบปุ่มโค้งมน
                                           ),
-                                          margin: EdgeInsets.all(
-                                              8.0), // กำหนดระยะห่าง
-                                          child: FutureBuilder(
-                                            future: buildOrderItem(
-                                                orders), // รอผลลัพธ์จาก Future
-                                            builder: (BuildContext context,
-                                                AsyncSnapshot<Widget>
-                                                    snapshot) {
-                                              if (snapshot.connectionState ==
-                                                  ConnectionState.waiting) {
-                                                // แสดง loading เมื่อกำลังโหลดข้อมูล
-                                                return CircularProgressIndicator();
-                                              } else if (snapshot.hasError) {
-                                                // แสดงข้อความเมื่อเกิดข้อผิดพลาด
-                                                return Text(
-                                                    'Error: ${snapshot.error}');
-                                              } else if (snapshot.hasData) {
-                                                // แสดง Widget เมื่อมีข้อมูล
-                                                return snapshot.data!;
-                                              } else {
-                                                // กรณีที่ไม่มีข้อมูล
-                                                return Text(
-                                                    'No data available');
-                                              }
-                                            },
-                                          ) // Widget ที่ต้องการแสดงใน Card
-                                          ))
-                                      .toList(),
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 10),
-                                  child: FilledButton(
-                                    onPressed: () {
-                                      Get.to(SendAllMapPage(
-                                          info_send_uid: sender_uid,
-                                          info_receive_uid: receiver_uid,
-                                          info_oid: order_oid,
-                                          selectedIndex: 1));
-                                    },
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor:
-                                          Colors.yellow, // สีพื้นหลังของปุ่ม
-                                      foregroundColor: const Color.fromARGB(255,
-                                          115, 28, 168), // สีของข้อความในปุ่ม
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 20,
-                                          vertical: 15), // ระยะห่างภายในปุ่ม
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(
-                                            12), // ขอบปุ่มโค้งมน
+                                          elevation:
+                                              5, // เงาของปุ่มเพื่อเพิ่มมิติ
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize
+                                              .min, // ขนาดของ Row จะเป็นตามเนื้อหาภายใน
+                                          mainAxisAlignment: MainAxisAlignment
+                                              .center, // จัดตำแหน่งกลาง
+                                          children: [
+                                            Text(
+                                              "Show All In One Map",
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight
+                                                    .bold, // ขนาดและน้ำหนักของข้อความ
+                                              ),
+                                            ),
+                                            SizedBox(
+                                                width:
+                                                    8), // ระยะห่างระหว่างข้อความและไอคอน
+                                            Icon(
+                                              FontAwesomeIcons
+                                                  .mapLocationDot, // เปลี่ยนเป็นไอคอนที่คุณต้องการ
+                                              size: 20, // ขนาดของไอคอน
+                                              color: const Color.fromARGB(255,
+                                                  115, 28, 168), // สีของไอคอน
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                      elevation: 5, // เงาของปุ่มเพื่อเพิ่มมิติ
                                     ),
-                                    child: Text(
-                                      "Show All In One Map",
-                                      style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight
-                                              .bold), // ขนาดและน้ำหนักของข้อความ
-                                    ),
-                                  ),
-                                )
-                              ],
-                            ),
+                                  ]
+                                ]),
                           ),
                         );
                       },
@@ -268,15 +292,60 @@ class _Home_SendPageState extends State<Home_SendPage>
             var data = docChange.doc.data();
             var docId = docChange.doc.id; // ชื่อเอกสารที่มีการเปลี่ยนแปลง
 
+            String numberPart = docId.substring(5);
             // แสดง Snackbar เฉพาะเมื่อมีการเปลี่ยนแปลงข้อมูล พร้อมแสดงชื่อเอกสาร
+            final matchingOrder = context
+                .read<ShareData>()
+                .snack_order_share
+                .firstWhere(
+                  (order) => order.oid.toString() == numberPart,
+                  orElse: () => GetSendOrder(
+                    oid: 0, // กำหนดค่าเริ่มต้นสำหรับ oid
+                    p_Name: "ไม่พบชื่อสินค้า", // กำหนดข้อความเริ่มต้นเมื่อไม่พบ
+                    p_Detail: "",
+                    se_Uid: 0,
+                    re_Uid: 0,
+                    ri_Uid: null,
+                    dv_Status: 0,
+                  ),
+                );
+
+            // กำหนดข้อความสถานะตามค่า Order_status
+            String statusMessage;
+
+            if (data!['Order_status'] == 2) {
+              statusMessage = "ไรเดอร์รับงานแล้ว";
+            } else if (data['Order_status'] == 3) {
+              statusMessage = "ไรเดอร์รับสินค้าแล้วและกำลังเดินทาง";
+            } else if (data['Order_status'] == 4) {
+              statusMessage = "ไรเดอร์นำส่งสินค้าแล้ว";
+            } else {
+              statusMessage = "สถานะไม่รู้จัก"; // กรณีค่าอื่นๆ
+            }
+
+// แสดง snackbar
             Get.snackbar(
-              "Document: $docId | Status: ${data!['Order_status']}",
-              "Order Time: ${data['Order_time_at'].toString()}",
+              "",
+              "",
+              titleText: Row(
+                children: [
+                  Icon(FontAwesomeIcons.motorcycle, size: 15), // ขนาดของไอคอน
+                  SizedBox(width: 8), // ระยะห่างระหว่างไอคอนและข้อความ
+                  Text(
+                    "Order: ${matchingOrder.p_Name}", // ข้อความที่แสดง
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              messageText: Text(
+                "สถานะ : $statusMessage", // ข้อความสถานะ
+                style: TextStyle(fontSize: 14),
+              ),
             );
 
             setState(() {});
 
-            // ตรวจสอบการเปลี่ยนแปลงสถานะใหม่
+// ตรวจสอบการเปลี่ยนแปลงสถานะใหม่
             if (New_Dv_status != data['Order_status'] ||
                 New_Dv_status == null) {
               New_Dv_status = data['Order_status'];
@@ -308,6 +377,22 @@ class _Home_SendPageState extends State<Home_SendPage>
         IntrinsicWidth(
           child: Column(
             children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    Icon(FontAwesomeIcons.box,
+                        color: const Color.fromARGB(255, 115, 28, 168),
+                        size: 20), // ปรับขนาดไอคอน
+                    SizedBox(width: 5),
+                    Text(
+                      orders.p_Name,
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
               Row(
                 children: [
                   Icon(Icons.location_on,
@@ -413,94 +498,6 @@ class _Home_SendPageState extends State<Home_SendPage>
     );
   }
 
-  Widget buildPrizeStatus(int status_prize) {
-    String status;
-    double fontSize;
-    Icon? icon;
-    Color textColor = Colors.black;
-    Color iconColor = Colors.black;
-
-    if (status_prize == 1) {
-      status = 'st';
-      fontSize = 21;
-      iconColor = Colors.blue;
-      icon = Icon(Icons.local_fire_department, color: iconColor, size: 40);
-      textColor = Colors.blue;
-    } else if (status_prize == 2) {
-      status = 'nd';
-      fontSize = 19;
-    } else if (status_prize == 3) {
-      status = 'rd';
-      fontSize = 17;
-    } else if (status_prize >= 4) {
-      status = 'th';
-      fontSize = 15;
-    } else {
-      status = 'unknown';
-      fontSize = 15;
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          "${status_prize}${status}",
-          style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: FontWeight.bold,
-              color: textColor),
-        ),
-        if (icon != null)
-          Padding(padding: const EdgeInsets.only(right: 8.0), child: icon),
-      ],
-    );
-  }
-
-  Widget buildPrizeAmount(int status_prize) {
-    String prize;
-    if (status_prize == 1) {
-      prize = '10,000';
-    } else if (status_prize == 2) {
-      prize = '5,000';
-    } else if (status_prize == 3) {
-      prize = '1,000';
-    } else if (status_prize == 4) {
-      prize = '500';
-    } else if (status_prize == 5) {
-      prize = '150';
-    } else {
-      prize = 'unknown';
-    }
-
-    return Text(
-      "เงินรางวัล $prize บาท",
-      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-    );
-  }
-
-  Widget buildNumberCard(String number) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-      child: Card(
-        color: const Color.fromARGB(255, 255, 255, 255),
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(50.0)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 2),
-          child: Center(
-            child: Text(
-              number,
-              style: const TextStyle(
-                  fontSize: 21,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Future<void> loadDataAsync() async {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
@@ -520,8 +517,19 @@ class _Home_SendPageState extends State<Home_SendPage>
       setState(() {
         context.read<ShareData>().send_order_share = send_Orders;
       });
-    } else {
-      log('Failed to load lottery numbers. Status code: ${response.statusCode}');
+
+      var snack = await http.get(Uri.parse("$url/db/get_SnackBar/${send_uid}"));
+      if (response.statusCode == 200) {
+        snack_Orders = getSendOrderFromJson(snack.body);
+        log(jsonEncode(snack_Orders));
+
+        setState(() {
+          context.read<ShareData>().snack_order_share = snack_Orders;
+          log(context.read<ShareData>().snack_order_share.toString());
+        });
+      } else {
+        log('Failed to load lottery numbers. Status code: ${response.statusCode}');
+      }
     }
   }
 }

@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/get_navigation.dart';
 import 'package:http/http.dart' as http;
@@ -12,7 +13,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
-import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
@@ -114,7 +114,7 @@ class _ReceiveAllMapPageState extends State<ReceiveAllMapPage> {
                           height: 40,
                           child: Icon(
                             Icons.location_on,
-                            color: Colors.red,
+                            color: Colors.green,
                             size: 40,
                           ),
                         ),
@@ -124,7 +124,7 @@ class _ReceiveAllMapPageState extends State<ReceiveAllMapPage> {
                           height: 40,
                           child: Icon(
                             Icons.location_on,
-                            color: Colors.green,
+                            color: Colors.red,
                             size: 40,
                           ),
                         ),
@@ -240,11 +240,6 @@ class _ReceiveAllMapPageState extends State<ReceiveAllMapPage> {
                       onPressed: () {
                         Get.to(HomePage());
                       },
-                      child: Text(
-                        "Back to HomePage",
-                        style: TextStyle(
-                            fontSize: 17, fontWeight: FontWeight.bold),
-                      ),
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color.fromARGB(
                             255, 115, 28, 168), // สีพื้นหลังของปุ่ม
@@ -257,7 +252,28 @@ class _ReceiveAllMapPageState extends State<ReceiveAllMapPage> {
                         ),
                         elevation: 5, // เงาของปุ่มเพื่อเพิ่มมิติ
                       ),
-                    ),
+                      child: Row(
+                        mainAxisSize:
+                            MainAxisSize.min, // ขนาดของ Row ตามเนื้อหาภายใน
+                        mainAxisAlignment: MainAxisAlignment
+                            .center, // จัดตำแหน่งให้เนื้อหาอยู่กลาง
+                        children: [
+                          Text(
+                            "Back to HomePage",
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(width: 8), // ระยะห่างระหว่างข้อความและไอคอน
+                          Icon(
+                            FontAwesomeIcons.house, // ไอคอนที่คุณต้องการใช้
+                            size: 20, // ขนาดของไอคอน
+                            color: Colors.yellow, // สีของไอคอน
+                          ),
+                        ],
+                      ),
+                    )
                   ],
                 ),
               ],

@@ -5,14 +5,16 @@ import 'dart:math' hide log;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/get_navigation.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
-import 'package:mobile_miniproject_app/models/response/GetLotteryNumbers_Res.dart';
-import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
+import 'package:mobile_miniproject_app/models/request/rider_address_post_req.dart';
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
@@ -27,9 +29,6 @@ import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 
 class RiderHomePage extends StatefulWidget {
-  int uid = 0;
-  int wallet = 0;
-  String name = '';
   int selectedIndex = 0;
   RiderHomePage({
     super.key,
@@ -46,6 +45,8 @@ class _RiderHomePageState extends State<RiderHomePage> {
   String send_user_name = '';
   String send_user_type = '';
   String send_user_image = '';
+  LatLng? currentLocation;
+  String currentAddress = '';
 
   int receive_uid = 0;
   String receive_user_name = '';
@@ -78,6 +79,7 @@ class _RiderHomePageState extends State<RiderHomePage> {
     receive_user_type = context.read<ShareData>().user_info_send.user_type;
     receive_user_image = context.read<ShareData>().user_info_send.user_image;
 
+    _getCurrentLocation();
     loadData = loadDataAsync();
   }
 
@@ -474,5 +476,107 @@ class _RiderHomePageState extends State<RiderHomePage> {
 
     // อัปเดตข้อมูลใน Firebase
     await db.collection('Order_Info').doc(doc).update(dataToUpdate);
+  }
+
+  Future<String> getAddressFromLatLng(LatLng location) async {
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        location.latitude,
+        location.longitude,
+      );
+
+      if (placemarks.isEmpty) return "ไม่พบข้อมูลที่อยู่";
+
+      Placemark place = placemarks[0];
+
+      // สร้างที่อยู่แบบละเอียด
+      String address = "";
+
+      if (place.street?.isNotEmpty ?? false) {
+        address += "${place.street}";
+      }
+
+      if (place.subLocality?.isNotEmpty ?? false) {
+        address +=
+            address.isEmpty ? place.subLocality! : ", ${place.subLocality}";
+      }
+
+      return address;
+    } catch (e) {
+      return "ไม่สามารถแปลงพิกัดเป็นที่อยู่ได้: $e";
+    }
+  }
+
+  Future<void> _getCurrentLocation() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    var value = await Configuration.getConfig();
+    String url = value['apiEndpoint'];
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        Fluttertoast.showToast(
+          msg: "ไม่สามารถใช้งาน GPS ได้ กรุณาอนุญาตการใช้งานตำแหน่ง",
+          backgroundColor: Colors.red,
+        );
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      Fluttertoast.showToast(
+        msg: "กรุณาเปิดการใช้งานตำแหน่งในการตั้งค่า",
+        backgroundColor: Colors.red,
+      );
+      return;
+    }
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        currentLocation = LatLng(position.latitude, position.longitude);
+      });
+
+      // แปลงพิกัดเป็นที่อยู่
+      String address = await getAddressFromLatLng(currentLocation!);
+
+      // แสดงที่อยู่ (ตัวอย่าง)
+      if (mounted) {
+        setState(() {
+          // สร้าง variable สำหรับเก็บที่อยู่
+          currentAddress = address;
+        });
+      }
+
+      // ตรวจสอบว่า currentLocation ไม่เป็น null ก่อนเข้าถึง latitude และ longitude
+      if (currentLocation != null) {
+        var model = RiderAddressPostRequest(
+          address: currentAddress,
+          coordinate:
+              "${currentLocation!.latitude},${currentLocation!.longitude}",
+        );
+
+        await http.put(
+          Uri.parse(
+            "$url/db/update_riderAddress/${context.read<ShareData>().user_info_send.uid}",
+          ),
+          headers: {"Content-Type": "application/json; charset=utf-8"},
+          body: RiderAddressPostRequestToJson(model),
+        );
+      }
+    } catch (e) {
+      print('Error getting current location: $e');
+      if (!mounted) return;
+
+      Fluttertoast.showToast(
+        msg: "ไม่สามารถดึงตำแหน่งปัจจุบันได้ กรุณาตรวจสอบการเชื่อมต่อ GPS",
+        backgroundColor: Colors.red,
+      );
+    }
   }
 }

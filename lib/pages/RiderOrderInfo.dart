@@ -8,7 +8,6 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
-import 'package:mobile_miniproject_app/models/response/GetOneUser_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
@@ -231,8 +230,7 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
                               children: [
                                 Text(sender_name),
                                 Text(
-                                  sender_address +
-                                      "asddddddddddddddddddddddddddddddddddddddddddddd", // จะอยู่ใต้ receiver_name
+                                  sender_address, // จะอยู่ใต้ receiver_name
                                   softWrap:
                                       true, // ทำให้ข้อความเว้นบรรทัดอัตโนมัติ
                                   maxLines:
@@ -264,8 +262,7 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
                               children: [
                                 Text(receiver_name),
                                 Text(
-                                  receiver_address +
-                                      "asddddddddddddddddddddddddddddddddddddddddddddd", // จะอยู่ใต้ receiver_name
+                                  receiver_address, // จะอยู่ใต้ receiver_name
                                   softWrap:
                                       true, // ทำให้ข้อความเว้นบรรทัดอัตโนมัติ
                                   maxLines:
