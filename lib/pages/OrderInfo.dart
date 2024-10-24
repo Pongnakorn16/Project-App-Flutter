@@ -159,25 +159,31 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.only(left: 5),
-                      child: Row(
-                        children: [
-                          Icon(Icons.location_on,
-                              color: Colors.red, size: 14), // ปรับขนาดไอคอน
-                          SizedBox(width: 5),
-                          Text(sender_address.toString()),
-                        ],
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            Icon(Icons.location_on,
+                                color: Colors.red, size: 14), // ปรับขนาดไอคอน
+                            SizedBox(width: 5),
+                            Text(sender_address.toString()),
+                          ],
+                        ),
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.only(left: 5, top: 8),
-                      child: Row(
-                        children: [
-                          Icon(Icons.location_on,
-                              color: const Color.fromARGB(255, 79, 252, 10),
-                              size: 14), // ปรับขนาดไอคอน
-                          SizedBox(width: 5),
-                          Text(receiver_address.toString()),
-                        ],
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            Icon(Icons.location_on,
+                                color: const Color.fromARGB(255, 79, 252, 10),
+                                size: 14), // ปรับขนาดไอคอน
+                            SizedBox(width: 5),
+                            Text(receiver_address.toString()),
+                          ],
+                        ),
                       ),
                     ),
                     const Padding(

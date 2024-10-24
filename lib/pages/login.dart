@@ -142,7 +142,7 @@ class _LoginPageState extends State<LoginPage> {
                                 },
                                 style: ButtonStyle(
                                   backgroundColor: WidgetStateProperty.all(
-                                      Color.fromARGB(255, 255, 222, 78)),
+                                      Color.fromRGBO(251, 215, 88, 1.0)),
                                   foregroundColor:
                                       WidgetStateProperty.all(Colors.white),
                                 ),
@@ -167,8 +167,8 @@ class _LoginPageState extends State<LoginPage> {
                               onPressed: register,
                               style: ButtonStyle(
                                 // สีพื้นหลังของปุ่ม
-                                foregroundColor: WidgetStateProperty.all(
-                                    Color.fromARGB(255, 139, 15, 188)),
+                                foregroundColor:
+                                    WidgetStateProperty.all(Color(0xFF562364)),
                               ),
                               child: const Text(
                                 'Register Now',
@@ -205,6 +205,17 @@ class _LoginPageState extends State<LoginPage> {
 
     log("xxxxxxx");
     model = UserLoginPostRequest(Phone: phone, Password: password);
+    if (PhoneCtl.text.isEmpty && PasswordCtl.text.isEmpty) {
+      Fluttertoast.showToast(
+          msg: "กรุณากรอกเบอร์โทรและรหัสผ่าน",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+          backgroundColor: Color.fromARGB(255, 255, 0, 0),
+          textColor: Colors.white,
+          fontSize: 15.0);
+    }
 
     try {
       var Value = await http.post(Uri.parse("$url/db/users/login"),
