@@ -75,7 +75,7 @@ class _RegisterUserState extends State<RegisterUser> {
                           'Create "User" Account',
                           style: TextStyle(
                             fontSize: 28,
-                            color: Color.fromARGB(255, 79, 78, 78),
+                            color: Color.fromARGB(255, 184, 181, 181),
                           ),
                         ),
                       ],
