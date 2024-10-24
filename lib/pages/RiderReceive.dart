@@ -21,6 +21,8 @@ import 'package:mobile_miniproject_app/pages/RiderDelivery.dart';
 import 'package:mobile_miniproject_app/pages/RiderHistory.dart';
 import 'package:mobile_miniproject_app/pages/RiderHome.dart';
 import 'package:mobile_miniproject_app/pages/RiderProfile.dart';
+import 'package:mobile_miniproject_app/shared/share_data.dart';
+import 'package:provider/provider.dart';
 
 class RiderReceivePage extends StatefulWidget {
   int info_send_uid; // ประกาศตัวแปรในคลาสนี้
@@ -44,6 +46,7 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
   MapController mapController = MapController();
   List<GetUserSearchRes> send_Info = [];
   List<GetUserSearchRes> receive_Info = [];
+  List<GetUserSearchRes> rider_Info = [];
   List<GetSendOrder> order_one = [];
   int sender_uid = 0; // ประกาศตัวแปรเพื่อเก็บค่า
   int receiver_uid = 0;
@@ -55,6 +58,7 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
   String product_imgUrl_status3 = "";
   LatLng send_latLng = LatLng(0, 0);
   LatLng receive_latLng = LatLng(0, 0);
+  LatLng rider_latLng = LatLng(0, 0);
   List<LatLng> polylinePoints = [];
   var db = FirebaseFirestore.instance;
   int _selectedIndex = 0;
@@ -120,6 +124,16 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
                           size: 40,
                         ),
                         alignment: Alignment.center,
+                      ),
+                      Marker(
+                        point: rider_latLng,
+                        width: 60,
+                        height: 60,
+                        child: Icon(
+                          Icons.motorcycle,
+                          color: Colors.blue,
+                          size: 30,
+                        ),
                       ),
                     ],
                   ),
@@ -307,6 +321,20 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
           double re_longitude = double.parse(latLngList[1]);
           receive_latLng = LatLng(re_latitude, re_longitude);
         }
+      }
+    }
+
+    var rider = await http.get(Uri.parse(
+        "$url/db/get_Rider/${context.read<ShareData>().user_info_send.uid}"));
+    if (receiver.statusCode == 200) {
+      rider_Info = getUserSearchResFromJson(rider.body);
+      if (rider_Info.first.coordinates != null) {
+        final coords = rider_Info.first.coordinates!.split(',');
+        final lat = double.parse(coords[0]);
+        final lng = double.parse(coords[1]);
+        rider_latLng = LatLng(lat, lng);
+      } else {
+        // Handle null case
       }
     }
 

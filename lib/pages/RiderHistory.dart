@@ -58,13 +58,13 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
   String url = '';
   List<GetSendOrder> rider_History = [];
   List<GetUserSearchRes> order_user = [];
+  List<List<String>> Dv_date = [];
   late Future<void> loadData;
   int _selectedIndex = 0;
   bool _showReceivePage = false;
   late AnimationController _animationController;
   late Animation<Offset> _pageSlideAnimation;
   var db = FirebaseFirestore.instance;
-  var Dv_date;
 
   @override
   void initState() {
@@ -354,7 +354,12 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
                   padding: const EdgeInsets.only(left: 5),
                   child: Text(orders.p_Name),
                 ),
-                Text("${Dv_date}")
+                Text(
+                  Dv_date.firstWhere(
+                          (element) => element[1] == orders.oid.toString(),
+                          orElse: () => ['ไม่พบวันที่', ''])[0] ??
+                      'ไม่พบวันที่',
+                ),
               ],
             ),
           ),
@@ -386,19 +391,24 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
       log('Failed to load lottery numbers. Status code: ${response.statusCode}');
     }
 
-    var result = await db
-        .collection('Order_Info')
-        .doc("order${rider_History.first.oid}")
-        .get();
-    var data = result.data();
-    log(data!['Order_time_at'].toString());
-    var timestamp = data!['Order_time_at'];
-    DateTime orderDate = timestamp.toDate(); // แปลง Timestamp เป็น DateTime
-    // ฟอร์แมตวันที่เป็น DD/MM/YYYY
-    String formattedDate = DateFormat('dd/MM/yyyy').format(orderDate);
-    log(formattedDate); // แสดงวันที่ที่ฟอร์แมตแล้ว
+    for (var rider in rider_History) {
+      var result =
+          await db.collection('Order_Info').doc("order${rider.oid}").get();
+      var data = result.data();
 
-    Dv_date = formattedDate; // เก็บวันที่ในตัวแปร Dv_date
-    log(Dv_date.toString());
+      if (data != null) {
+        log(data['Order_time_at'].toString());
+        var timestamp = data['Order_time_at'];
+        DateTime orderDate = timestamp.toDate(); // แปลง Timestamp เป็น DateTime
+        String formattedDate = DateFormat('dd/MM/yyyy')
+            .format(orderDate); // ฟอร์แมตวันที่เป็น DD/MM/YYYY
+        log(formattedDate); // แสดงวันที่ที่ฟอร์แมตแล้ว
+
+        // เก็บวันที่และ oid ใน Dv_date
+        Dv_date.add([formattedDate, rider.oid.toString()]);
+      } else {
+        log("Data not found for oid: ${rider.oid}");
+      }
+    }
   }
 }

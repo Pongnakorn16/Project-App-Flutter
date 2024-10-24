@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
@@ -68,8 +69,14 @@ class _RiderDeliveryPageState extends State<RiderDeliveryPage> {
     sender_uid = widget.info_send_uid;
     receiver_uid = widget.info_receive_uid;
     _selectedIndex = widget.selectedIndex;
-    loadRiderLocation();
-    loadDataAsync(); // กำหนดค่าใน initState
+    setupInitialData(); // กำหนดค่าใน initState
+  }
+
+  Future<void> setupInitialData() async {
+    await loadRiderLocation();
+    await loadDataAsync();
+    await getRouteCoordinates();
+    startRiderMovement();
   }
 
   @override
@@ -507,6 +514,56 @@ class _RiderDeliveryPageState extends State<RiderDeliveryPage> {
             fontSize: 15.0);
       }
     }
+  } // เพิ่ม library สำหรับ Timer
+
+  Future<void> startRiderMovement() async {
+    if (polylinePoints.isEmpty) {
+      print("No route points available");
+      return;
+    }
+
+    int currentPointIndex = 0;
+
+    // กำหนดให้ไรเดอร์เริ่มต้นที่จุดเริ่มต้นของเส้นทาง
+    setState(() {
+      riderLatLng = polylinePoints[0];
+    });
+
+    Timer.periodic(Duration(seconds: 3), (timer) async {
+      if (currentPointIndex >= polylinePoints.length - 1) {
+        print("Reached destination");
+        timer.cancel();
+
+        // อัปเดตตำแหน่งสุดท้ายเป็นจุดหมายปลายทาง
+        setState(() {
+          riderLatLng = receive_latLng;
+        });
+
+        // อัปเดต Firebase ด้วยพิกัดสุดท้าย
+        var doc = "order${widget.info_oid}";
+        await db.collection('Order_Info').doc(doc).update({
+          'rider_coordinates':
+              '${receive_latLng.latitude},${receive_latLng.longitude}'
+        });
+
+        return;
+      }
+
+      // Move to next point
+      currentPointIndex++;
+      setState(() {
+        riderLatLng = polylinePoints[currentPointIndex];
+      });
+
+      // Update Firebase
+      var doc = "order${widget.info_oid}";
+      await db.collection('Order_Info').doc(doc).update({
+        'rider_coordinates': '${riderLatLng.latitude},${riderLatLng.longitude}'
+      });
+
+      print(
+          "Moving rider to: ${riderLatLng.latitude}, ${riderLatLng.longitude}");
+    });
   }
 
   Future<void> loadRiderLocation() async {

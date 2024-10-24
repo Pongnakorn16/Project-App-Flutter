@@ -5,6 +5,7 @@ import 'dart:math' hide log;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get_core/src/get_main.dart';
@@ -39,6 +40,7 @@ class RiderHomePage extends StatefulWidget {
 }
 
 class _RiderHomePageState extends State<RiderHomePage> {
+  List<GetUserSearchRes> send_Info = [];
   int send_uid = 0;
   int info_send_uid = 0;
   int info_receive_uid = 0;
@@ -59,6 +61,8 @@ class _RiderHomePageState extends State<RiderHomePage> {
   String url = '';
   List<GetSendOrder> rider_Orders = [];
   List<GetUserSearchRes> order_user = [];
+  List<Map<String, String>> senderInfoList = [];
+  List<String> M_CheckUId = [];
   late Future<void> loadData;
   int _selectedIndex = 0;
   bool _showReceivePage = false;
@@ -140,6 +144,8 @@ class _RiderHomePageState extends State<RiderHomePage> {
                                 if (context
                                     .read<ShareData>()
                                     .rider_order_share
+                                    .where((order) => M_CheckUId.contains(
+                                        order.se_Uid.toString()))
                                     .isEmpty)
                                   const Center(
                                     child: Text(
@@ -153,6 +159,8 @@ class _RiderHomePageState extends State<RiderHomePage> {
                                   ...context
                                       .read<ShareData>()
                                       .rider_order_share
+                                      .where((order) => M_CheckUId.contains(
+                                          order.se_Uid.toString()))
                                       .map((orders) => Card(
                                           elevation: 4.0, // ความลึกเงาของ Card
                                           shape: RoundedRectangleBorder(
@@ -349,6 +357,22 @@ class _RiderHomePageState extends State<RiderHomePage> {
         IntrinsicWidth(
           child: Column(
             children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    Icon(FontAwesomeIcons.box,
+                        color: const Color.fromARGB(255, 115, 28, 168),
+                        size: 20), // ปรับขนาดไอคอน
+                    SizedBox(width: 5),
+                    Text(
+                      orders.p_Name,
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
               Row(
                 children: [
                   Icon(Icons.location_on,
@@ -399,6 +423,7 @@ class _RiderHomePageState extends State<RiderHomePage> {
                     info_receive_uid: orders.re_Uid,
                     info_oid: orders.oid,
                     selectedIndex: 1));
+                context.read<ShareData>().listener!.cancel();
               },
               style: ButtonStyle(
                 backgroundColor: WidgetStateProperty.all<Color>(
@@ -455,6 +480,32 @@ class _RiderHomePageState extends State<RiderHomePage> {
     } else {
       log('Failed to load lottery numbers. Status code: ${response.statusCode}');
     }
+
+    for (var OD in context.read<ShareData>().rider_order_share) {
+      var sender = await http.get(Uri.parse("$url/db/get_Send/${OD.se_Uid}"));
+
+      if (sender.statusCode == 200) {
+        send_Info = getUserSearchResFromJson(sender.body);
+
+        if (send_Info.isNotEmpty) {
+          String sender_name = send_Info.first.name ?? "N/A";
+          String sender_address = send_Info.first.address ?? "N/A";
+
+          // เก็บข้อมูล sender_name และ sender_address ใน Map แล้วเพิ่มเข้าไปในลิสต์
+          senderInfoList.add({
+            "uid": send_Info.first.uid.toString(),
+            "sender_name": sender_name,
+            "sender_address": sender_address,
+            "sender_coordinate": send_Info.first.coordinates.toString(),
+          });
+        }
+      } else {
+        log("Failed to load sender info for uid: ${send_Info.first.uid}");
+      }
+    }
+
+// ตอนนี้ senderInfoList จะมีข้อมูลของ sender ทั้งหมดในลิสต์
+    log("Sender Info List: $senderInfoList+JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ");
   }
 
   void UpdateStatus(int oid) async {
@@ -507,6 +558,51 @@ class _RiderHomePageState extends State<RiderHomePage> {
     }
   }
 
+  Future<void> M_check() async {
+    M_CheckUId.clear(); // Clear the list before checking
+
+    if (currentLocation == null) {
+      print('Current location is not available');
+      return;
+    }
+
+    // Create Distance calculator from latlong2 package
+    final Distance distance = const Distance();
+
+    for (var senderInfo in senderInfoList) {
+      // Get coordinates string from senderInfo
+      String coordinatesStr = senderInfo["sender_coordinate"] ?? "";
+
+      // Remove any brackets and split the coordinates
+      coordinatesStr = coordinatesStr.replaceAll('[', '').replaceAll(']', '');
+      List<String> coordinates = coordinatesStr.split(',');
+
+      if (coordinates.length == 2) {
+        try {
+          // Convert coordinates to double
+          double senderLat = double.parse(coordinates[0].trim());
+          double senderLng = double.parse(coordinates[1].trim());
+
+          // Calculate distance in meters
+          double distanceInMeters = distance.as(
+              LengthUnit.Meter,
+              LatLng(currentLocation!.latitude, currentLocation!.longitude),
+              LatLng(senderLat, senderLng));
+
+          // Check if distance is less than or equal to 20 meters
+          if (distanceInMeters <= 20) {
+            M_CheckUId.add(senderInfo["uid"]!);
+            print(
+                'Found nearby sender with UID: ${senderInfo["uid"]} at distance: ${distanceInMeters.toStringAsFixed(2)} meters');
+          }
+        } catch (e) {
+          print(
+              'Error parsing coordinates for sender ${senderInfo["uid"]}: $e');
+        }
+      }
+    }
+  }
+
   Future<void> _getCurrentLocation() async {
     LocationPermission permission = await Geolocator.checkPermission();
     var value = await Configuration.getConfig();
@@ -541,6 +637,9 @@ class _RiderHomePageState extends State<RiderHomePage> {
       setState(() {
         currentLocation = LatLng(position.latitude, position.longitude);
       });
+
+      await M_check();
+      log("${M_CheckUId}+IUDIUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU");
 
       // แปลงพิกัดเป็นที่อยู่
       String address = await getAddressFromLatLng(currentLocation!);

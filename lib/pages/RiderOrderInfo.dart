@@ -291,6 +291,7 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
                     info_receive_uid: widget.info_receive_uid,
                     info_oid: widget.info_oid,
                     selectedIndex: 1));
+                context.read<ShareData>().listener!.cancel();
               },
               child: Text(
                 "Hire",
