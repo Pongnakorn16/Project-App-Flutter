@@ -157,10 +157,10 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
                   crossAxisAlignment:
                       CrossAxisAlignment.start, // จัดเรียงข้อความไปทางซ้าย
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 5),
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 5),
                         child: Row(
                           children: [
                             Icon(Icons.location_on,
@@ -171,10 +171,10 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 5, top: 8),
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 5, top: 8),
                         child: Row(
                           children: [
                             Icon(Icons.location_on,

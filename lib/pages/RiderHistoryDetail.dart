@@ -150,10 +150,10 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
                           endIndent: 2,
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 5, top: 8),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 5, top: 8),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -178,10 +178,10 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
                           ),
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 5, top: 8),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 5, top: 8),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [

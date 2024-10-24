@@ -33,9 +33,11 @@ class _RegisterUserState extends State<RegisterUser> {
   TextEditingController passwordCtl = TextEditingController();
   TextEditingController conPassCtl = TextEditingController();
   TextEditingController addressCtl = TextEditingController();
+  TextEditingController imageCtl = TextEditingController();
   String url = '';
   GetStorage gs = GetStorage();
   late LatLng coor;
+  bool showImage = false;
 
   @override
   void initState() {
@@ -85,10 +87,39 @@ class _RegisterUserState extends State<RegisterUser> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
-                        Image.network(
-                          'https://static-00.iconduck.com/assets.00/person-add-icon-512x512-qnly9xgp.png',
-                          width: 60, // กำหนดความกว้างของรูปภาพ
-                          height: 60, // กำหนดความสูงของรูปภาพ
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10.0),
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                showImage =
+                                    true; // เปลี่ยนสถานะให้แสดงรูปเมื่อกด
+                                imageCtl.text =
+                                    'https://your_new_image_url.com'; // กำหนด URL ของรูปที่เปลี่ยนใหม่
+                              });
+                              change_image(); // เรียกฟังก์ชัน change_image()
+                            },
+                            child: ClipOval(
+                              child: Container(
+                                width: 70,
+                                height: 70,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300], // สีพื้นของกรอบว่าง
+                                  border: Border.all(
+                                      color: Colors.grey,
+                                      width: 2), // กรอบสีเทา
+                                  image: DecorationImage(
+                                    image: showImage
+                                        ? NetworkImage(
+                                            imageCtl.text) // แสดงรูปใหม่เมื่อกด
+                                        : NetworkImage(
+                                            'https://static-00.iconduck.com/assets.00/person-add-icon-512x512-qnly9xgp.png'), // รูปเริ่มต้น
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                         Padding(
                           padding: const EdgeInsets.only(top: 8, bottom: 5),
@@ -326,15 +357,17 @@ class _RegisterUserState extends State<RegisterUser> {
     }
 
     var model = UserRegisterPostRequest(
-        phone: phoneCtl.text,
-        name: nameCtl.text,
-        password: passwordCtl.text,
-        address: addressCtl.text,
-        coordinate: "${coor.latitude},${coor.longitude}",
-        user_type: "user",
-        license_plate: null,
-        user_image:
-            'http://202.28.34.197:8888/contents/4a00cead-afb3-45db-a37a-c8bebe08fe0d.png');
+      phone: phoneCtl.text,
+      name: nameCtl.text,
+      password: passwordCtl.text,
+      address: addressCtl.text,
+      coordinate: "${coor.latitude},${coor.longitude}",
+      user_type: "user",
+      license_plate: null,
+      user_image: imageCtl.text.isEmpty
+          ? 'http://202.28.34.197:8888/contents/4a00cead-afb3-45db-a37a-c8bebe08fe0d.png'
+          : imageCtl.text, // ใช้ toString() เพื่อแปลงเป็น String
+    );
 
     var Value = await http.post(Uri.parse("$url/db/register/user"),
         headers: {"Content-Type": "application/json; charset=utf-8"},
@@ -548,6 +581,78 @@ class _RegisterUserState extends State<RegisterUser> {
           ),
         );
       },
+    );
+  }
+
+  void change_image() {
+    imageCtl.clear();
+    showDialog(
+      context: context,
+      barrierDismissible: false, // กำหนดให้ dialog ไม่หายเมื่อแตะบริเวณรอบนอก
+      builder: (context) => AlertDialog(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('เปลี่ยนรูป'),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Icon(
+                Icons.close,
+                size: 25,
+              ),
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.all(Colors.red),
+                foregroundColor: WidgetStateProperty.all(Colors.white),
+                padding: WidgetStateProperty.all<EdgeInsets>(EdgeInsets.zero),
+                minimumSize: WidgetStateProperty.all<Size>(const Size(30, 30)),
+                shape: WidgetStateProperty.all<RoundedRectangleBorder>(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('กรอก URL ของรูปที่ต้องการจะเปลี่ยน'),
+            const SizedBox(height: 10),
+            TextField(
+              controller: imageCtl,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: const Color.fromARGB(255, 228, 225, 225),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30.0),
+                  borderSide: const BorderSide(width: 1),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Row(
+            mainAxisAlignment:
+                MainAxisAlignment.center, // ปรับตำแหน่งปุ่มให้ตรงกลาง
+            children: [
+              FilledButton(
+                onPressed: () {
+                  setState(() {});
+                  Navigator.pop(context);
+                },
+                child: const Text('ยืนยัน'),
+                style: ButtonStyle(
+                  backgroundColor: WidgetStateProperty.all(Colors.blue),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
