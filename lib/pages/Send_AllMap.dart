@@ -355,7 +355,6 @@ class _SendAllMapPageState extends State<SendAllMapPage> {
                 style: TextStyle(fontSize: 14),
               ),
             );
-
             setState(() {});
           }
         }
