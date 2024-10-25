@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/get_navigation.dart';
 import 'package:http/http.dart' as http;
@@ -517,52 +518,45 @@ class _RiderDeliveryPageState extends State<RiderDeliveryPage> {
   } // เพิ่ม library สำหรับ Timer
 
   Future<void> startRiderMovement() async {
-    if (polylinePoints.isEmpty) {
-      print("No route points available");
+    // ตรวจสอบการอนุญาตตำแหน่ง
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      print("Location services are disabled.");
       return;
     }
 
-    int currentPointIndex = 0;
-
-    // กำหนดให้ไรเดอร์เริ่มต้นที่จุดเริ่มต้นของเส้นทาง
-    setState(() {
-      riderLatLng = polylinePoints[0];
-    });
-
-    Timer.periodic(Duration(seconds: 10), (timer) async {
-      if (currentPointIndex >= polylinePoints.length - 1) {
-        print("Reached destination");
-        timer.cancel();
-
-        // อัปเดตตำแหน่งสุดท้ายเป็นจุดหมายปลายทาง
-        setState(() {
-          riderLatLng = receive_latLng;
-        });
-
-        // อัปเดต Firebase ด้วยพิกัดสุดท้าย
-        var doc = "order${widget.info_oid}";
-        await db.collection('Order_Info').doc(doc).update({
-          'rider_coordinates':
-              '${receive_latLng.latitude},${receive_latLng.longitude}'
-        });
-
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        print("Location permissions are denied.");
         return;
       }
+    }
 
-      // Move to next point
-      currentPointIndex++;
+    if (permission == LocationPermission.deniedForever) {
+      print("Location permissions are permanently denied.");
+      return;
+    }
+
+    // เริ่มติดตามตำแหน่ง GPS
+    Geolocator.getPositionStream(
+      locationSettings: LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10, // ปรับตามความถี่ที่ต้องการให้เปลี่ยนตำแหน่ง
+      ),
+    ).listen((Position position) async {
       setState(() {
-        riderLatLng = polylinePoints[currentPointIndex];
+        riderLatLng = LatLng(position.latitude, position.longitude);
       });
 
-      // Update Firebase
+      // อัปเดตตำแหน่งไปยัง Firebase
       var doc = "order${widget.info_oid}";
-      await db.collection('Order_Info').doc(doc).update({
-        'rider_coordinates': '${riderLatLng.latitude},${riderLatLng.longitude}'
-      });
+      await db.collection('Order_Info').doc(doc).update(
+          {'rider_coordinates': '${position.latitude},${position.longitude}'});
 
       print(
-          "Moving rider to: ${riderLatLng.latitude}, ${riderLatLng.longitude}");
+          "Rider position updated to: ${position.latitude}, ${position.longitude}");
     });
   }
 
