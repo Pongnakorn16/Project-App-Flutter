@@ -298,7 +298,7 @@ class _SendAllMapPageState extends State<SendAllMapPage> {
 
     final collectionRef = db.collection("Order_Info");
     context.read<ShareData>().listener = collectionRef.snapshots().listen(
-      (snapshot) {
+      (snapshot) async {
         for (var docChange in snapshot.docChanges) {
           // ตรวจสอบเฉพาะการเปลี่ยนแปลง (modified) เท่านั้น
           if (docChange.type == DocumentChangeType.modified) {
@@ -307,21 +307,19 @@ class _SendAllMapPageState extends State<SendAllMapPage> {
 
             String numberPart = docId.substring(5);
             // แสดง Snackbar เฉพาะเมื่อมีการเปลี่ยนแปลงข้อมูล พร้อมแสดงชื่อเอกสาร
-            final matchingOrder = context
-                .read<ShareData>()
-                .snack_order_share
-                .firstWhere(
-                  (order) => order.oid.toString() == numberPart,
-                  orElse: () => GetSendOrder(
-                    oid: 0, // กำหนดค่าเริ่มต้นสำหรับ oid
-                    p_Name: "ไม่พบชื่อสินค้า", // กำหนดข้อความเริ่มต้นเมื่อไม่พบ
-                    p_Detail: "",
-                    se_Uid: 0,
-                    re_Uid: 0,
-                    ri_Uid: null,
-                    dv_Status: 0,
-                  ),
-                );
+            final matchingOrder =
+                context.read<ShareData>().snack_order_share.firstWhere(
+                      (order) => order.oid.toString() == numberPart,
+                      orElse: () => GetSendOrder(
+                        oid: 0,
+                        p_Name: "ไม่พบชื่อสินค้า",
+                        p_Detail: "",
+                        se_Uid: 0,
+                        re_Uid: 0,
+                        ri_Uid: null,
+                        dv_Status: 0,
+                      ),
+                    );
 
             // กำหนดข้อความสถานะตามค่า Order_status
             String statusMessage;
@@ -333,29 +331,32 @@ class _SendAllMapPageState extends State<SendAllMapPage> {
             } else if (data['Order_status'] == 4) {
               statusMessage = "ไรเดอร์นำส่งสินค้าแล้ว";
             } else {
-              statusMessage = "สถานะไม่รู้จัก"; // กรณีค่าอื่นๆ
+              statusMessage = "สถานะไม่รู้จัก";
             }
 
-// แสดง snackbar
+            // แสดง snackbar
             Get.snackbar(
               "",
               "",
               titleText: Row(
                 children: [
-                  Icon(FontAwesomeIcons.motorcycle, size: 15), // ขนาดของไอคอน
-                  SizedBox(width: 8), // ระยะห่างระหว่างไอคอนและข้อความ
+                  Icon(FontAwesomeIcons.motorcycle, size: 15),
+                  SizedBox(width: 8),
                   Text(
-                    "Order: ${matchingOrder.p_Name}", // ข้อความที่แสดง
+                    "Order: ${matchingOrder.p_Name}",
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
               messageText: Text(
-                "สถานะ : $statusMessage", // ข้อความสถานะ
+                "สถานะ : $statusMessage",
                 style: TextStyle(fontSize: 14),
               ),
             );
-            setState(() {});
+
+            // โหลดพิกัดของไรเดอร์และรีเฟรชหน้า
+            await loadRiderLocation(matchingOrder.oid);
+            setState(() {}); // รีเฟรชหน้า UI หลังจากโหลดพิกัด
           }
         }
       },
@@ -369,11 +370,12 @@ class _SendAllMapPageState extends State<SendAllMapPage> {
       allSend_order = getSendOrderFromJson(order.body);
 
       for (var singleOrder in allSend_order) {
-        loadRiderLocation(singleOrder.oid);
+        await loadRiderLocation(
+            singleOrder.oid); // อย่าลืมใช้ await ถ้าเป็น async
+        setState(() {}); // เรียกใช้ setState เพื่ออัพเดต UI
         if (send_latLng != null && receive_latLng != null) {
           await getRouteCoordinates(singleOrder.se_Uid, singleOrder.re_Uid);
         }
-        setstate() {}
       }
     } else {
       print("Error: ${order.statusCode}");
@@ -415,8 +417,10 @@ class _SendAllMapPageState extends State<SendAllMapPage> {
           double send_longitude = double.parse(latLngList[1]);
           send_latLng = LatLng(send_latitude, send_longitude);
 
-          // เก็บค่า send_latLng ลงใน List
           allSendLatLngs.add(send_latLng);
+
+          // เลื่อนแผนที่ไปยังพิกัดของผู้ส่งหลังจากอัปเดตค่า send_latLng
+          mapController.move(send_latLng, mapController.camera.zoom);
         }
       }
     }
