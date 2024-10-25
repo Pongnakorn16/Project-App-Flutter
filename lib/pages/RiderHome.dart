@@ -62,8 +62,10 @@ class _RiderHomePageState extends State<RiderHomePage> {
   List<GetSendOrder> rider_Orders = [];
   List<GetUserSearchRes> order_user = [];
   List<Map<String, String>> senderInfoList = [];
+  List<GetUserSearchRes> rider_Info = [];
   List<String> M_CheckUId = [];
   late Future<void> loadData;
+  LatLng rider_latLng = LatLng(0, 0);
   int _selectedIndex = 0;
   bool _showReceivePage = false;
   late AnimationController _animationController;
@@ -423,6 +425,14 @@ class _RiderHomePageState extends State<RiderHomePage> {
                     info_receive_uid: orders.re_Uid,
                     info_oid: orders.oid,
                     selectedIndex: 1));
+                var doc = "order${orders.oid}";
+                // ข้อมูลที่ต้องการอัปเดต
+                var dataToUpdate = {
+                  'Order_status': 2,
+                  'rider_coordinates':
+                      '${rider_latLng.latitude},${rider_latLng.longitude}',
+                };
+                db.collection('Order_Info').doc(doc).update(dataToUpdate);
                 context.read<ShareData>().listener!.cancel();
               },
               style: ButtonStyle(
@@ -481,6 +491,20 @@ class _RiderHomePageState extends State<RiderHomePage> {
       log('Failed to load lottery numbers. Status code: ${response.statusCode}');
     }
 
+    var rider = await http.get(Uri.parse(
+        "$url/db/get_Rider/${context.read<ShareData>().user_info_send.uid}"));
+    if (rider.statusCode == 200) {
+      rider_Info = getUserSearchResFromJson(rider.body);
+      if (rider_Info.first.coordinates != null) {
+        final coords = rider_Info.first.coordinates!.split(',');
+        final lat = double.parse(coords[0]);
+        final lng = double.parse(coords[1]);
+        rider_latLng = LatLng(lat, lng);
+      } else {
+        // Handle null case
+      }
+    }
+
     for (var OD in context.read<ShareData>().rider_order_share) {
       var sender = await http.get(Uri.parse("$url/db/get_Send/${OD.se_Uid}"));
 
@@ -517,16 +541,6 @@ class _RiderHomePageState extends State<RiderHomePage> {
           "$url/db/update_status/${oid}/${2}/${context.read<ShareData>().user_info_send.uid}"),
       headers: {"Content-Type": "application/json; charset=utf-8"},
     );
-
-    var doc = "order${oid}";
-
-    // ข้อมูลที่ต้องการอัปเดต
-    var dataToUpdate = {
-      'Order_status': 2,
-    };
-
-    // อัปเดตข้อมูลใน Firebase
-    await db.collection('Order_Info').doc(doc).update(dataToUpdate);
   }
 
   Future<String> getAddressFromLatLng(LatLng location) async {

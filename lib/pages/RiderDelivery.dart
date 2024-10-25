@@ -529,7 +529,7 @@ class _RiderDeliveryPageState extends State<RiderDeliveryPage> {
       riderLatLng = polylinePoints[0];
     });
 
-    Timer.periodic(Duration(seconds: 3), (timer) async {
+    Timer.periodic(Duration(seconds: 10), (timer) async {
       if (currentPointIndex >= polylinePoints.length - 1) {
         print("Reached destination");
         timer.cancel();

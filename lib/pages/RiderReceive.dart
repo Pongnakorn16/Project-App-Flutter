@@ -326,7 +326,7 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
 
     var rider = await http.get(Uri.parse(
         "$url/db/get_Rider/${context.read<ShareData>().user_info_send.uid}"));
-    if (receiver.statusCode == 200) {
+    if (rider.statusCode == 200) {
       rider_Info = getUserSearchResFromJson(rider.body);
       if (rider_Info.first.coordinates != null) {
         final coords = rider_Info.first.coordinates!.split(',');

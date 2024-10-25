@@ -42,6 +42,7 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
   MapController mapController = MapController();
   List<GetUserSearchRes> send_Info = [];
   List<GetUserSearchRes> receive_Info = [];
+  List<GetUserSearchRes> rider_Info = [];
   List<GetSendOrder> order_one = [];
   int sender_uid = 0; // ประกาศตัวแปรเพื่อเก็บค่า
   int receiver_uid = 0;
@@ -54,6 +55,7 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
   String product_imgUrl = "";
   LatLng send_latLng = LatLng(0, 0);
   LatLng receive_latLng = LatLng(0, 0);
+  LatLng rider_latLng = LatLng(0, 0);
   List<LatLng> polylinePoints = [];
   var db = FirebaseFirestore.instance;
   int _selectedIndex = 0;
@@ -291,6 +293,14 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
                     info_receive_uid: widget.info_receive_uid,
                     info_oid: widget.info_oid,
                     selectedIndex: 1));
+                var doc = "order${widget.info_oid}";
+                // ข้อมูลที่ต้องการอัปเดต
+                var dataToUpdate = {
+                  'Order_status': 2,
+                  'rider_coordinates':
+                      '${rider_latLng.latitude},${rider_latLng.longitude}',
+                };
+                db.collection('Order_Info').doc(doc).update(dataToUpdate);
                 context.read<ShareData>().listener!.cancel();
               },
               child: Text(
@@ -431,6 +441,20 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
       }
     }
 
+    var rider = await http.get(Uri.parse(
+        "$url/db/get_Rider/${context.read<ShareData>().user_info_send.uid}"));
+    if (rider.statusCode == 200) {
+      rider_Info = getUserSearchResFromJson(rider.body);
+      if (rider_Info.first.coordinates != null) {
+        final coords = rider_Info.first.coordinates!.split(',');
+        final lat = double.parse(coords[0]);
+        final lng = double.parse(coords[1]);
+        rider_latLng = LatLng(lat, lng);
+      } else {
+        // Handle null case
+      }
+    }
+
     var order =
         await http.get(Uri.parse("$url/db/get_OneOrder/${widget.info_oid}"));
     if (order.statusCode == 200) {
@@ -513,15 +537,5 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
           "$url/db/update_status/${oid}/${2}/${context.read<ShareData>().user_info_send.uid}"),
       headers: {"Content-Type": "application/json; charset=utf-8"},
     );
-
-    var doc = "order${oid}";
-
-    // ข้อมูลที่ต้องการอัปเดต
-    var dataToUpdate = {
-      'Order_status': 2,
-    };
-
-    // อัปเดตข้อมูลใน Firebase
-    await db.collection('Order_Info').doc(doc).update(dataToUpdate);
   }
 }

@@ -354,13 +354,6 @@ class _Home_ReceivePageState extends State<Home_ReceivePage>
             );
 
             setState(() {});
-
-// ตรวจสอบการเปลี่ยนแปลงสถานะใหม่
-            if (New_Dv_status != data['Order_status'] ||
-                New_Dv_status == null) {
-              New_Dv_status = data['Order_status'];
-              log("${New_Dv_status}+NEWNEWNENWNEDVVVVVVVVVVVVVVVVSTATATUS (Document: $docId)");
-            }
           }
         }
       },

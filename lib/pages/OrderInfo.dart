@@ -36,7 +36,13 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
   List<GetUserSearchRes> send_Info = [];
   List<GetUserSearchRes> receive_Info = [];
   List<GetUserSearchRes> rider_Info = [];
+  List<LatLng> allSendLatLngs = [];
+  List<LatLng> allReceiveLatLngs = [];
+  List<List<LatLng>> allPolylinePoints = [];
   List<GetSendOrder> order_one = [];
+  Map<int, LatLng> riderPositions = {};
+  List<LatLng> allRiderLatLngs = [];
+
   int sender_uid = 0; // ประกาศตัวแปรเพื่อเก็บค่า
   int receiver_uid = 0;
   String sender_address = "";
@@ -64,7 +70,6 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
     sender_uid = widget.info_send_uid;
     receiver_uid = widget.info_receive_uid;
     _selectedIndex = widget.selectedIndex;
-    loadRiderLocation();
     loadDataAsync(); // กำหนดค่าใน initState
   }
 
@@ -130,16 +135,17 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
                       ),
                     ],
                   ),
-                  if (polylinePoints.isNotEmpty)
-                    PolylineLayer(
-                      polylines: [
+                  PolylineLayer(
+                    polylines: [
+                      for (int i = 0; i < allPolylinePoints.length; i++) ...[
                         Polyline(
-                          points: polylinePoints, // แสดงเส้นทางที่คำนวณได้
+                          points: allPolylinePoints[i],
                           strokeWidth: 4.0,
                           color: Colors.blue,
                         ),
                       ],
-                    ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -547,8 +553,9 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
     }
 
     // เรียก getRouteCoordinates หลังจากได้รับค่า latLng ของผู้ส่งและผู้รับ
+    loadRiderLocation(order_one.first.oid);
     if (send_latLng != null && receive_latLng != null) {
-      await getRouteCoordinates();
+      await getRouteCoordinates(order_one.first.se_Uid, order_one.first.re_Uid);
     }
 
     setState(() {});
@@ -601,25 +608,57 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
     return image;
   }
 
-  Future<void> getRouteCoordinates() async {
+  Future<void> getRouteCoordinates(int se_uid, int re_uid) async {
     // Move the map to the sender's location
     mapController.move(send_latLng, mapController.camera.zoom);
 
-    final url =
+    var value = await Configuration.getConfig();
+    String url = value['apiEndpoint'];
+
+    var sender = await http.get(Uri.parse("$url/db/get_Send/${se_uid}"));
+    if (sender.statusCode == 200) {
+      send_Info = getUserSearchResFromJson(sender.body);
+      sender_address = send_Info.first.address.toString();
+
+      String? send_coordinates = send_Info.first.coordinates;
+      if (send_coordinates != null) {
+        List<String> latLngList = send_coordinates.split(',');
+        if (latLngList.length == 2) {
+          double send_latitude = double.parse(latLngList[0]);
+          double send_longitude = double.parse(latLngList[1]);
+          send_latLng = LatLng(send_latitude, send_longitude);
+
+          // เก็บค่า send_latLng ลงใน List
+          allSendLatLngs.add(send_latLng);
+        }
+      }
+    }
+
+    var receiver = await http.get(Uri.parse("$url/db/get_Receive/${re_uid}"));
+    if (receiver.statusCode == 200) {
+      receive_Info = getUserSearchResFromJson(receiver.body);
+      receiver_address = receive_Info.first.address.toString();
+
+      String? re_coordinates = receive_Info.first.coordinates;
+      if (re_coordinates != null) {
+        List<String> latLngList = re_coordinates.split(',');
+        if (latLngList.length == 2) {
+          double re_latitude = double.parse(latLngList[0]);
+          double re_longitude = double.parse(latLngList[1]);
+          receive_latLng = LatLng(re_latitude, re_longitude);
+
+          // เก็บค่า receive_latLng ลงใน List
+          allReceiveLatLngs.add(receive_latLng);
+        }
+      }
+    }
+
+    final url_location =
         'https://router.project-osrm.org/route/v1/driving/${send_latLng.longitude},${send_latLng.latitude};${receive_latLng.longitude},${receive_latLng.latitude}?geometries=geojson';
-    final response = await http.get(Uri.parse(url));
+    final response = await http.get(Uri.parse(url_location));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-
-      // Get route distance
-      final distance = data['routes'][0]['distance'];
-
-      // Convert distance from meters to kilometers
-      distanceInKm = distance / 1000;
-
-      // Print distance (or you can display it on the UI)
-      print('Distance: ${distanceInKm.toStringAsFixed(2)} km');
 
       // Get route coordinates for polyline
       final coordinates = data['routes'][0]['geometry']['coordinates'];
@@ -627,17 +666,17 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
         return LatLng(coord[1], coord[0]);
       }).toList();
 
-      setState(() {
-        polylinePoints = routePoints;
-      });
+      // เก็บค่าของเส้นทางลงใน List
+      allPolylinePoints.add(routePoints);
     } else {
       print('Error getting route');
     }
+
+    setState(() {});
   }
 
-  Future<void> loadRiderLocation() async {
-    var riderDoc =
-        await db.collection('Order_Info').doc('order${widget.info_oid}').get();
+  Future<void> loadRiderLocation(int oid) async {
+    var riderDoc = await db.collection('Order_Info').doc('order${oid}').get();
     if (riderDoc.exists) {
       String riderCoordinates = riderDoc.data()?['rider_coordinates'];
       print('Rider Coordinates: $riderCoordinates'); // เพิ่มการพิมพ์ข้อมูลพิกัด
@@ -646,12 +685,18 @@ class _OrderinfoPageState extends State<OrderinfoPage> {
         if (latLngList.length == 2) {
           double riderLat = double.parse(latLngList[0]);
           double riderLng = double.parse(latLngList[1]);
-          riderLatLng = LatLng(riderLat, riderLng);
-          print(
-              'Parsed LatLngกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกก: $riderLatLng'); // ตรวจสอบพิกัด
+          LatLng riderLatLng = LatLng(riderLat, riderLng);
+
+          // แทนที่ตำแหน่งไรเดอร์ใน Map
+          riderPositions[oid] = riderLatLng;
+
+          // อัปเดตตำแหน่งไรเดอร์ทั้งหมดใน allRiderLatLngs
+          allRiderLatLngs = riderPositions.values.toList();
+
+          print('Parsed LatLng: $riderLatLng'); // ตรวจสอบพิกัด
         }
       }
-      setState(() {});
+      setState(() {}); // เรียก setState เพื่ออัปเดต UI
     }
   }
 }

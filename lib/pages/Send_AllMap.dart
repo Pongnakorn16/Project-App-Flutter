@@ -299,26 +299,66 @@ class _SendAllMapPageState extends State<SendAllMapPage> {
     final collectionRef = db.collection("Order_Info");
     context.read<ShareData>().listener = collectionRef.snapshots().listen(
       (snapshot) {
-        // รีเซ็ตค่าตำแหน่งไรเดอร์
         for (var docChange in snapshot.docChanges) {
+          // ตรวจสอบเฉพาะการเปลี่ยนแปลง (modified) เท่านั้น
           if (docChange.type == DocumentChangeType.modified) {
             var data = docChange.doc.data();
-            var docId = docChange.doc.id;
-            int orderId = int.parse(docId.replaceAll('order', ''));
+            var docId = docChange.doc.id; // ชื่อเอกสารที่มีการเปลี่ยนแปลง
 
+            String numberPart = docId.substring(5);
             // แสดง Snackbar เฉพาะเมื่อมีการเปลี่ยนแปลงข้อมูล พร้อมแสดงชื่อเอกสาร
+            final matchingOrder = context
+                .read<ShareData>()
+                .snack_order_share
+                .firstWhere(
+                  (order) => order.oid.toString() == numberPart,
+                  orElse: () => GetSendOrder(
+                    oid: 0, // กำหนดค่าเริ่มต้นสำหรับ oid
+                    p_Name: "ไม่พบชื่อสินค้า", // กำหนดข้อความเริ่มต้นเมื่อไม่พบ
+                    p_Detail: "",
+                    se_Uid: 0,
+                    re_Uid: 0,
+                    ri_Uid: null,
+                    dv_Status: 0,
+                  ),
+                );
+
+            // กำหนดข้อความสถานะตามค่า Order_status
+            String statusMessage;
+
+            if (data!['Order_status'] == 2) {
+              statusMessage = "ไรเดอร์รับงานแล้ว";
+            } else if (data['Order_status'] == 3) {
+              statusMessage = "ไรเดอร์รับสินค้าแล้วและกำลังเดินทาง";
+            } else if (data['Order_status'] == 4) {
+              statusMessage = "ไรเดอร์นำส่งสินค้าแล้ว";
+            } else {
+              statusMessage = "สถานะไม่รู้จัก"; // กรณีค่าอื่นๆ
+            }
+
+// แสดง snackbar
             Get.snackbar(
-              "Document: $docId | Status: ${data!['Order_status']}",
-              "Order Time: ${data['Order_time_at'].toString()}",
+              "",
+              "",
+              titleText: Row(
+                children: [
+                  Icon(FontAwesomeIcons.motorcycle, size: 15), // ขนาดของไอคอน
+                  SizedBox(width: 8), // ระยะห่างระหว่างไอคอนและข้อความ
+                  Text(
+                    "Order: ${matchingOrder.p_Name}", // ข้อความที่แสดง
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              messageText: Text(
+                "สถานะ : $statusMessage", // ข้อความสถานะ
+                style: TextStyle(fontSize: 14),
+              ),
             );
 
-            // เรียก loadRiderLocation ใหม่เพื่ออัปเดตข้อมูลไรเดอร์
-            loadRiderLocation(orderId);
+            setState(() {});
           }
         }
-
-        // เรียก setState เพื่ออัปเดต UI และแผนที่ทุกครั้งที่มีการเปลี่ยนแปลง
-        setState(() {});
       },
       onError: (error) => log("Listen failed: $error"),
     );
