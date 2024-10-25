@@ -373,6 +373,7 @@ class _SendAllMapPageState extends State<SendAllMapPage> {
         if (send_latLng != null && receive_latLng != null) {
           await getRouteCoordinates(singleOrder.se_Uid, singleOrder.re_Uid);
         }
+        setstate() {}
       }
     } else {
       print("Error: ${order.statusCode}");
