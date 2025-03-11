@@ -12,22 +12,20 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/customer_regis_post_req.dart';
-import 'package:mobile_miniproject_app/models/request/rider_regis_post_req.dart';
 import 'package:mobile_miniproject_app/models/request/user_regis_post_req.dart';
 import 'package:mobile_miniproject_app/pages/Login.dart';
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
 import 'package:mobile_miniproject_app/pages/Register_Customer.dart';
-import 'package:mobile_miniproject_app/pages/Register_Restaurant.dart';
 import 'package:mobile_miniproject_app/pages/Register_Rider.dart';
 
-class RegisterRider extends StatefulWidget {
-  const RegisterRider({super.key});
+class RegisterRestaurant extends StatefulWidget {
+  const RegisterRestaurant({super.key});
 
   @override
-  State<RegisterRider> createState() => _RegisterCustomerState();
+  State<RegisterRestaurant> createState() => _RegisterCustomerState();
 }
 
-class _RegisterCustomerState extends State<RegisterRider> {
+class _RegisterCustomerState extends State<RegisterRestaurant> {
   String txt = '';
   LatLng? selectedLocation;
   LatLng? currentLocation;
@@ -37,8 +35,6 @@ class _RegisterCustomerState extends State<RegisterRider> {
   TextEditingController passwordCtl = TextEditingController();
   TextEditingController conPassCtl = TextEditingController();
   TextEditingController phoneCtl = TextEditingController();
-  TextEditingController licenseCtl = TextEditingController();
-
   String url = '';
   GetStorage gs = GetStorage();
   late LatLng coor;
@@ -81,7 +77,7 @@ class _RegisterCustomerState extends State<RegisterRider> {
                         Expanded(
                           // ✅ ป้องกัน overflow
                           child: Text(
-                            'Create "Rider" Account',
+                            'Create "Restaurant" Account',
                             textAlign:
                                 TextAlign.center, // ✅ จัดข้อความให้อยู่กึ่งกลาง
                             style: TextStyle(
@@ -102,16 +98,16 @@ class _RegisterCustomerState extends State<RegisterRider> {
                           child: ToggleButtons(
                             isSelected: [
                               false,
-                              false,
-                              true
+                              true,
+                              false
                             ], // ตั้งค่าเริ่มต้นของปุ่ม
                             onPressed: (index) {
-                              if (index == 2) {
+                              if (index == 1) {
                                 // ไปที่หน้าลูกค้า
-                              } else if (index == 1) {
-                                registerRes();
-                              } else {
+                              } else if (index == 0) {
                                 registerCus();
+                              } else {
+                                registerRider();
                               }
                             },
                             borderRadius: BorderRadius.circular(10),
@@ -177,7 +173,7 @@ class _RegisterCustomerState extends State<RegisterRider> {
                                 borderSide: BorderSide(width: 1),
                               ),
                               prefixIcon: Icon(Icons.person),
-                              hintText: 'Name',
+                              hintText: 'Restaurant Name',
                             ),
                           ),
                         ),
@@ -231,24 +227,6 @@ class _RegisterCustomerState extends State<RegisterRider> {
                               ),
                               prefixIcon: Icon(Icons.phone), // ไอคอนด้านหน้า
                               hintText: 'Phone',
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding:
-                              const EdgeInsets.only(top: 8.0, bottom: 16.0),
-                          child: TextField(
-                            controller: licenseCtl,
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: Color.fromARGB(255, 228, 225, 225),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30.0),
-                                borderSide: BorderSide(width: 1),
-                              ),
-                              prefixIcon:
-                                  Icon(Icons.motorcycle), // ไอคอนด้านหน้า
-                              hintText: 'License plate number',
                             ),
                           ),
                         ),
@@ -348,16 +326,16 @@ class _RegisterCustomerState extends State<RegisterRider> {
     //   coor = LatLng(0, 0); // ค่าพื้นฐานเมื่อเกิดข้อผิดพลาด
     // }
 
-    var model = RiderPostRequest(
-        phone: phoneCtl.text,
-        name: nameCtl.text,
-        password: passwordCtl.text,
-        email: EmailCtl.text,
-        license: licenseCtl.text);
+    var model = CustomerPostRequest(
+      phone: phoneCtl.text,
+      name: nameCtl.text,
+      password: passwordCtl.text,
+      email: EmailCtl.text,
+    );
 
-    var Value = await http.post(Uri.parse("$url/db/register/rider"),
+    var Value = await http.post(Uri.parse("$url/db/register/restaurant"),
         headers: {"Content-Type": "application/json; charset=utf-8"},
-        body: RiderPostRequestToJson(model));
+        body: CustomerPostRequestToJson(model));
 
     if (Value.statusCode == 200) {
       log('Registration is successful');
@@ -388,8 +366,8 @@ class _RegisterCustomerState extends State<RegisterRider> {
     Get.to(() => const RegisterCustomer());
   }
 
-  void registerRes() {
-    Get.to(() => const RegisterRestaurant());
+  void registerRider() {
+    Get.to(() => const RegisterRider());
   }
 
   void login() {

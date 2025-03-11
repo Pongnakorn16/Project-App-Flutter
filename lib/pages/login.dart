@@ -7,7 +7,7 @@ import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/user_login_post_req.dart';
 import 'package:mobile_miniproject_app/models/response/UserLoginPostRes.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
-import 'package:mobile_miniproject_app/pages/Register_User.dart';
+import 'package:mobile_miniproject_app/pages/Register_Customer.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
 import 'package:mobile_miniproject_app/pages/RiderHome.dart';
@@ -27,7 +27,7 @@ class _LoginPageState extends State<LoginPage> {
   String text = '';
   int count = 0;
   String phoneNo = '', txt = '';
-  TextEditingController PhoneCtl = TextEditingController();
+  TextEditingController EmailCtl = TextEditingController();
   TextEditingController PasswordCtl = TextEditingController();
   String url = '';
 
@@ -92,7 +92,7 @@ class _LoginPageState extends State<LoginPage> {
                       Padding(
                         padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
                         child: TextField(
-                          controller: PhoneCtl,
+                          controller: EmailCtl,
                           decoration: InputDecoration(
                             filled: true,
                             fillColor: Color.fromARGB(255, 228, 225, 225),
@@ -101,8 +101,8 @@ class _LoginPageState extends State<LoginPage> {
                               borderSide: BorderSide(width: 1),
                             ),
                             prefixIcon: Icon(
-                                Icons.phone), // ใส่ไอคอนโทรศัพท์ที่ด้านซ้าย
-                            hintText: 'Phone Number', // ใส่ placeholder
+                                Icons.email), // ใส่ไอคอนโทรศัพท์ที่ด้านซ้าย
+                            hintText: 'Email', // ใส่ placeholder
                           ),
                         ),
                       ),
@@ -127,33 +127,66 @@ class _LoginPageState extends State<LoginPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: 40),
-                            child: SizedBox(
-                              width: 300,
-                              height: 50,
-                              child: FilledButton(
-                                onPressed: () {
-                                  gs.write('Phone', PhoneCtl.text);
-                                  gs.write('Password', PasswordCtl.text);
-                                  print(gs.read('Phone'));
-                                  print(gs.read('Password'));
-                                  login();
-                                },
-                                style: ButtonStyle(
-                                  backgroundColor: WidgetStateProperty.all(
-                                      Color.fromRGBO(251, 215, 88, 1.0)),
-                                  foregroundColor:
-                                      WidgetStateProperty.all(Colors.white),
-                                ),
-                                child: const Text(
-                                  'Log in',
-                                  style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w400),
+                          Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 40),
+                                child: SizedBox(
+                                  width: 300,
+                                  height: 50,
+                                  child: FilledButton(
+                                    onPressed: () {
+                                      gs.write('Email', EmailCtl.text);
+                                      gs.write('Password', PasswordCtl.text);
+                                      print(gs.read('Email'));
+                                      print(gs.read('Password'));
+                                      login();
+                                    },
+                                    style: ButtonStyle(
+                                      backgroundColor: WidgetStateProperty.all(
+                                          Color.fromRGBO(251, 215, 88, 1.0)),
+                                      foregroundColor:
+                                          WidgetStateProperty.all(Colors.white),
+                                    ),
+                                    child: const Text(
+                                      'Log in',
+                                      style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w400),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                              const SizedBox(
+                                  height: 20), // เพิ่มระยะห่างระหว่างปุ่ม
+                              SizedBox(
+                                width: 300,
+                                height: 50,
+                                child: FilledButton(
+                                  onPressed: signInWithGoogle,
+                                  style: ButtonStyle(
+                                    backgroundColor: WidgetStateProperty.all(
+                                        Color.fromRGBO(66, 133, 244, 1.0)),
+                                    foregroundColor:
+                                        WidgetStateProperty.all(Colors.white),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.login,
+                                          size: 24, color: Colors.white),
+                                      SizedBox(width: 10),
+                                      Text(
+                                        'Login with Google',
+                                        style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w400),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -198,16 +231,16 @@ class _LoginPageState extends State<LoginPage> {
 
   void login() async {
     log("API Endpoint: $url");
-    String phone = gs.read('Phone');
+    String phone = gs.read('Email');
     String password = gs.read('Password');
     log(phone);
     log(password);
 
     log("xxxxxxx");
     model = UserLoginPostRequest(Phone: phone, Password: password);
-    if (PhoneCtl.text.isEmpty && PasswordCtl.text.isEmpty) {
+    if (EmailCtl.text.isEmpty && PasswordCtl.text.isEmpty) {
       Fluttertoast.showToast(
-          msg: "กรุณากรอกเบอร์โทรและรหัสผ่าน",
+          msg: "กรุณากรอกอีเมลและรหัสผ่าน",
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.CENTER,
           timeInSecForIosWeb: 1,
@@ -255,7 +288,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         Fluttertoast.showToast(
             msg:
-                "เบอร์โทรศํพท์ หรือ รหัสผ่าน ไม่ถูกต้องโปรดตรวจสอบความถูกต้อง แล้วลองอีกครั้ง",
+                "เบอร์อีเมล หรือ รหัสผ่าน ไม่ถูกต้องโปรดตรวจสอบความถูกต้อง แล้วลองอีกครั้ง",
             toastLength: Toast.LENGTH_SHORT,
             gravity: ToastGravity.CENTER,
             timeInSecForIosWeb: 1,
@@ -273,7 +306,9 @@ class _LoginPageState extends State<LoginPage> {
     Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => const RegisterUser(),
+          builder: (context) => const RegisterCustomer(),
         ));
   }
 }
+
+void signInWithGoogle() {}
