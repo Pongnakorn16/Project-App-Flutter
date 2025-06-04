@@ -27,34 +27,34 @@ class UserLoginPostResponse {
     required this.name,
     required this.password,
     required this.user_image,
-    required this.address,
-    required this.coordinates,
+    this.address,
+    this.coordinates,
     required this.user_type,
-    required this.license_plate,
+    this.license_plate,
   });
 
   factory UserLoginPostResponse.fromJson(Map<String, dynamic> json) =>
       UserLoginPostResponse(
-        uid: json["uid"],
-        phone: json["phone"],
-        name: json["name"],
-        password: json["password"],
-        user_image: json["user_image"],
+        uid: json["id"] ?? 0,
+        phone: json["phone"] ?? '',
+        name: json["name"] ?? '',
+        password: json["password"] ?? '',
+        user_image: json["image"] ?? '',
         address: json["address"],
         coordinates: json["coordinates"],
-        user_type: json["user_type"],
+        user_type: json["source_table"] ?? '',
         license_plate: json["license_plate"],
       );
 
   Map<String, dynamic> toJson() => {
-        "uid": uid,
+        "id": uid,
         "phone": phone,
         "name": name,
         "password": password,
-        "user_image": user_image,
+        "image": user_image,
         "address": address,
         "coordinates": coordinates,
-        "user_type": user_type,
+        "source_table": user_type,
         "license_plate": license_plate,
       };
 }

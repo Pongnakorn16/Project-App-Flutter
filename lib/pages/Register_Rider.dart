@@ -349,11 +349,11 @@ class _RegisterCustomerState extends State<RegisterRider> {
     // }
 
     var model = RiderPostRequest(
-        phone: phoneCtl.text,
-        name: nameCtl.text,
-        password: passwordCtl.text,
-        email: EmailCtl.text,
-        license: licenseCtl.text);
+        rid_phone: phoneCtl.text,
+        rid_name: nameCtl.text,
+        rid_password: passwordCtl.text,
+        rid_email: EmailCtl.text,
+        rid_license: licenseCtl.text);
 
     var Value = await http.post(Uri.parse("$url/db/register/rider"),
         headers: {"Content-Type": "application/json; charset=utf-8"},

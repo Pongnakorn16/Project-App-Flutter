@@ -18,6 +18,8 @@ import 'package:mobile_miniproject_app/pages/Home_Send.dart';
 import 'package:mobile_miniproject_app/pages/Register_Customer.dart';
 import 'package:mobile_miniproject_app/pages/Register_Rider.dart';
 
+import '../models/request/restaurant_regis_post_req.dart';
+
 class RegisterRestaurant extends StatefulWidget {
   const RegisterRestaurant({super.key});
 
@@ -326,16 +328,18 @@ class _RegisterCustomerState extends State<RegisterRestaurant> {
     //   coor = LatLng(0, 0); // ค่าพื้นฐานเมื่อเกิดข้อผิดพลาด
     // }
 
-    var model = CustomerPostRequest(
-      phone: phoneCtl.text,
-      name: nameCtl.text,
-      password: passwordCtl.text,
-      email: EmailCtl.text,
+    var model = RestaurantPostRequest(
+      res_phone: phoneCtl.text,
+      res_name: nameCtl.text,
+      res_password: passwordCtl.text,
+      res_email: EmailCtl.text,
     );
+
+    log("Sending: ${RestaurantPostRequestToJson(model)}");
 
     var Value = await http.post(Uri.parse("$url/db/register/restaurant"),
         headers: {"Content-Type": "application/json; charset=utf-8"},
-        body: CustomerPostRequestToJson(model));
+        body: RestaurantPostRequestToJson(model));
 
     if (Value.statusCode == 200) {
       log('Registration is successful');

@@ -12,20 +12,20 @@ String CustomerPostRequestToJson(CustomerPostRequest data) =>
 
 class CustomerPostRequest {
   // int cusId;
-  String name;
-  String email;
-  String password;
-  String phone;
+  String cus_name;
+  String cus_email;
+  String cus_password;
+  String cus_phone;
   // String image;
   // int balance;
   // int activeStatus;
 
   CustomerPostRequest({
     // required this.cusId,
-    required this.name,
-    required this.email,
-    required this.password,
-    required this.phone,
+    required this.cus_name,
+    required this.cus_email,
+    required this.cus_password,
+    required this.cus_phone,
     // required this.image,
     // required this.balance,
     // required this.activeStatus,
@@ -34,10 +34,10 @@ class CustomerPostRequest {
   factory CustomerPostRequest.fromJson(Map<String, dynamic> json) =>
       CustomerPostRequest(
         // cusId: json["cus_id"],
-        name: json["name"],
-        email: json["email"],
-        password: json["password"],
-        phone: json["phone"],
+        cus_name: json["cus_name"],
+        cus_email: json["cus_email"],
+        cus_password: json["cus_password"],
+        cus_phone: json["cus_phone"],
         // image: json["image"],
         // balance: json["balance"],
         // activeStatus: json["active_status"],
@@ -45,10 +45,10 @@ class CustomerPostRequest {
 
   Map<String, dynamic> toJson() => {
         // "cus_id": cusId,
-        "name": name,
-        "email": email,
-        "password": password,
-        "phone": phone,
+        "cus_name": cus_name,
+        "cus_email": cus_email,
+        "cus_password": cus_password,
+        "cus_phone": cus_phone,
         // "image": image,
         // "balance": balance,
         // "active_status": activeStatus,

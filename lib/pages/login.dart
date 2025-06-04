@@ -231,74 +231,89 @@ class _LoginPageState extends State<LoginPage> {
 
   void login() async {
     log("API Endpoint: $url");
-    String phone = gs.read('Email');
+
+    String email = gs.read('Email');
     String password = gs.read('Password');
-    log(phone);
+    log(email);
     log(password);
 
-    log("xxxxxxx");
-    model = UserLoginPostRequest(Phone: phone, Password: password);
-    if (EmailCtl.text.isEmpty && PasswordCtl.text.isEmpty) {
+    // เช็คว่ากรอกครบหรือยัง
+    if (EmailCtl.text.isEmpty || PasswordCtl.text.isEmpty) {
       Fluttertoast.showToast(
           msg: "กรุณากรอกอีเมลและรหัสผ่าน",
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.CENTER,
           timeInSecForIosWeb: 1,
-          // backgroundColor: Color.fromARGB(120, 0, 0, 0),
           backgroundColor: Color.fromARGB(255, 255, 0, 0),
           textColor: Colors.white,
           fontSize: 15.0);
+      return; // ต้อง return เพื่อไม่ให้ทำต่อ
     }
 
+    log("xxxxxxx");
+
+    // สร้างโมเดลข้อมูล login
+    var model = UserLoginPostRequest(Email: email, Password: password);
+
     try {
-      var Value = await http.post(Uri.parse("$url/db/users/login"),
-          headers: {"Content-Type": "application/json; charset=utf-8"},
-          body: UserLoginPostRequestToJson(model));
-      log(Value.body); // Log the raw response body
+      var response = await http.post(
+        Uri.parse("$url/db/users/login"),
+        headers: {"Content-Type": "application/json; charset=utf-8"},
+        body: UserLoginPostRequestToJson(model),
+      );
+      log("SPIDERMAN");
+      log(response.body); // log ข้อมูลที่ได้จาก API
+      log("Status Code: ${response.statusCode}");
 
-      List<dynamic> jsonResponse = json.decode(Value.body);
-      var res = UserLoginPostResponse.fromJson(jsonResponse.first);
-      User_Info_Send User = User_Info_Send();
-      User.uid = res.uid;
-      User.name = res.name;
-      User.user_type = res.user_type;
-      User.user_image = res.user_image;
+      if (response.statusCode == 200) {
+        Map<String, dynamic> jsonResponse = json.decode(response.body);
+        var res = UserLoginPostResponse.fromJson(jsonResponse);
 
-      ///เดี๋ยวมาเพิ่มทีหลัง
+        // เก็บข้อมูลผู้ใช้ลงใน ShareData
+        User_Info_Send User = User_Info_Send();
+        User.uid = res.uid;
+        User.name = res.name;
+        User.user_type = res.user_type;
+        User.user_image = res.user_image;
 
-      context.read<ShareData>().user_info_send = User;
+        context.read<ShareData>().user_info_send = User;
 
-      if (res.user_type == 'rider') {
-        log("Admin User Logged In");
-        Navigator.push(
+        // นำทางตามประเภทผู้ใช้
+        if (res.user_type == 'rider') {
+          log("Rider User Logged In");
+          Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => RiderHomePage(),
-            ));
+            MaterialPageRoute(builder: (context) => RiderHomePage()),
+          );
+        } else {
+          log("Customer User Logged In");
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => HomePage()),
+          );
+        }
       } else {
-        // นำไปยังหน้า HomePage ตามปกติ
-        Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => HomePage(),
-            ));
-      }
-    } catch (err) {
-      log(err.toString());
-      setState(() {
+        // ถ้า status ไม่ใช่ 200 แสดงว่า login fail
         Fluttertoast.showToast(
-            msg:
-                "เบอร์อีเมล หรือ รหัสผ่าน ไม่ถูกต้องโปรดตรวจสอบความถูกต้อง แล้วลองอีกครั้ง",
+            msg: "อีเมล หรือ รหัสผ่านไม่ถูกต้อง โปรดลองใหม่อีกครั้ง",
             toastLength: Toast.LENGTH_SHORT,
             gravity: ToastGravity.CENTER,
             timeInSecForIosWeb: 1,
-            // backgroundColor: Color.fromARGB(120, 0, 0, 0),
             backgroundColor: Color.fromARGB(255, 255, 0, 0),
             textColor: Colors.white,
             fontSize: 15.0);
-      });
-
-      setState(() {});
+      }
+    } catch (err) {
+      log("Login Failed:");
+      log(err.toString());
+      Fluttertoast.showToast(
+          msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Color.fromARGB(255, 255, 0, 0),
+          textColor: Colors.white,
+          fontSize: 15.0);
     }
   }
 

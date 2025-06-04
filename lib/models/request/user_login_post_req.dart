@@ -11,22 +11,22 @@ String UserLoginPostRequestToJson(UserLoginPostRequest data) =>
     json.encode(data.toJson());
 
 class UserLoginPostRequest {
-  String Phone;
+  String Email;
   String Password;
 
   UserLoginPostRequest({
-    required this.Phone,
+    required this.Email,
     required this.Password,
   });
 
   factory UserLoginPostRequest.fromJson(Map<String, dynamic> json) =>
       UserLoginPostRequest(
-        Phone: json["Phone"],
+        Email: json["Email"],
         Password: json["Password"],
       );
 
   Map<String, dynamic> toJson() => {
-        "Phone": Phone,
+        "Email": Email,
         "Password": Password,
       };
 }

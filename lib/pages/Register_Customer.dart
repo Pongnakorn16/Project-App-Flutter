@@ -327,11 +327,13 @@ class _RegisterCustomerState extends State<RegisterCustomer> {
     // }
 
     var model = CustomerPostRequest(
-      phone: phoneCtl.text,
-      name: nameCtl.text,
-      password: passwordCtl.text,
-      email: EmailCtl.text,
+      cus_phone: phoneCtl.text,
+      cus_name: nameCtl.text,
+      cus_password: passwordCtl.text,
+      cus_email: EmailCtl.text,
     );
+
+    log("Sending: ${CustomerPostRequestToJson(model)}");
 
     var Value = await http.post(Uri.parse("$url/db/register/customer"),
         headers: {"Content-Type": "application/json; charset=utf-8"},
