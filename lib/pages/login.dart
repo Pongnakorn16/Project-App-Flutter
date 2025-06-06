@@ -6,10 +6,12 @@ import 'package:get_storage/get_storage.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/user_login_post_req.dart';
 import 'package:mobile_miniproject_app/models/response/UserLoginPostRes.dart';
+import 'package:mobile_miniproject_app/pages/CustomerHome.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
 import 'package:mobile_miniproject_app/pages/Register_Customer.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
+import 'package:mobile_miniproject_app/pages/RestaurantHome.dart';
 import 'package:mobile_miniproject_app/pages/RiderHome.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
@@ -271,25 +273,44 @@ class _LoginPageState extends State<LoginPage> {
 
         // เก็บข้อมูลผู้ใช้ลงใน ShareData
         User_Info_Send User = User_Info_Send();
-        User.uid = res.uid;
+        User.uid = res.id;
+        User.email = res.email;
         User.name = res.name;
-        User.user_type = res.user_type;
+        User.name = res.phone;
         User.user_image = res.user_image;
+        User.balance = res.balance;
+        User.active_status = res.active_status;
+        User.user_type = res.source_table;
 
         context.read<ShareData>().user_info_send = User;
 
         // นำทางตามประเภทผู้ใช้
-        if (res.user_type == 'rider') {
+        if (res.source_table == 'BP_rider') {
           log("Rider User Logged In");
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => RiderHomePage()),
           );
-        } else {
+        } else if (res.source_table == 'BP_restaurant') {
+          log("Restaurant User Logged In");
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => RestaurantHomePage()),
+          );
+        } else if (res.source_table == 'BP_customer') {
           log("Customer User Logged In");
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => HomePage()),
+            MaterialPageRoute(builder: (context) => CustomerHomePage()),
+          );
+        } else {
+          log("Unknown user type");
+          Fluttertoast.showToast(
+            msg: "ประเภทผู้ใช้ไม่ถูกต้อง",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
           );
         }
       } else {

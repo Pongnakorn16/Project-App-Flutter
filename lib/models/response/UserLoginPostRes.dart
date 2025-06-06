@@ -11,50 +11,61 @@ String UserLoginPostResponseToJson(UserLoginPostResponse data) =>
     json.encode(data.toJson());
 
 class UserLoginPostResponse {
-  int uid;
+  int id;
+  String email;
   String phone;
   String name;
   String password;
   String user_image;
   String? address;
   String? coordinates;
-  String user_type;
   String? license_plate;
+  int balance;
+  int active_status;
+  String source_table;
 
   UserLoginPostResponse({
-    required this.uid,
+    required this.id,
+    required this.email,
     required this.phone,
     required this.name,
     required this.password,
     required this.user_image,
     this.address,
     this.coordinates,
-    required this.user_type,
     this.license_plate,
+    required this.balance,
+    required this.active_status,
+    required this.source_table,
   });
 
   factory UserLoginPostResponse.fromJson(Map<String, dynamic> json) =>
       UserLoginPostResponse(
-        uid: json["id"] ?? 0,
-        phone: json["phone"] ?? '',
-        name: json["name"] ?? '',
-        password: json["password"] ?? '',
-        user_image: json["image"] ?? '',
-        address: json["address"],
-        coordinates: json["coordinates"],
-        user_type: json["source_table"] ?? '',
-        license_plate: json["license_plate"],
-      );
+          id: json["id"] ?? 0,
+          email: json["email"] ?? '',
+          phone: json["phone"] ?? '',
+          name: json["name"] ?? '',
+          password: json["password"] ?? '',
+          user_image: json["image"] ?? '',
+          address: json["address"],
+          coordinates: json["coordinates"],
+          license_plate: json["license_plate"],
+          balance: json["balance"] ?? 0,
+          active_status: json["activ_status"] ?? 0,
+          source_table: json["source_table"]);
 
   Map<String, dynamic> toJson() => {
-        "id": uid,
+        "id": id,
+        "email": email,
         "phone": phone,
         "name": name,
         "password": password,
         "image": user_image,
         "address": address,
         "coordinates": coordinates,
-        "source_table": user_type,
         "license_plate": license_plate,
+        "balance": balance,
+        "active_status": active_status,
+        "source_table": source_table,
       };
 }
