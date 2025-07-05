@@ -18,6 +18,7 @@ class UserLoginPostResponse {
   String password;
   String user_image;
   String? address;
+  String? address_detail;
   String? coordinates;
   String? license_plate;
   int balance;
@@ -32,6 +33,7 @@ class UserLoginPostResponse {
     required this.password,
     required this.user_image,
     this.address,
+    this.address_detail,
     this.coordinates,
     this.license_plate,
     required this.balance,
@@ -41,31 +43,34 @@ class UserLoginPostResponse {
 
   factory UserLoginPostResponse.fromJson(Map<String, dynamic> json) =>
       UserLoginPostResponse(
-          id: json["id"] ?? 0,
-          email: json["email"] ?? '',
-          phone: json["phone"] ?? '',
-          name: json["name"] ?? '',
-          password: json["password"] ?? '',
-          user_image: json["image"] ?? '',
-          address: json["address"],
-          coordinates: json["coordinates"],
-          license_plate: json["license_plate"],
-          balance: json["balance"] ?? 0,
-          active_status: json["activ_status"] ?? 0,
-          source_table: json["source_table"]);
+        id: json["cus_id"] ?? 0,
+        email: json["cus_email"] ?? '',
+        phone: json["cus_phone"] ?? '',
+        name: json["cus_name"] ?? '',
+        password: json["cus_password"] ?? '',
+        user_image: json["cus_image"] ?? '',
+        address: json["address"], // ถ้ายังไม่มีใน JSON ก็ไม่ต้องแก้
+        address_detail: json["address_detail"],
+        coordinates: json["coordinates"],
+        license_plate: json["license_plate"],
+        balance: json["cus_balance"] ?? 0,
+        active_status: json["cus_active_status"] ?? 0,
+        source_table: json["source_table"] ?? '',
+      );
 
   Map<String, dynamic> toJson() => {
-        "id": id,
-        "email": email,
-        "phone": phone,
-        "name": name,
-        "password": password,
-        "image": user_image,
+        "cus_id": id,
+        "cus_email": email,
+        "cus_phone": phone,
+        "cus_name": name,
+        "cus_password": password,
+        "cus_image": user_image,
         "address": address,
+        "address_detail": address_detail,
         "coordinates": coordinates,
         "license_plate": license_plate,
-        "balance": balance,
-        "active_status": active_status,
+        "cus_balance": balance,
+        "cus_active_status": active_status,
         "source_table": source_table,
       };
 }

@@ -270,13 +270,14 @@ class _LoginPageState extends State<LoginPage> {
       if (response.statusCode == 200) {
         Map<String, dynamic> jsonResponse = json.decode(response.body);
         var res = UserLoginPostResponse.fromJson(jsonResponse);
+        log(res.id.toString() + "ASASASDDDDDDDDDDDDDDDDDDDDD");
 
         // เก็บข้อมูลผู้ใช้ลงใน ShareData
         User_Info_Send User = User_Info_Send();
         User.uid = res.id;
         User.email = res.email;
         User.name = res.name;
-        User.name = res.phone;
+        User.phone = res.phone;
         User.user_image = res.user_image;
         User.balance = res.balance;
         User.active_status = res.active_status;
