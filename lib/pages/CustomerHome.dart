@@ -500,25 +500,7 @@ class _HomePageState extends State<CustomerHomePage> {
           context.read<ShareData>().customer_addresses = [Cus_add];
           context.read<ShareData>().notifyListeners();
         }
-
-        Fluttertoast.showToast(
-          msg: "ประเภทผู้ใช้ไม่ถูกต้อง",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.CENTER,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-        );
-      } else {
-        // ถ้า status ไม่ใช่ 200 แสดงว่า login fail
-        Fluttertoast.showToast(
-            msg: "อีเมล หรือ รหัสผ่านไม่ถูกต้อง โปรดลองใหม่อีกครั้ง",
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.CENTER,
-            timeInSecForIosWeb: 1,
-            backgroundColor: Color.fromARGB(255, 255, 0, 0),
-            textColor: Colors.white,
-            fontSize: 15.0);
-      }
+      } else {}
 
       var res_Cat = await http.get(
         Uri.parse("$url/db/loadCat"),
@@ -540,25 +522,7 @@ class _HomePageState extends State<CustomerHomePage> {
             isLoading = false;
           });
         }
-
-        Fluttertoast.showToast(
-          msg: "ประเภทผู้ใช้ไม่ถูกต้อง",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.CENTER,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-        );
-      } else {
-        // ถ้า status ไม่ใช่ 200 แสดงว่า login fail
-        Fluttertoast.showToast(
-            msg: "อีเมล หรือ รหัสผ่านไม่ถูกต้อง โปรดลองใหม่อีกครั้ง",
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.CENTER,
-            timeInSecForIosWeb: 1,
-            backgroundColor: Color.fromARGB(255, 255, 0, 0),
-            textColor: Colors.white,
-            fontSize: 15.0);
-      }
+      } else {}
 
       var res_NearRes = await http.get(
         Uri.parse("$url/db/loadNearRes/$userId"),
@@ -579,25 +543,7 @@ class _HomePageState extends State<CustomerHomePage> {
             isLoading = false;
           });
         }
-
-        Fluttertoast.showToast(
-          msg: "ประเภทผู้ใช้ไม่ถูกต้อง",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.CENTER,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-        );
-      } else {
-        // ถ้า status ไม่ใช่ 200 แสดงว่า login fail
-        Fluttertoast.showToast(
-            msg: "อีเมล หรือ รหัสผ่านไม่ถูกต้อง โปรดลองใหม่อีกครั้ง",
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.CENTER,
-            timeInSecForIosWeb: 1,
-            backgroundColor: Color.fromARGB(255, 255, 0, 0),
-            textColor: Colors.white,
-            fontSize: 15.0);
-      }
+      } else {}
     } catch (err) {
       log("Login Failed:");
       log(err.toString());
