@@ -1,15 +1,18 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/Profile.dart';
+import 'package:mobile_miniproject_app/pages/RestaurantInfo.dart';
 import 'package:mobile_miniproject_app/pages/SearchByCat.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
@@ -203,7 +206,8 @@ class _HomePageState extends State<CustomerHomePage> {
 
   Widget buildMainContent() {
     final Caterogy = context.watch<ShareData>().restaurant_type;
-    final NearbyRes = context.watch<ShareData>().restaurant_near;
+    final AllRes = context.watch<ShareData>().restaurant_all;
+    final NearByRes = context.watch<ShareData>().restaurant_near;
     final Categoryfontsize =
         const TextStyle(fontSize: 10, fontWeight: FontWeight.bold);
 
@@ -267,11 +271,11 @@ class _HomePageState extends State<CustomerHomePage> {
 
           /// ร้านใกล้เคียง
           sectionTitle("ร้านใกล้เคียง"),
-          horizontalRestaurantScroll(NearbyRes),
+          horizontalRestaurantScroll(NearByRes),
 
           /// ร้านแนะนำ
           sectionTitle("ร้านแนะนำ"),
-          horizontalRestaurantScroll(NearbyRes, menuLabel: "ชื่อเมนู"),
+          horizontalRestaurantScroll(AllRes, menuLabel: "ชื่อเมนู"),
         ],
       ),
     );
@@ -297,7 +301,9 @@ class _HomePageState extends State<CustomerHomePage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ElevatedButton(
-                    onPressed: () => print({near.res_name}),
+                    onPressed: () {
+                      Get.to(() => RestaurantinfoPage(ResId: near.res_id));
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       padding: EdgeInsets.zero,
@@ -341,6 +347,14 @@ class _HomePageState extends State<CustomerHomePage> {
                               style: const TextStyle(
                                   fontSize: 13, fontWeight: FontWeight.bold),
                               overflow: TextOverflow.ellipsis),
+                          if (near.distanceFromCustomer != null &&
+                              menuLabel == null)
+                            Text(
+                              "${near.distanceFromCustomer!.toStringAsFixed(2)} กม.",
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: const Color.fromARGB(255, 18, 18, 18)),
+                            ),
                         ],
                       ),
                     ),
@@ -378,12 +392,55 @@ class _HomePageState extends State<CustomerHomePage> {
         context.read<ShareData>().restaurant_type = list;
       }
 
-      final res_Near = await http.get(Uri.parse("$url/db/loadNearRes/$userId"));
-      if (res_Near.statusCode == 200) {
-        final List<ResInfoResponse> list = (json.decode(res_Near.body) as List)
+      final res_all = await http.get(Uri.parse("$url/db/loadAllRes"));
+      if (res_all.statusCode == 200) {
+        final List<ResInfoResponse> list = (json.decode(res_all.body) as List)
             .map((e) => ResInfoResponse.fromJson(e))
             .toList();
-        context.read<ShareData>().restaurant_near = list;
+        for (final res in list) {
+          log("ร้าน: ${res.res_name}, พิกัด: ${res.res_coordinate}");
+        }
+        context.read<ShareData>().restaurant_all = list;
+      }
+
+      // ดึงพิกัดลูกค้า
+      if (context.read<ShareData>().customer_addresses.isNotEmpty) {
+        final customerLocationStr =
+            context.read<ShareData>().customer_addresses[0].ca_coordinate;
+        log("Customer location: $customerLocationStr"); // ✅ log ดูก่อน
+        final List<String> cusSplit = customerLocationStr.split(',');
+        final double cusLat = double.parse(cusSplit[0].trim());
+        final double cusLng = double.parse(cusSplit[1].trim());
+
+        final allRestaurants = context.read<ShareData>().restaurant_all;
+        final List<ResInfoResponse> nearRestaurants = [];
+        final Map<ResInfoResponse, double> distanceMap = {};
+
+        for (final res in allRestaurants) {
+          final resLocationStr = res.res_coordinate;
+          log("ร้านทั้งหมด:\n" +
+              allRestaurants
+                  .map((res) => "${res.res_name} (${res.res_coordinate})")
+                  .join('\n'));
+
+          try {
+            final List<String> resSplit = resLocationStr.split(',');
+            final double resLat = double.parse(resSplit[0].trim());
+            final double resLng = double.parse(resSplit[1].trim());
+
+            final double distance =
+                calculateDistance(cusLat, cusLng, resLat, resLng);
+            if (distance <= 5.0) {
+              res.distanceFromCustomer = distance;
+              nearRestaurants.add(res);
+              distanceMap[res] = distance;
+            }
+          } catch (e) {
+            log("แปลงพิกัดร้าน ${res.res_name} ผิดพลาด: $e");
+          }
+        }
+
+        context.read<ShareData>().restaurant_near = nearRestaurants;
       }
 
       setState(() => isLoading = false);
@@ -395,4 +452,20 @@ class _HomePageState extends State<CustomerHomePage> {
           textColor: Colors.white);
     }
   }
+
+  double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const earthRadius = 6371.0; // กิโลเมตร
+    final dLat = _deg2rad(lat2 - lat1);
+    final dLon = _deg2rad(lon2 - lon1);
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_deg2rad(lat1)) *
+            math.cos(_deg2rad(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return earthRadius * c;
+  }
+
+  double _deg2rad(double deg) => deg * (math.pi / 180);
 }

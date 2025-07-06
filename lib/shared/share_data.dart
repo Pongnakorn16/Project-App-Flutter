@@ -15,6 +15,7 @@ class ShareData with ChangeNotifier {
   List<CusAddressGetResponse> customer_addresses = [];
   List<ResTypeGetResponse> restaurant_type = [];
   List<ResInfoResponse> restaurant_near = [];
+  List<ResInfoResponse> restaurant_all = [];
 
   List<GetSendOrder> send_order_share = [];
   List<GetSendOrder> snack_order_share = [];

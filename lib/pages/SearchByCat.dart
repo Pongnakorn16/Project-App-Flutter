@@ -1,6 +1,9 @@
 // file: search_result_page.dart
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:mobile_miniproject_app/pages/RestaurantInfo.dart';
 import 'package:provider/provider.dart';
 import '../models/response/ResInfoGetRes.dart';
 import '../models/response/ResTypeGetRes.dart';
@@ -46,7 +49,7 @@ class SearchByCatPage extends StatelessWidget {
                   title: Text(res.res_name),
                   subtitle: Text("ID: ${res.res_id}"),
                   onTap: () {
-                    print("เลือก ${res.res_name}");
+                    Get.to(() => RestaurantinfoPage(ResId: res.res_id));
                   },
                 );
               },
