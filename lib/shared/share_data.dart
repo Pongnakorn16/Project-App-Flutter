@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
+import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
 
 class ShareData with ChangeNotifier {
@@ -13,6 +14,7 @@ class ShareData with ChangeNotifier {
   late User_Info_Receive user_info_receive;
   List<CusAddressGetResponse> customer_addresses = [];
   List<ResTypeGetResponse> restaurant_type = [];
+  List<ResInfoResponse> restaurant_near = [];
 
   List<GetSendOrder> send_order_share = [];
   List<GetSendOrder> snack_order_share = [];

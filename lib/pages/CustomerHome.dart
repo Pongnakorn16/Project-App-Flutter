@@ -7,6 +7,7 @@ import 'package:get/get_navigation/get_navigation.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/user_login_post_req.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
+import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/Home_Receive.dart';
@@ -121,6 +122,7 @@ class _HomePageState extends State<CustomerHomePage> {
     final userName = context.read<ShareData>().user_info_send.name;
     var topAdd = context.watch<ShareData>().customer_addresses;
     var Caterogy = context.watch<ShareData>().restaurant_type;
+    var NearbyRes = context.watch<ShareData>().restaurant_near;
 
     if (isLoading) {
       return Scaffold(
@@ -128,7 +130,7 @@ class _HomePageState extends State<CustomerHomePage> {
       );
     }
     final Categoryfontsize =
-        TextStyle(fontSize: 14, fontWeight: FontWeight.bold);
+        TextStyle(fontSize: 10, fontWeight: FontWeight.bold);
 
     log(topAdd.toString());
 
@@ -187,7 +189,7 @@ class _HomePageState extends State<CustomerHomePage> {
             ),
 
             Padding(
-              padding: const EdgeInsets.only(left: 20, top: 15),
+              padding: const EdgeInsets.only(left: 20, top: 5),
               child: Text(
                 "หมวดหมู่อาหาร",
                 style: TextStyle(
@@ -198,7 +200,7 @@ class _HomePageState extends State<CustomerHomePage> {
             ),
             Padding(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 10.0, vertical: 20),
+                  const EdgeInsets.symmetric(horizontal: 10.0, vertical: 15),
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -227,11 +229,11 @@ class _HomePageState extends State<CustomerHomePage> {
                           children: [
                             Image.network(
                               type.type_image, // ต้องเป็นลิงก์เต็ม เช่น https://...png
-                              width: 50,
-                              height: 50,
+                              width: 35,
+                              height: 35,
                               errorBuilder: (context, error, stackTrace) {
                                 return Icon(Icons.fastfood,
-                                    size: 50); // fallback ถ้าโหลดรูปไม่ได้
+                                    size: 30); // fallback ถ้าโหลดรูปไม่ได้
                               },
                               loadingBuilder:
                                   (context, child, loadingProgress) {
@@ -244,7 +246,7 @@ class _HomePageState extends State<CustomerHomePage> {
                                 );
                               },
                             ),
-                            SizedBox(height: 4),
+                            SizedBox(height: 10),
                             Text(type.type_name, style: Categoryfontsize),
                           ],
                         ),
@@ -255,35 +257,192 @@ class _HomePageState extends State<CustomerHomePage> {
               ),
             ),
 
-            // ตัวอย่าง PageView หรือ ListView ต้องกำหนดขนาด
-            SizedBox(
-              height: 400, // กำหนดสูงตามต้องการ
-              child: PageView(
-                children: [
-                  Container(color: Colors.red),
-                  Container(color: Colors.green),
-                  Container(color: Colors.blue),
-                ],
+            ////แสดงเมื่ออยู่ใน ระยะ 5 กม.
+            Padding(
+              padding: const EdgeInsets.only(left: 20, top: 5),
+              child: Text(
+                "ร้านใกล้เคียง",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-            SizedBox(
-              height: 400, // กำหนดสูงตามต้องการ
-              child: PageView(
-                children: [
-                  Container(color: Colors.red),
-                  Container(color: Colors.green),
-                  Container(color: Colors.blue),
-                ],
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10.0, vertical: 10),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: NearbyRes.map((near) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              print({near.res_name});
+                            },
+                            style: ElevatedButton.styleFrom(
+                              padding: EdgeInsets.zero, // ไม่ให้มีช่องว่างเกิน
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              backgroundColor: Colors.white,
+                              elevation: 3,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                near.res_image,
+                                width: 155,
+                                height: 80,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Icon(Icons.fastfood, size: 40);
+                                },
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return SizedBox(
+                                    width: 40,
+                                    height: 40,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.only(top: 10),
+                            child: Container(
+                              width: 155, // เท่ากับความกว้างของปุ่ม
+                              alignment: Alignment.centerLeft, // เปลี่ยนตรงนี้
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment
+                                    .start, // ปรับตำแหน่งชิดซ้าย
+                                children: [
+                                  Text(
+                                    near.res_name,
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                  Text(
+                                    "ระยะทางที่ห่างจากลูกค้า",
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
             ),
-            SizedBox(
-              height: 400, // กำหนดสูงตามต้องการ
-              child: PageView(
-                children: [
-                  Container(color: Colors.red),
-                  Container(color: Colors.green),
-                  Container(color: Colors.blue),
-                ],
+            Padding(
+              padding: const EdgeInsets.only(left: 20, top: 10),
+              child: Text(
+                "ร้านแนะนำ",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10.0, vertical: 10),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: NearbyRes.map((near) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              print({near.res_name});
+                            },
+                            style: ElevatedButton.styleFrom(
+                              padding: EdgeInsets.zero, // ไม่ให้มีช่องว่างเกิน
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              backgroundColor: Colors.white,
+                              elevation: 3,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                //รูปเมนู
+                                near.res_image,
+                                width: 155,
+                                height: 80,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Icon(Icons.fastfood, size: 40);
+                                },
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return SizedBox(
+                                    width: 40,
+                                    height: 40,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.only(top: 10),
+                            child: Container(
+                              width: 155, // เท่ากับความกว้างของปุ่ม
+                              alignment: Alignment.centerLeft, // เปลี่ยนตรงนี้
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment
+                                    .start, // ปรับตำแหน่งชิดซ้าย
+                                children: [
+                                  Text(
+                                    "ชื่อเมนู",
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                  Text(
+                                    near.res_name,
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
             ),
           ],
@@ -377,6 +536,45 @@ class _HomePageState extends State<CustomerHomePage> {
 
         if (res_CatList.isNotEmpty) {
           context.read<ShareData>().restaurant_type = res_CatList;
+          setState(() {
+            isLoading = false;
+          });
+        }
+
+        Fluttertoast.showToast(
+          msg: "ประเภทผู้ใช้ไม่ถูกต้อง",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+      } else {
+        // ถ้า status ไม่ใช่ 200 แสดงว่า login fail
+        Fluttertoast.showToast(
+            msg: "อีเมล หรือ รหัสผ่านไม่ถูกต้อง โปรดลองใหม่อีกครั้ง",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Color.fromARGB(255, 255, 0, 0),
+            textColor: Colors.white,
+            fontSize: 15.0);
+      }
+
+      var res_NearRes = await http.get(
+        Uri.parse("$url/db/loadNearRes/$userId"),
+        headers: {"Content-Type": "application/json; charset=utf-8"},
+      );
+      log("SPIDERMAN");
+      log(res_NearRes.body); // log ข้อมูลที่ได้จาก API
+      log("Status Code: ${res_NearRes.statusCode}");
+
+      if (res_NearRes.statusCode == 200) {
+        List<dynamic> jsonResponse = json.decode(res_NearRes.body);
+        List<ResInfoResponse> res_NearResList =
+            jsonResponse.map((item) => ResInfoResponse.fromJson(item)).toList();
+
+        if (res_NearResList.isNotEmpty) {
+          context.read<ShareData>().restaurant_near = res_NearResList;
           setState(() {
             isLoading = false;
           });
