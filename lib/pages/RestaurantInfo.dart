@@ -13,6 +13,8 @@ import 'package:mobile_miniproject_app/pages/Profile.dart';
 import 'package:mobile_miniproject_app/pages/SearchByCat.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 
 class RestaurantinfoPage extends StatefulWidget {
   final int ResId;
@@ -26,6 +28,8 @@ class _HomePageState extends State<RestaurantinfoPage> {
   int _selectedIndex = 0;
   late PageController _pageController;
   String url = '';
+  bool isFavorite = false;
+  String? _address; // เก็บที่อยู่ที่ได้
 
   @override
   void initState() {
@@ -36,6 +40,97 @@ class _HomePageState extends State<RestaurantinfoPage> {
       setState(() {});
     });
     _pageController = PageController();
+  }
+
+  void _getAddressFromCoordinates() async {
+    final AllRes = context.read<ShareData>().restaurant_all;
+    final matchedRestaurant =
+        AllRes.firstWhere((res) => res.res_id == widget.ResId);
+
+    final coords = matchedRestaurant.res_coordinate.split(',');
+    final double lat = double.parse(coords[0]);
+    final double lng = double.parse(coords[1]);
+
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isNotEmpty) {
+        final Placemark place = placemarks.first;
+
+        setState(() {
+          _address =
+              "${(place.subLocality ?? '').trim()} ${(place.locality ?? '').trim()} ${(place.administrativeArea ?? '').trim()} ${(place.postalCode ?? '').trim()}";
+        });
+      }
+    } catch (e) {
+      print("Error in geocoding: $e");
+      setState(() {
+        _address = "ไม่พบที่อยู่";
+      });
+    }
+  }
+
+  String calculateDeliveryTime({
+    required double customerLat,
+    required double customerLng,
+    required double restaurantLat,
+    required double restaurantLng,
+  }) {
+    double distanceInMeters = Geolocator.distanceBetween(
+      customerLat,
+      customerLng,
+      restaurantLat,
+      restaurantLng,
+    );
+
+    double distanceInKm = distanceInMeters / 1000;
+
+    if (distanceInKm <= 1)
+      return "10 นาที";
+    else if (distanceInKm <= 2)
+      return "15 นาที";
+    else if (distanceInKm <= 3)
+      return "20 นาที";
+    else if (distanceInKm <= 4)
+      return "25 นาที";
+    else if (distanceInKm <= 5)
+      return "30 นาที";
+    else
+      return "35 นาทีขึ้นไป";
+  }
+
+  Widget buildRatingStars(double rating) {
+    List<Widget> stars = [];
+
+    int fullStars = rating.floor(); // จำนวนดาวเต็ม
+    bool hasHalfStar = (rating - fullStars) >= 0.5;
+    int emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
+    // ดาวเต็ม
+    for (int i = 0; i < fullStars; i++) {
+      stars.add(const Icon(Icons.star, color: Colors.orange, size: 20));
+    }
+
+    // ดาวครึ่ง
+    if (hasHalfStar) {
+      stars.add(const Icon(Icons.star_half, color: Colors.orange, size: 20));
+    }
+
+    // ดาวว่าง
+    for (int i = 0; i < emptyStars; i++) {
+      stars.add(const Icon(Icons.star_border, color: Colors.orange, size: 20));
+    }
+
+    // ตัวเลข rating ตามท้าย
+    stars.add(const SizedBox(width: 6));
+    stars.add(Text(
+      "(${rating.toStringAsFixed(1)})",
+      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+    ));
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: stars,
+    );
   }
 
   @override
@@ -68,6 +163,15 @@ class _HomePageState extends State<RestaurantinfoPage> {
     final topAdd = context.watch<ShareData>().customer_addresses;
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text("รายละเอียดร้านอาหาร"),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pop(); // กดแล้วกลับไปหน้าก่อนหน้า
+          },
+        ),
+      ),
       body: buildMainContent(),
       bottomNavigationBar: buildBottomNavigationBar(),
       floatingActionButton: SizedBox(
@@ -123,92 +227,143 @@ class _HomePageState extends State<RestaurantinfoPage> {
 
   Widget buildMainContent() {
     final Caterogy = context.watch<ShareData>().restaurant_type;
-    final NearbyRes = context.watch<ShareData>().restaurant_near;
-    final Categoryfontsize =
-        const TextStyle(fontSize: 10, fontWeight: FontWeight.bold);
+    final AllRes = context.watch<ShareData>().restaurant_all;
+    final topAdd = context.watch<ShareData>().customer_addresses;
+
+    final matchedRestaurant =
+        AllRes.firstWhere((res) => res.res_id == widget.ResId);
+
+    // ถ้าไม่มีพิกัดลูกค้า
+    if (topAdd.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+
+    final customer = topAdd[0];
+
+    // แยกพิกัดร้าน
+    final coordsRes = matchedRestaurant.res_coordinate.split(',');
+    final double resLat = double.parse(coordsRes[0]);
+    final double resLng = double.parse(coordsRes[1]);
+
+    // แยกพิกัดลูกค้า
+    final coordsCus = customer.ca_coordinate.split(',');
+    final double cusLat = double.parse(coordsCus[0]);
+    final double cusLng = double.parse(coordsCus[1]);
+
+    // คำนวณระยะทาง
+    double distanceInMeters =
+        Geolocator.distanceBetween(cusLat, cusLng, resLat, resLng);
+    double distanceInKm = distanceInMeters / 1000;
+
+    // คำนวณเวลาโดยเงื่อนไขที่ให้มา
+    String deliveryTime;
+    if (distanceInKm <= 1) {
+      deliveryTime = "10 นาที";
+    } else if (distanceInKm <= 2) {
+      deliveryTime = "15 นาที";
+    } else if (distanceInKm <= 3) {
+      deliveryTime = "20 นาที";
+    } else if (distanceInKm <= 4) {
+      deliveryTime = "25 นาที";
+    } else if (distanceInKm <= 5) {
+      deliveryTime = "30 นาที";
+    } else {
+      deliveryTime = "35 นาทีขึ้นไป";
+    }
 
     return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 50),
-            child: Column(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 10, left: 30, right: 30),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                matchedRestaurant.res_image,
+                width: double.infinity,
+                height: 200,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) =>
+                    const Icon(Icons.fastfood, size: 60),
+                loadingBuilder: (_, child, loading) {
+                  if (loading == null) return child;
+                  return const SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // children: NearbyRes.map((Near) {
-                //   Image.network(,
-                //               width: 35,
-                //               height: 35,
-                //               errorBuilder: (_, __, ___) =>
-                //                   const Icon(Icons.fastfood, size: 30),
-                //               loadingBuilder: (_, child, loading) {
-                //                 if (loading == null) return child;
-                //                 return const SizedBox(
-                //                     width: 30,
-                //                     height: 30,
-                //                     child: CircularProgressIndicator(
-                //                         strokeWidth: 2));
-                //          }),
-                SizedBox(height: 8),
-                Text(
-                  "หมวดหมู่อาหาร",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Expanded(
+                  child: Text(
+                    matchedRestaurant.res_name,
+                    style: const TextStyle(
+                        fontSize: 25, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    isFavorite ? Icons.favorite : Icons.favorite_border,
+                    color: Colors.red,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      isFavorite = !isFavorite;
+                    });
+                  },
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 5),
 
-          // ✅ ปุ่มหมวดหมู่แสดงเป็นแนวนอน
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: Caterogy.map((type) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Get.to(() => SearchByCatPage(typeId: type.type_id));
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 20, horizontal: 20),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: const BorderSide(
-                              color: Colors.deepPurple, width: 2),
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Image.network(type.type_image,
-                              width: 35,
-                              height: 35,
-                              errorBuilder: (_, __, ___) =>
-                                  const Icon(Icons.fastfood, size: 30),
-                              loadingBuilder: (_, child, loading) {
-                                if (loading == null) return child;
-                                return const SizedBox(
-                                    width: 30,
-                                    height: 30,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2));
-                              }),
-                          const SizedBox(height: 10),
-                          Text(type.type_name, style: Categoryfontsize)
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
+            // รายละเอียดร้าน (ที่อยู่) พร้อม background สีเขียวและ padding เดียวกับ column
+            Container(
+              child: Text(
+                (_address ?? "กำลังโหลดที่อยู่...").trimLeft(),
+                style: const TextStyle(
+                    fontSize: 15, height: 1.2, letterSpacing: 0),
+                textAlign: TextAlign.left,
               ),
             ),
-          ),
-        ],
+
+            const SizedBox(height: 10),
+
+            // แถวแสดงระยะทาง + เวลาจัดส่ง
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Text(
+                  "ระยะทาง: ${distanceInKm.toStringAsFixed(2)} กม.",
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(width: 15),
+                Row(
+                  children: [
+                    const Icon(Icons.access_time, size: 18, color: Colors.grey),
+                    const SizedBox(
+                        width: 4), // เว้นระยะห่างระหว่างไอคอนกับข้อความ
+                    Text(
+                      "เวลาจัดส่ง: $deliveryTime",
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            buildRatingStars(matchedRestaurant.res_rating)
+          ],
+        ),
       ),
     );
   }
@@ -243,6 +398,10 @@ class _HomePageState extends State<RestaurantinfoPage> {
             .map((e) => ResInfoResponse.fromJson(e))
             .toList();
         context.read<ShareData>().restaurant_near = list;
+
+        if (mounted) {
+          _getAddressFromCoordinates();
+        }
       }
     } catch (e) {
       log("LoadCusHome Error: $e");
