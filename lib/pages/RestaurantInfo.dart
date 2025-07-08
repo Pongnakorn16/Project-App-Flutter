@@ -6,11 +6,11 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
+import 'package:mobile_miniproject_app/models/response/ResCatGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/Profile.dart';
-import 'package:mobile_miniproject_app/pages/SearchByCat.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 import 'package:geocoding/geocoding.dart';
@@ -30,6 +30,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
   String url = '';
   bool isFavorite = false;
   String? _address; // เก็บที่อยู่ที่ได้
+  List<ResCatGetResponse> _restaurantCategories = [];
 
   @override
   void initState() {
@@ -107,17 +108,17 @@ class _HomePageState extends State<RestaurantinfoPage> {
 
     // ดาวเต็ม
     for (int i = 0; i < fullStars; i++) {
-      stars.add(const Icon(Icons.star, color: Colors.orange, size: 20));
+      stars.add(const Icon(Icons.star, color: Colors.amber, size: 20));
     }
 
     // ดาวครึ่ง
     if (hasHalfStar) {
-      stars.add(const Icon(Icons.star_half, color: Colors.orange, size: 20));
+      stars.add(const Icon(Icons.star_half, color: Colors.amber, size: 20));
     }
 
     // ดาวว่าง
     for (int i = 0; i < emptyStars; i++) {
-      stars.add(const Icon(Icons.star_border, color: Colors.orange, size: 20));
+      stars.add(const Icon(Icons.star_border, color: Colors.amber, size: 20));
     }
 
     // ตัวเลข rating ตามท้าย
@@ -221,6 +222,29 @@ class _HomePageState extends State<RestaurantinfoPage> {
               icon: Icon(Icons.notifications), label: 'Notis'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
+      ),
+    );
+  }
+
+  Widget buildCategoryChip(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 0, right: 20),
+      child: OutlinedButton(
+        onPressed: () {
+          // TODO: เขียน logic การเลือกเมนูภายในร้าน เช่น filter list
+          print("เลือกหมวด: $label");
+        },
+        style: OutlinedButton.styleFrom(
+          shape: const CircleBorder(),
+          padding: const EdgeInsets.all(20),
+          side: const BorderSide(color: Colors.deepPurple),
+          backgroundColor: Colors.white,
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.black),
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }
@@ -361,7 +385,25 @@ class _HomePageState extends State<RestaurantinfoPage> {
               ],
             ),
             const SizedBox(height: 10),
-            buildRatingStars(matchedRestaurant.res_rating)
+            buildRatingStars(matchedRestaurant.res_rating),
+            const SizedBox(
+              height: 10,
+            ),
+            Text(
+              "หมวดหมู่อาหารภายในร้าน",
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 10),
+
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _restaurantCategories.map((category) {
+                  return buildCategoryChip(
+                      category.cat_name); // หรือชื่อ field ที่ถูกต้อง
+                }).toList(),
+              ),
+            ),
           ],
         ),
       ),
@@ -383,25 +425,16 @@ class _HomePageState extends State<RestaurantinfoPage> {
         }
       }
 
-      final res_Cat = await http.get(Uri.parse("$url/db/loadCat"));
+      final res_Cat =
+          await http.get(Uri.parse("$url/db/loadCat/${widget.ResId}"));
+
       if (res_Cat.statusCode == 200) {
-        final List<ResTypeGetResponse> list =
-            (json.decode(res_Cat.body) as List)
-                .map((e) => ResTypeGetResponse.fromJson(e))
-                .toList();
-        context.read<ShareData>().restaurant_type = list;
-      }
-
-      final res_Near = await http.get(Uri.parse("$url/db/loadNearRes/$userId"));
-      if (res_Near.statusCode == 200) {
-        final List<ResInfoResponse> list = (json.decode(res_Near.body) as List)
-            .map((e) => ResInfoResponse.fromJson(e))
+        final List<ResCatGetResponse> list = (json.decode(res_Cat.body) as List)
+            .map((e) => ResCatGetResponse.fromJson(e))
             .toList();
-        context.read<ShareData>().restaurant_near = list;
-
-        if (mounted) {
-          _getAddressFromCoordinates();
-        }
+        setState(() {
+          _restaurantCategories = list;
+        });
       }
     } catch (e) {
       log("LoadCusHome Error: $e");

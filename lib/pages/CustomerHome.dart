@@ -13,7 +13,6 @@ import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/Profile.dart';
 import 'package:mobile_miniproject_app/pages/RestaurantInfo.dart';
-import 'package:mobile_miniproject_app/pages/SearchByCat.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 
@@ -31,6 +30,7 @@ class _HomePageState extends State<CustomerHomePage> {
   bool isLoading = true;
   bool isSearching = false;
   String searchQuery = "";
+  TextEditingController searchController = TextEditingController();
 
   @override
   void initState() {
@@ -108,22 +108,40 @@ class _HomePageState extends State<CustomerHomePage> {
           preferredSize: const Size.fromHeight(60),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'ค้นหาร้านอาหาร...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30.0),
+            child: Row(
+              children: [
+                if (isSearching)
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () {
+                      setState(() {
+                        searchQuery = "";
+                        isSearching = false;
+                        searchController.clear(); // เคลียร์ข้อความค้นหา
+                      });
+                    },
+                  ),
+                Expanded(
+                  child: TextField(
+                    controller: searchController,
+                    decoration: InputDecoration(
+                      hintText: 'ค้นหาร้านอาหาร...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30.0),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[200],
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        searchQuery = value;
+                        isSearching = value.isNotEmpty;
+                      });
+                    },
+                  ),
                 ),
-                filled: true,
-                fillColor: Colors.grey[200],
-              ),
-              onChanged: (value) {
-                setState(() {
-                  searchQuery = value;
-                  isSearching = value.isNotEmpty;
-                });
-              },
+              ],
             ),
           ),
         ),
@@ -182,22 +200,83 @@ class _HomePageState extends State<CustomerHomePage> {
   }
 
   Widget buildSearchResultView() {
-    final allRestaurants = context.watch<ShareData>().restaurant_near;
+    final allRestaurants = context.watch<ShareData>().restaurant_all;
+    final topAdd = context.watch<ShareData>().customer_addresses;
+
+    // ถ้าพิกัดลูกค้าไม่มี ให้ใช้ค่า default หรือ 0.0
+    double customerLat = 0.0;
+    double customerLng = 0.0;
+
+    if (topAdd.isNotEmpty) {
+      final coordsCus = topAdd[0].ca_coordinate.split(',');
+      customerLat = double.tryParse(coordsCus[0].trim()) ?? 0.0;
+      customerLng = double.tryParse(coordsCus[1].trim()) ?? 0.0;
+    }
+
     final filtered = allRestaurants
         .where(
             (r) => r.res_name.toLowerCase().contains(searchQuery.toLowerCase()))
         .toList();
+    //|| r.res_description.toLowerCase().contains(searchQuery.toLowerCase())) เดี๋ยวมาใส่ชื่อเมนูเพิ่ม
+
+    if (filtered.isEmpty) {
+      return Center(
+        child: Text(
+          "ไม่พบร้านที่มีชื่อหรือชื่อเมนูที่ตรงกัน",
+          style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+
+    // ฟังก์ชันคำนวณระยะทาง (km)
+    double calculateDistance(
+        double lat1, double lon1, double lat2, double lon2) {
+      const earthRadius = 6371.0; // กิโลเมตร
+      final dLat = (lat2 - lat1) * (math.pi / 180);
+      final dLon = (lon2 - lon1) * (math.pi / 180);
+      final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+          math.cos(lat1 * (math.pi / 180)) *
+              math.cos(lat2 * (math.pi / 180)) *
+              math.sin(dLon / 2) *
+              math.sin(dLon / 2);
+      final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+      return earthRadius * c;
+    }
 
     return ListView.builder(
       itemCount: filtered.length,
       itemBuilder: (context, index) {
         final res = filtered[index];
+
+        // แปลงพิกัดร้าน
+        final coordsRes = res.res_coordinate.split(',');
+        final double resLat = double.tryParse(coordsRes[0].trim()) ?? 0.0;
+        final double resLng = double.tryParse(coordsRes[1].trim()) ?? 0.0;
+
+        // คำนวณระยะทางระหว่างร้านกับลูกค้า
+        double distanceKm =
+            calculateDistance(customerLat, customerLng, resLat, resLng);
+
         return ListTile(
           leading: Image.network(res.res_image, width: 50, height: 50),
           title: Text(res.res_name),
-          subtitle: Text("ID: ${res.res_id}"),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.star, color: Colors.amber, size: 20),
+                  const SizedBox(width: 4),
+                  Text("rating: ${res.res_rating.toStringAsFixed(1)}"),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text("ระยะทาง: ${distanceKm.toStringAsFixed(2)} กม."),
+            ],
+          ),
           onTap: () {
-            print("เลือก ${res.res_name}");
+            Get.to(() => RestaurantinfoPage(ResId: res.res_id));
           },
         );
       },
@@ -215,21 +294,22 @@ class _HomePageState extends State<CustomerHomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-              padding: EdgeInsets.only(left: 20, top: 10),
-              child: Text("หมวดหมู่อาหาร",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: Caterogy.map((type) {
-                  return Padding(
+                children: [
+                  // ปุ่มก๋วยเตี๋ยว
+                  Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: ElevatedButton(
                       onPressed: () {
-                        Get.to(() => SearchByCatPage(typeId: type.type_id));
+                        setState(() {
+                          searchQuery = "ก๋วยเตี๋ยว";
+                          searchController.text = "ก๋วยเตี๋ยว";
+                          isSearching = true;
+                        });
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
@@ -245,26 +325,171 @@ class _HomePageState extends State<CustomerHomePage> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Image.network(type.type_image,
-                              width: 35,
-                              height: 35,
-                              errorBuilder: (_, __, ___) =>
-                                  const Icon(Icons.fastfood, size: 30),
-                              loadingBuilder: (_, child, loading) {
-                                if (loading == null) return child;
-                                return const SizedBox(
-                                    width: 30,
-                                    height: 30,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2));
-                              }),
-                          const SizedBox(height: 10),
-                          Text(type.type_name, style: Categoryfontsize)
+                          Image.network(
+                            'https://img.icons8.com/?size=100&id=mZg2mwGEJKMd&format=png&color=000000',
+                            width: 35,
+                            height: 35,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.fastfood, size: 30),
+                            loadingBuilder: (_, child, loading) {
+                              if (loading == null) return child;
+                              return const SizedBox(
+                                width: 30,
+                                height: 30,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          Text("ก๋วยเตี๋ยว", style: Categoryfontsize),
                         ],
                       ),
                     ),
-                  );
-                }).toList(),
+                  ),
+
+                  // ปุ่มข้าว
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          searchQuery = "ข้าว";
+                          searchController.text = "ข้าว";
+                          isSearching = true;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 20, horizontal: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(
+                              color: Colors.deepPurple, width: 2),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.network(
+                            'https://img.icons8.com/?size=100&id=97436&format=png&color=000000',
+                            width: 35,
+                            height: 35,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.fastfood, size: 30),
+                            loadingBuilder: (_, child, loading) {
+                              if (loading == null) return child;
+                              return const SizedBox(
+                                width: 30,
+                                height: 30,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          Text("ข้าว", style: Categoryfontsize),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // ปุ่มของหวาน
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          searchQuery = "ของหวาน";
+                          searchController.text = "ของหวาน";
+                          isSearching = true;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 20, horizontal: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(
+                              color: Colors.deepPurple, width: 2),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.network(
+                            'https://img.icons8.com/?size=100&id=36142&format=png&color=000000',
+                            width: 35,
+                            height: 35,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.fastfood, size: 30),
+                            loadingBuilder: (_, child, loading) {
+                              if (loading == null) return child;
+                              return const SizedBox(
+                                width: 30,
+                                height: 30,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          Text("ของหวาน", style: Categoryfontsize),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          searchQuery = "ไก่ทอด";
+                          searchController.text = "ไก่ทอด";
+                          isSearching = true;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 20, horizontal: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(
+                              color: Colors.deepPurple, width: 2),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.network(
+                            'https://img.icons8.com/?size=100&id=vt3FjELxZZG0&format=png&color=000000',
+                            width: 35,
+                            height: 35,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.fastfood, size: 30),
+                            loadingBuilder: (_, child, loading) {
+                              if (loading == null) return child;
+                              return const SizedBox(
+                                width: 30,
+                                height: 30,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          Text("ไก่ทอด", style: Categoryfontsize),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -282,7 +507,7 @@ class _HomePageState extends State<CustomerHomePage> {
   }
 
   Widget sectionTitle(String title) => Padding(
-        padding: const EdgeInsets.only(left: 20, top: 10),
+        padding: const EdgeInsets.only(left: 20, top: 20),
         child: Text(title,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
       );
@@ -381,15 +606,6 @@ class _HomePageState extends State<CustomerHomePage> {
         if (res_addList.isNotEmpty) {
           context.read<ShareData>().customer_addresses = [res_addList[0]];
         }
-      }
-
-      final res_Cat = await http.get(Uri.parse("$url/db/loadCat"));
-      if (res_Cat.statusCode == 200) {
-        final List<ResTypeGetResponse> list =
-            (json.decode(res_Cat.body) as List)
-                .map((e) => ResTypeGetResponse.fromJson(e))
-                .toList();
-        context.read<ShareData>().restaurant_type = list;
       }
 
       final res_all = await http.get(Uri.parse("$url/db/loadAllRes"));
