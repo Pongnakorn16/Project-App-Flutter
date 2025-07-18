@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
+import 'package:mobile_miniproject_app/models/response/MenuInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResCatGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
@@ -31,14 +32,18 @@ class _HomePageState extends State<RestaurantinfoPage> {
   bool isFavorite = false;
   String? _address; // เก็บที่อยู่ที่ได้
   List<ResCatGetResponse> _restaurantCategories = [];
+  List<MenuInfoGetResponse> _restaurantMenu = [];
 
   @override
   void initState() {
     super.initState();
     Configuration.getConfig().then((value) {
       url = value['apiEndpoint'];
-      LoadCusHome();
+      LoadResInfo();
       setState(() {});
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _getAddressFromCoordinates();
+      });
     });
     _pageController = PageController();
   }
@@ -134,6 +139,46 @@ class _HomePageState extends State<RestaurantinfoPage> {
     );
   }
 
+  Widget buildMenuItem(MenuInfoGetResponse menu) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // รูปเมนู
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              menu.menu_image, // ต้องเป็นฟิลด์ของเมนู
+              width: 60,
+              height: 60,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Icon(Icons.fastfood),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // ชื่อเมนู + ราคา
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  menu.menu_name, // ฟิลด์ชื่อเมนู
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  "${menu.menu_price} บาท",
+                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -175,17 +220,6 @@ class _HomePageState extends State<RestaurantinfoPage> {
       ),
       body: buildMainContent(),
       bottomNavigationBar: buildBottomNavigationBar(),
-      floatingActionButton: SizedBox(
-        height: 80,
-        width: 80,
-        child: FloatingActionButton(
-          onPressed: () => Get.to(() => AddItemPage()),
-          backgroundColor: Colors.yellow,
-          child: const Icon(Icons.add, size: 50, color: Colors.white),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
-        ),
-      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
@@ -217,7 +251,6 @@ class _HomePageState extends State<RestaurantinfoPage> {
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
               icon: Icon(Icons.favorite), label: 'Favorite'),
-          BottomNavigationBarItem(icon: SizedBox.shrink(), label: ''),
           BottomNavigationBarItem(
               icon: Icon(Icons.notifications), label: 'Notis'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
@@ -228,22 +261,39 @@ class _HomePageState extends State<RestaurantinfoPage> {
 
   Widget buildCategoryChip(String label) {
     return Padding(
-      padding: const EdgeInsets.only(left: 0, right: 20),
-      child: OutlinedButton(
-        onPressed: () {
-          // TODO: เขียน logic การเลือกเมนูภายในร้าน เช่น filter list
-          print("เลือกหมวด: $label");
-        },
-        style: OutlinedButton.styleFrom(
-          shape: const CircleBorder(),
-          padding: const EdgeInsets.all(20),
-          side: const BorderSide(color: Colors.deepPurple),
-          backgroundColor: Colors.white,
+      padding: const EdgeInsets.only(left: 0, right: 12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: Colors.deepPurple, width: 1.5),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: Colors.black),
-          textAlign: TextAlign.center,
+        child: TextButton(
+          onPressed: () {
+            // TODO: เขียน logic การเลือกเมนูภายในร้าน เช่น filter list
+            print("เลือกหมวด: $label");
+          },
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            foregroundColor: const Color.fromARGB(255, 0, 0, 0),
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.normal,
+            ),
+          ),
         ),
       ),
     );
@@ -297,6 +347,62 @@ class _HomePageState extends State<RestaurantinfoPage> {
       deliveryTime = "35 นาทีขึ้นไป";
     }
 
+    List<Widget> categoryCards = _restaurantCategories
+        .map((category) {
+          final menusInCategory = _restaurantMenu
+              .where((menu) => menu.cat_id == category.cat_id)
+              .toList();
+
+          if (menusInCategory.isEmpty) {
+            // ถ้าไม่มีเมนูในหมวดนี้ ไม่ต้องแสดงอะไรเลย
+            return SizedBox.shrink();
+          }
+
+          return Card(
+            margin: const EdgeInsets.only(bottom: 20),
+            elevation: 3,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    category.cat_name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ...menusInCategory
+                      .map((menu) => buildMenuItem(menu))
+                      .toList(),
+                ],
+              ),
+            ),
+          );
+        })
+        .where((widget) => widget is! SizedBox)
+        .toList(); // กรอง SizedBox.shrink() ออก
+
+    // ถ้าไม่มี card ไหนเลย แสดงข้อความ "ไม่มีเมนูในร้าน"
+    if (categoryCards.isEmpty) {
+      categoryCards.add(
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 40),
+          child: Center(
+            child: Text(
+              "ไม่มีเมนูในร้าน",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+          ),
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.only(top: 10, left: 30, right: 30),
@@ -348,7 +454,6 @@ class _HomePageState extends State<RestaurantinfoPage> {
             ),
             const SizedBox(height: 5),
 
-            // รายละเอียดร้าน (ที่อยู่) พร้อม background สีเขียวและ padding เดียวกับ column
             Container(
               child: Text(
                 (_address ?? "กำลังโหลดที่อยู่...").trimLeft(),
@@ -399,18 +504,20 @@ class _HomePageState extends State<RestaurantinfoPage> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: _restaurantCategories.map((category) {
-                  return buildCategoryChip(
-                      category.cat_name); // หรือชื่อ field ที่ถูกต้อง
+                  return buildCategoryChip(category.cat_name);
                 }).toList(),
               ),
             ),
+
+            const SizedBox(height: 20),
+            ...categoryCards,
           ],
         ),
       ),
     );
   }
 
-  void LoadCusHome() async {
+  void LoadResInfo() async {
     try {
       int userId = context.read<ShareData>().user_info_send.uid;
 
@@ -434,6 +541,20 @@ class _HomePageState extends State<RestaurantinfoPage> {
             .toList();
         setState(() {
           _restaurantCategories = list;
+        });
+      }
+
+      final res_Menu =
+          await http.get(Uri.parse("$url/db/loadMenu/${widget.ResId}"));
+      log("Raw JSON from API: ${res_Menu.body}");
+      if (res_Menu.statusCode == 200) {
+        final List<MenuInfoGetResponse> list =
+            (json.decode(res_Menu.body) as List)
+                .map((e) => MenuInfoGetResponse.fromJson(e))
+                .toList();
+        setState(() {
+          _restaurantMenu = list;
+          log("MENUUUUUUUUUUUUUUUUUUUUUUUU" + _restaurantMenu.toString());
         });
       }
     } catch (e) {

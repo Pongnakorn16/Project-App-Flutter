@@ -148,17 +148,6 @@ class _HomePageState extends State<CustomerHomePage> {
       ),
       body: isSearching ? buildSearchResultView() : buildMainContent(),
       bottomNavigationBar: buildBottomNavigationBar(),
-      floatingActionButton: SizedBox(
-        height: 80,
-        width: 80,
-        child: FloatingActionButton(
-          onPressed: () => Get.to(() => AddItemPage()),
-          backgroundColor: Colors.yellow,
-          child: const Icon(Icons.add, size: 50, color: Colors.white),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
-        ),
-      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
@@ -190,7 +179,6 @@ class _HomePageState extends State<CustomerHomePage> {
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
               icon: Icon(Icons.favorite), label: 'Favorite'),
-          BottomNavigationBarItem(icon: SizedBox.shrink(), label: ''),
           BottomNavigationBarItem(
               icon: Icon(Icons.notifications), label: 'Notis'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
