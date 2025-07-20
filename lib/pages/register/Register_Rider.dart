@@ -14,11 +14,11 @@ import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/customer_regis_post_req.dart';
 import 'package:mobile_miniproject_app/models/request/rider_regis_post_req.dart';
 import 'package:mobile_miniproject_app/models/request/user_regis_post_req.dart';
-import 'package:mobile_miniproject_app/pages/Login.dart';
+import 'package:mobile_miniproject_app/pages/login/Login.dart';
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
-import 'package:mobile_miniproject_app/pages/Register_Customer.dart';
-import 'package:mobile_miniproject_app/pages/Register_Restaurant.dart';
-import 'package:mobile_miniproject_app/pages/Register_Rider.dart';
+import 'package:mobile_miniproject_app/pages/register/Register_Customer.dart';
+import 'package:mobile_miniproject_app/pages/register/Register_Restaurant.dart';
+import 'package:mobile_miniproject_app/pages/register/Register_Rider.dart';
 
 class RegisterRider extends StatefulWidget {
   const RegisterRider({super.key});

@@ -13,21 +13,19 @@ import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/customer_regis_post_req.dart';
 import 'package:mobile_miniproject_app/models/request/user_regis_post_req.dart';
-import 'package:mobile_miniproject_app/pages/Login.dart';
+import 'package:mobile_miniproject_app/pages/login/Login.dart';
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
-import 'package:mobile_miniproject_app/pages/Register_Customer.dart';
-import 'package:mobile_miniproject_app/pages/Register_Rider.dart';
+import 'package:mobile_miniproject_app/pages/register/Register_Restaurant.dart';
+import 'package:mobile_miniproject_app/pages/register/Register_Rider.dart';
 
-import '../models/request/restaurant_regis_post_req.dart';
-
-class RegisterRestaurant extends StatefulWidget {
-  const RegisterRestaurant({super.key});
+class RegisterCustomer extends StatefulWidget {
+  const RegisterCustomer({super.key});
 
   @override
-  State<RegisterRestaurant> createState() => _RegisterCustomerState();
+  State<RegisterCustomer> createState() => _RegisterCustomerState();
 }
 
-class _RegisterCustomerState extends State<RegisterRestaurant> {
+class _RegisterCustomerState extends State<RegisterCustomer> {
   String txt = '';
   LatLng? selectedLocation;
   LatLng? currentLocation;
@@ -79,7 +77,7 @@ class _RegisterCustomerState extends State<RegisterRestaurant> {
                         Expanded(
                           // ✅ ป้องกัน overflow
                           child: Text(
-                            'Create "Restaurant" Account',
+                            'Create "Customer" Account',
                             textAlign:
                                 TextAlign.center, // ✅ จัดข้อความให้อยู่กึ่งกลาง
                             style: TextStyle(
@@ -99,15 +97,15 @@ class _RegisterCustomerState extends State<RegisterRestaurant> {
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           child: ToggleButtons(
                             isSelected: [
-                              false,
                               true,
+                              false,
                               false
                             ], // ตั้งค่าเริ่มต้นของปุ่ม
                             onPressed: (index) {
-                              if (index == 1) {
+                              if (index == 0) {
                                 // ไปที่หน้าลูกค้า
-                              } else if (index == 0) {
-                                registerCus();
+                              } else if (index == 1) {
+                                registerRes();
                               } else {
                                 registerRider();
                               }
@@ -175,7 +173,7 @@ class _RegisterCustomerState extends State<RegisterRestaurant> {
                                 borderSide: BorderSide(width: 1),
                               ),
                               prefixIcon: Icon(Icons.person),
-                              hintText: 'Restaurant Name',
+                              hintText: 'Name',
                             ),
                           ),
                         ),
@@ -328,18 +326,18 @@ class _RegisterCustomerState extends State<RegisterRestaurant> {
     //   coor = LatLng(0, 0); // ค่าพื้นฐานเมื่อเกิดข้อผิดพลาด
     // }
 
-    var model = RestaurantPostRequest(
-      res_phone: phoneCtl.text,
-      res_name: nameCtl.text,
-      res_password: passwordCtl.text,
-      res_email: EmailCtl.text,
+    var model = CustomerPostRequest(
+      cus_phone: phoneCtl.text,
+      cus_name: nameCtl.text,
+      cus_password: passwordCtl.text,
+      cus_email: EmailCtl.text,
     );
 
-    log("Sending: ${RestaurantPostRequestToJson(model)}");
+    log("Sending: ${CustomerPostRequestToJson(model)}");
 
-    var Value = await http.post(Uri.parse("$url/db/register/restaurant"),
+    var Value = await http.post(Uri.parse("$url/db/register/customer"),
         headers: {"Content-Type": "application/json; charset=utf-8"},
-        body: RestaurantPostRequestToJson(model));
+        body: CustomerPostRequestToJson(model));
 
     if (Value.statusCode == 200) {
       log('Registration is successful');
@@ -366,8 +364,8 @@ class _RegisterCustomerState extends State<RegisterRestaurant> {
     }
   }
 
-  void registerCus() {
-    Get.to(() => const RegisterCustomer());
+  void registerRes() {
+    Get.to(() => const RegisterRestaurant());
   }
 
   void registerRider() {

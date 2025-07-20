@@ -19,13 +19,13 @@ import 'package:mobile_miniproject_app/models/request/rider_address_post_req.dar
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
-import 'package:mobile_miniproject_app/pages/RiderReceive.dart';
-import 'package:mobile_miniproject_app/pages/RiderHistory.dart';
-import 'package:mobile_miniproject_app/pages/RiderOrderInfo.dart';
-import 'package:mobile_miniproject_app/pages/RiderProfile.dart';
+import 'package:mobile_miniproject_app/pages/rider/RiderReceive.dart';
+import 'package:mobile_miniproject_app/pages/rider/RiderHistory.dart';
+import 'package:mobile_miniproject_app/pages/rider/RiderOrderInfo.dart';
+import 'package:mobile_miniproject_app/pages/rider/RiderProfile.dart';
 import 'package:mobile_miniproject_app/pages/Shop.dart';
 import 'package:mobile_miniproject_app/pages/Ticket.dart';
-import 'package:mobile_miniproject_app/pages/Profile.dart';
+import 'package:mobile_miniproject_app/pages/customer/Profile.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 

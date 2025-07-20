@@ -6,13 +6,13 @@ import 'package:get_storage/get_storage.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/user_login_post_req.dart';
 import 'package:mobile_miniproject_app/models/response/UserLoginPostRes.dart';
-import 'package:mobile_miniproject_app/pages/CustomerHome.dart';
+import 'package:mobile_miniproject_app/pages/customer/CustomerHome.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
-import 'package:mobile_miniproject_app/pages/Register_Customer.dart';
+import 'package:mobile_miniproject_app/pages/register/Register_Customer.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
-import 'package:mobile_miniproject_app/pages/RestaurantHome.dart';
-import 'package:mobile_miniproject_app/pages/RiderHome.dart';
+import 'package:mobile_miniproject_app/pages/restaurant/RestaurantHome.dart';
+import 'package:mobile_miniproject_app/pages/rider/RiderHome.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 

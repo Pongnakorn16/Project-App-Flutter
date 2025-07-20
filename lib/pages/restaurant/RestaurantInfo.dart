@@ -11,7 +11,8 @@ import 'package:mobile_miniproject_app/models/response/ResCatGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
-import 'package:mobile_miniproject_app/pages/Profile.dart';
+import 'package:mobile_miniproject_app/pages/customer/Cart.dart';
+import 'package:mobile_miniproject_app/pages/customer/Profile.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 import 'package:geocoding/geocoding.dart';
@@ -33,6 +34,12 @@ class _HomePageState extends State<RestaurantinfoPage> {
   String? _address; // เก็บที่อยู่ที่ได้
   List<ResCatGetResponse> _restaurantCategories = [];
   List<MenuInfoGetResponse> _restaurantMenu = [];
+  Map<int, int> _selectedMenuCounts = {};
+  List<MenuInfoGetResponse> get selectedMenus {
+    return _restaurantMenu
+        .where((menu) => _selectedMenuCounts.containsKey(menu.menu_id))
+        .toList();
+  }
 
   @override
   void initState() {
@@ -140,41 +147,81 @@ class _HomePageState extends State<RestaurantinfoPage> {
   }
 
   Widget buildMenuItem(MenuInfoGetResponse menu) {
+    int count = _selectedMenuCounts[menu.menu_id] ?? 0;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // รูปเมนู
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              menu.menu_image, // ต้องเป็นฟิลด์ของเมนู
-              width: 60,
-              height: 60,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const Icon(Icons.fastfood),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // ชื่อเมนู + ราคา
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  menu.menu_name, // ฟิลด์ชื่อเมนู
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.bold),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
+            children: [
+              // รูปภาพเมนู
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  menu.menu_image,
+                  width: 60,
+                  height: 60,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.fastfood),
                 ),
-                Text(
-                  "${menu.menu_price} บาท",
-                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(width: 12),
+
+              // ข้อมูลเมนู
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(menu.menu_name,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.bold)),
+                    Text("${menu.menu_price} บาท",
+                        style:
+                            const TextStyle(fontSize: 13, color: Colors.grey)),
+                  ],
                 ),
-              ],
-            ),
+              ),
+
+              // ปุ่ม + / -
+              Row(
+                children: [
+                  if (count > 0)
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline),
+                      onPressed: () {
+                        setState(() {
+                          if (_selectedMenuCounts[menu.menu_id]! > 1) {
+                            _selectedMenuCounts[menu.menu_id] =
+                                _selectedMenuCounts[menu.menu_id]! - 1;
+                          } else {
+                            _selectedMenuCounts.remove(menu.menu_id);
+                          }
+                        });
+                      },
+                    ),
+                  if (count > 0)
+                    Text(
+                      '$count',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_outline),
+                    onPressed: () {
+                      setState(() {
+                        _selectedMenuCounts[menu.menu_id] =
+                            (_selectedMenuCounts[menu.menu_id] ?? 0) + 1;
+                      });
+                    },
+                  ),
+                ],
+              )
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -220,7 +267,50 @@ class _HomePageState extends State<RestaurantinfoPage> {
       ),
       body: buildMainContent(),
       bottomNavigationBar: buildBottomNavigationBar(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomSheet: _selectedMenuCounts.isNotEmpty
+          ? Container(
+              height: 60,
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 8,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "ไปที่ตะกร้า (${_selectedMenuCounts.length} รายการ)",
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      // ส่งรายการไปหน้าตะกร้า
+                      Get.to(() => CartPage(
+                            selectedMenus: selectedMenus,
+                            counts: _selectedMenuCounts,
+                          ));
+                    },
+                    child: const Text(
+                      "ดูตะกร้า",
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : null,
     );
   }
 

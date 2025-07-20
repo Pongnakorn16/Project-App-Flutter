@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:mobile_miniproject_app/pages/Login.dart';
+import 'package:mobile_miniproject_app/pages/login/Login.dart';
 import 'package:mobile_miniproject_app/pages/Splash.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';

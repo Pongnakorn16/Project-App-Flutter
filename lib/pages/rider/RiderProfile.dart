@@ -11,49 +11,51 @@ import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/user_edit_post_req.dart';
+import 'package:mobile_miniproject_app/models/response/GetRiderInfo_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/models/response/customers_idx_get_res.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
-import 'package:mobile_miniproject_app/pages/Login.dart';
+import 'package:mobile_miniproject_app/pages/login/Login.dart';
+import 'package:mobile_miniproject_app/pages/rider/RiderHistory.dart';
+import 'package:mobile_miniproject_app/pages/rider/RiderHome.dart';
 import 'package:mobile_miniproject_app/pages/Shop.dart';
 import 'package:mobile_miniproject_app/pages/Ticket.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 
-class ProfilePage extends StatefulWidget {
+class RiderProfilePage extends StatefulWidget {
   int uid = 0;
   String username = '';
   int selectedIndex = 0;
-  int cart_length = 0;
   final VoidCallback onClose;
 
-  ProfilePage({
+  RiderProfilePage({
     super.key,
     required this.onClose,
     required this.selectedIndex,
   });
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  State<RiderProfilePage> createState() => _RiderProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _RiderProfilePageState extends State<RiderProfilePage> {
   int uid = 0;
   int wallet = 0;
   TextEditingController phoneCtl = TextEditingController();
   TextEditingController nameCtl = TextEditingController();
   TextEditingController passwordCtl = TextEditingController();
   TextEditingController conPassCtl = TextEditingController();
-  TextEditingController addressCtl = TextEditingController();
+  TextEditingController licenseCtl = TextEditingController();
   String send_user_name = '';
   String send_user_type = '';
   String send_user_image = '';
   String username = '';
   int cart_length = 0;
   GetStorage gs = GetStorage();
-  List<GetUserSearchRes> user_Info = [];
+  List<GetRiderInfoRes> rider_Info = [];
   TextEditingController imageCtl = TextEditingController();
   int _selectedIndex = 0;
   late LatLng coor;
@@ -109,10 +111,10 @@ class _ProfilePageState extends State<ProfilePage> {
                           height: 100,
                           decoration: BoxDecoration(
                             image: DecorationImage(
-                              image: user_Info.isNotEmpty
-                                  ? NetworkImage(user_Info.first.userImage)
-                                  : AssetImage(
-                                      'assets/images/default_profile.png'), // ใส่รูป default ถ้าไม่มีข้อมูล
+                              image: rider_Info.isNotEmpty
+                                  ? NetworkImage(rider_Info.first.userImage)
+                                  : NetworkImage(
+                                      'https://t4.ftcdn.net/jpg/04/70/29/97/360_F_470299797_UD0eoVMMSUbHCcNJCdv2t8B2g1GVqYgs.jpg'), // ใส่รูป default ถ้าไม่มีข้อมูล
                               fit: BoxFit.cover,
                             ),
                           ),
@@ -136,8 +138,8 @@ class _ProfilePageState extends State<ProfilePage> {
                               borderSide: BorderSide(width: 1),
                             ),
                             prefixIcon: Icon(Icons.phone),
-                            hintText: user_Info.isNotEmpty
-                                ? user_Info.first.phone
+                            hintText: rider_Info.isNotEmpty
+                                ? rider_Info.first.phone
                                 : '',
                           ),
                         ),
@@ -152,8 +154,8 @@ class _ProfilePageState extends State<ProfilePage> {
                               borderSide: BorderSide(width: 1),
                             ),
                             prefixIcon: Icon(Icons.person),
-                            hintText: user_Info.isNotEmpty
-                                ? user_Info.first.name
+                            hintText: rider_Info.isNotEmpty
+                                ? rider_Info.first.name
                                 : '',
                           ),
                         ),
@@ -169,8 +171,8 @@ class _ProfilePageState extends State<ProfilePage> {
                               borderSide: BorderSide(width: 1),
                             ),
                             prefixIcon: Icon(Icons.lock),
-                            hintText: user_Info.isNotEmpty
-                                ? user_Info.first.password
+                            hintText: rider_Info.isNotEmpty
+                                ? rider_Info.first.password
                                 : '', // ทำให้ hintText ว่างไปเลย
                           ),
                         ),
@@ -186,15 +188,16 @@ class _ProfilePageState extends State<ProfilePage> {
                               borderSide: BorderSide(width: 1),
                             ),
                             prefixIcon: Icon(Icons.lock),
-                            hintText: user_Info.isNotEmpty
-                                ? user_Info.first.password
+                            hintText: rider_Info.isNotEmpty
+                                ? rider_Info.first.password
                                 : '', // ทำให้ hintText ว่างไปเลย
                           ),
                         ),
 
                         SizedBox(height: 15.0), // เพิ่มระยะห่างระหว่างฟิลด์
                         TextField(
-                          controller: addressCtl,
+                          controller: licenseCtl,
+                          enabled: false, // ล็อคไม่ให้แก้ไข
                           decoration: InputDecoration(
                             filled: true,
                             fillColor: Color.fromARGB(255, 228, 225, 225),
@@ -202,12 +205,13 @@ class _ProfilePageState extends State<ProfilePage> {
                               borderRadius: BorderRadius.circular(30.0),
                               borderSide: BorderSide(width: 1),
                             ),
-                            prefixIcon: Icon(Icons.location_on),
-                            hintText: user_Info.isNotEmpty
-                                ? user_Info.first.address
+                            prefixIcon: Icon(Icons.motorcycle_rounded),
+                            hintText: rider_Info.isNotEmpty
+                                ? rider_Info.first.licensePlate
                                 : '',
                           ),
                         ),
+
                         Padding(
                           padding: const EdgeInsets.symmetric(
                               vertical: 20, horizontal: 10),
@@ -273,21 +277,6 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
       bottomNavigationBar: buildBottomNavigationBar(),
-      floatingActionButton: Container(
-        height: 80,
-        width: 80,
-        child: FloatingActionButton(
-          onPressed: () {
-            Get.to(() => AddItemPage());
-            log("ADDD");
-          },
-          backgroundColor: Colors.yellow,
-          child: Icon(Icons.add, size: 50, color: Colors.white),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(40),
-          ),
-        ),
-      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
@@ -317,7 +306,7 @@ class _ProfilePageState extends State<ProfilePage> {
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
-          selectedItemColor: Color.fromARGB(255, 115, 28, 168),
+          selectedItemColor: Colors.yellow,
           unselectedItemColor: Colors.grey,
           backgroundColor: Colors.white,
           iconSize: 20,
@@ -326,6 +315,10 @@ class _ProfilePageState extends State<ProfilePage> {
           unselectedLabelStyle: TextStyle(fontSize: 10),
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.history_edu_outlined), // Icon for the Add button
+              label: 'History', // Label for the Add button
+            ),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
         ),
@@ -333,25 +326,59 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  void _onItemTapped(int index) {
+    setState(() {
+      if (index == 0) {
+        // Navigate to Home page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => RiderHomePage()), // สมมติว่ามี HomePage
+        );
+      } else if (index == 1) {
+        // Navigate to Add page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                RiderHistoryPage(onClose: () {}, selectedIndex: 1),
+          ),
+        );
+      } else if (index == 2) {
+        // Navigate to Profile page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                RiderProfilePage(onClose: () {}, selectedIndex: 2),
+          ),
+        );
+      }
+    });
+  }
+
   Future<void> loadDataAsync() async {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
 
     try {
-      var res = await http.get(Uri.parse("$url/db/get_Profile/${uid}"));
+      var res = await http.get(Uri.parse("$url/db/get_RiderProfile/${uid}"));
       log("Response status: ${res.statusCode}");
       log("Response body: ${res.body}");
 
       if (res.statusCode == 200) {
-        user_Info = getUserSearchResFromJson(res.body);
-        phoneCtl.text = user_Info.first.phone;
-        nameCtl.text = user_Info.first.name;
-        passwordCtl.text = user_Info.first.password;
-        conPassCtl.text = user_Info.first.password;
-        addressCtl.text = user_Info.first.address;
-        if (user_Info != null) {
-          log("user_Info : " + user_Info.toString());
-          log(user_Info.first.name.toString());
+        rider_Info = getRiderInfoResFromJson(res.body);
+        log("SSSSSSSSSSSS");
+        log(rider_Info.first.name.toString());
+        log("xxxxxxxxxxxxxxxxxxxxx");
+        phoneCtl.text = rider_Info.first.phone;
+        nameCtl.text = rider_Info.first.name;
+        passwordCtl.text = rider_Info.first.password;
+        conPassCtl.text = rider_Info.first.password;
+        licenseCtl.text = rider_Info.first.licensePlate ?? '';
+        if (rider_Info != null) {
+          log("user_Info : " + rider_Info.toString());
+          log(rider_Info.first.name.toString());
           setState(() {});
         } else {
           log("Failed to parse user info.");
@@ -362,28 +389,6 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (e) {
       log("Error occurred: $e");
     }
-  }
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-      if (index == 0) {
-        // Navigate to Home page
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-              builder: (context) => HomePage()), // สมมติว่ามี HomePage
-        );
-      } else if (index == 1) {
-        // Navigate to Profile page
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ProfilePage(onClose: () {}, selectedIndex: 1),
-          ),
-        );
-      }
-    });
   }
 
   void updateProfile() async {
@@ -405,29 +410,29 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     if (phoneCtl.text.isEmpty) {
-      phoneCtl.text = user_Info.first.phone;
+      phoneCtl.text = rider_Info.first.phone;
     }
 
     if (nameCtl.text.isEmpty) {
-      nameCtl.text = user_Info.first.name;
+      nameCtl.text = rider_Info.first.name;
     }
 
     if (passwordCtl.text.isEmpty) {
-      passwordCtl.text = user_Info.first.password;
+      passwordCtl.text = rider_Info.first.password;
     }
 
     if (conPassCtl.text.isEmpty) {
-      conPassCtl.text = user_Info.first.password; // กำหนดให้ตรงกับ password
+      conPassCtl.text = rider_Info.first.password; // กำหนดให้ตรงกับ password
     }
 
-    if (addressCtl.text.isEmpty) {
-      addressCtl.text = user_Info.first.address;
+    if (licenseCtl.text.isEmpty) {
+      licenseCtl.text = rider_Info.first.licensePlate;
     }
 
     // Getting coordinates from the address
     LatLng coor;
     try {
-      List<Location> locations = await locationFromAddress(addressCtl.text);
+      List<Location> locations = await locationFromAddress(licenseCtl.text);
       coor = LatLng(locations.first.latitude, locations.first.longitude);
       log("${coor.latitude},${coor.longitude}");
     } catch (e) {
@@ -437,19 +442,20 @@ class _ProfilePageState extends State<ProfilePage> {
 
     // Create the model only with changed fields
     var model = UserEditPostRequest(
-      uid: user_Info.first.uid, // แทนที่ userId ด้วย ID ของผู้ใช้ที่กำลังอัปเดต
-      phone: phoneCtl.text == user_Info.first.phone
-          ? user_Info.first.phone
+      uid:
+          rider_Info.first.uid, // แทนที่ userId ด้วย ID ของผู้ใช้ที่กำลังอัปเดต
+      phone: phoneCtl.text == rider_Info.first.phone
+          ? rider_Info.first.phone
           : phoneCtl.text,
-      name: nameCtl.text == user_Info.first.name
-          ? user_Info.first.name
+      name: nameCtl.text == rider_Info.first.name
+          ? rider_Info.first.name
           : nameCtl.text,
-      password: passwordCtl.text == user_Info.first.password
-          ? user_Info.first.password
+      password: passwordCtl.text == rider_Info.first.password
+          ? rider_Info.first.password
           : passwordCtl.text,
-      address: addressCtl.text == user_Info.first.address
-          ? user_Info.first.address
-          : addressCtl.text,
+      address: licenseCtl.text == rider_Info.first.address
+          ? rider_Info.first.licensePlate
+          : licenseCtl.text,
       coordinate: "${coor.latitude},${coor.longitude}",
     );
 
@@ -476,7 +482,7 @@ class _ProfilePageState extends State<ProfilePage> {
       );
       setState(() async {
         await loadDataAsync();
-        context.read<ShareData>().user_info_send.name = user_Info.first.name;
+        context.read<ShareData>().user_info_send.name = rider_Info.first.name;
       });
     } else {
       // If the status code is not 200, get the message from response body
@@ -585,9 +591,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
     var res = await http.get(Uri.parse("$url/db/user/${uid}"));
     if (res.statusCode == 200) {
-      user_Info = getUserSearchResFromJson(res.body);
-      if (user_Info != null) {
-        log("user_Info: " + user_Info.toString());
+      rider_Info = getRiderInfoResFromJson(res.body);
+      if (rider_Info != null) {
+        log("user_Info: " + rider_Info.toString());
       } else {
         log("Failed to parse user info.");
       }

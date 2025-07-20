@@ -1,32 +1,36 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/get_navigation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
-import 'package:mobile_miniproject_app/pages/Profile.dart';
-import 'package:mobile_miniproject_app/pages/RiderReceive.dart';
-import 'package:mobile_miniproject_app/pages/RiderHistory.dart';
-import 'package:mobile_miniproject_app/pages/RiderHome.dart';
-import 'package:mobile_miniproject_app/pages/RiderProfile.dart';
+import 'package:mobile_miniproject_app/pages/customer/Profile.dart';
+import 'package:mobile_miniproject_app/pages/rider/RiderDelivery.dart';
+import 'package:mobile_miniproject_app/pages/rider/RiderHistory.dart';
+import 'package:mobile_miniproject_app/pages/rider/RiderHome.dart';
+import 'package:mobile_miniproject_app/pages/rider/RiderProfile.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 
-class RiderOrderinfoPage extends StatefulWidget {
+class RiderReceivePage extends StatefulWidget {
   int info_send_uid; // ประกาศตัวแปรในคลาสนี้
   int selectedIndex = 0;
   int info_receive_uid; // ประกาศตัวแปรในคลาสนี้
   int info_oid;
 
-  RiderOrderinfoPage({
+  RiderReceivePage({
     super.key,
     required this.info_send_uid,
     required this.info_receive_uid,
@@ -35,10 +39,10 @@ class RiderOrderinfoPage extends StatefulWidget {
   });
 
   @override
-  State<RiderOrderinfoPage> createState() => _RiderOrderinfoPageState();
+  State<RiderReceivePage> createState() => _RiderReceivePageState();
 }
 
-class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
+class _RiderReceivePageState extends State<RiderReceivePage> {
   MapController mapController = MapController();
   List<GetUserSearchRes> send_Info = [];
   List<GetUserSearchRes> receive_Info = [];
@@ -46,13 +50,12 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
   List<GetSendOrder> order_one = [];
   int sender_uid = 0; // ประกาศตัวแปรเพื่อเก็บค่า
   int receiver_uid = 0;
-  String sender_name = "";
-  String receiver_name = "";
   String sender_address = "";
   String receiver_address = "";
   String product_name = "";
   String product_detail = "";
   String product_imgUrl = "";
+  String product_imgUrl_status3 = "";
   LatLng send_latLng = LatLng(0, 0);
   LatLng receive_latLng = LatLng(0, 0);
   LatLng rider_latLng = LatLng(0, 0);
@@ -60,6 +63,8 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
   var db = FirebaseFirestore.instance;
   int _selectedIndex = 0;
   double distanceInKm = 0;
+  final ImagePicker picker = ImagePicker();
+  XFile? image;
 
   @override
   void initState() {
@@ -120,6 +125,16 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
                         ),
                         alignment: Alignment.center,
                       ),
+                      Marker(
+                        point: rider_latLng,
+                        width: 60,
+                        height: 60,
+                        child: Icon(
+                          Icons.motorcycle,
+                          color: Colors.blue,
+                          size: 30,
+                        ),
+                      ),
                     ],
                   ),
                   if (polylinePoints.isNotEmpty)
@@ -136,7 +151,7 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
               ),
             ),
           )),
-          Padding(
+          Container(
             padding: const EdgeInsets.all(8.0), // เพิ่ม Padding รอบๆ Card
             child: Card(
               elevation: 4,
@@ -160,18 +175,10 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
                               Text(
                                 '${product_name}',
                                 style: TextStyle(fontSize: 30),
-                                softWrap:
-                                    true, // ทำให้ข้อความเว้นบรรทัดอัตโนมัติ
-                                overflow:
-                                    TextOverflow.visible, // ให้ข้อความแสดงต่อไป
                               ),
                               Text(
                                 '${product_detail}',
                                 style: TextStyle(fontSize: 15),
-                                softWrap:
-                                    true, // ทำให้ข้อความเว้นบรรทัดอัตโนมัติ
-                                overflow:
-                                    TextOverflow.visible, // ให้ข้อความแสดงต่อไป
                               ),
                             ],
                           ),
@@ -206,210 +213,87 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
                         ],
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.only(top: 10.0, bottom: 10.0),
-                      child: Divider(
-                        color: Colors.black,
-                        thickness: 2,
-                        indent: 2,
-                        endIndent: 2,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 5, top: 8),
-                      child: Row(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start, // จัดแนวข้อความไปทางซ้าย
-                        children: [
-                          Icon(Icons.location_on,
-                              color: Colors.red, size: 14), // ปรับขนาดไอคอน
-                          SizedBox(width: 5),
-                          Expanded(
-                            // ใช้ Expanded เพื่อให้ Text ใช้พื้นที่ว่างที่เหลือ
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment
-                                  .start, // จัดแนวข้อความไปทางซ้าย
-                              children: [
-                                Text(sender_name),
-                                Text(
-                                  sender_address, // จะอยู่ใต้ receiver_name
-                                  softWrap:
-                                      true, // ทำให้ข้อความเว้นบรรทัดอัตโนมัติ
-                                  maxLines:
-                                      2, // กำหนดจำนวนบรรทัดสูงสุดที่จะแสดง
-                                  overflow: TextOverflow
-                                      .ellipsis, // แสดง ... ถ้ามีข้อความเกิน
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 5, top: 8),
-                      child: Row(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start, // จัดแนวข้อความไปทางซ้าย
-                        children: [
-                          Icon(Icons.location_on,
-                              color: const Color.fromARGB(255, 79, 252, 10),
-                              size: 14), // ปรับขนาดไอคอน
-                          SizedBox(width: 5),
-                          Expanded(
-                            // ใช้ Expanded เพื่อให้ Text ใช้พื้นที่ว่างที่เหลือ
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment
-                                  .start, // จัดแนวข้อความไปทางซ้าย
-                              children: [
-                                Text(receiver_name),
-                                Text(
-                                  receiver_address, // จะอยู่ใต้ receiver_name
-                                  softWrap:
-                                      true, // ทำให้ข้อความเว้นบรรทัดอัตโนมัติ
-                                  maxLines:
-                                      2, // กำหนดจำนวนบรรทัดสูงสุดที่จะแสดง
-                                  overflow: TextOverflow
-                                      .ellipsis, // แสดง ... ถ้ามีข้อความเกิน
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(top: 5, bottom: 10),
-            child: FilledButton(
-              onPressed: () {
-                UpdateStatus(widget.info_oid);
-                Get.to(() => RiderReceivePage(
-                    info_send_uid: widget.info_send_uid,
-                    info_receive_uid: widget.info_receive_uid,
-                    info_oid: widget.info_oid,
-                    selectedIndex: 1));
-                var doc = "order${widget.info_oid}";
-                // ข้อมูลที่ต้องการอัปเดต
-                var dataToUpdate = {
-                  'Order_status': 2,
-                  'rider_coordinates':
-                      '${rider_latLng.latitude},${rider_latLng.longitude}',
-                };
-                db.collection('Order_Info').doc(doc).update(dataToUpdate);
-                context.read<ShareData>().listener!.cancel();
-              },
-              child: Text(
-                "Hire",
-                style: TextStyle(fontSize: 20),
-              ),
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color.fromARGB(
-                    255, 139, 15, 188), // เปลี่ยนสีพื้นหลังของปุ่ม
-                minimumSize: Size(
-                    200, 50), // กำหนดขนาดขั้นต่ำของปุ่ม (ความกว้าง, ความสูง)
-                shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(15), // กำหนดมุมโค้งของปุ่ม
+            padding:
+                const EdgeInsets.only(left: 30, right: 40, bottom: 20, top: 10),
+            child: Row(
+              mainAxisAlignment:
+                  MainAxisAlignment.spaceBetween, // จัดตำแหน่งให้ห่างกัน
+              children: [
+                Column(
+                  // ใช้ Column เพื่อจัดตำแหน่งปุ่มและไอคอนในแนวตั้ง
+                  children: [
+                    FilledButton(
+                      onPressed: () {
+                        sendImage();
+                      },
+                      child: Text(
+                        "Receive",
+                        style: TextStyle(fontSize: 17),
+                      ),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(
+                            255, 139, 15, 188), // เปลี่ยนสีพื้นหลังของปุ่ม
+                        minimumSize: Size(200,
+                            50), // กำหนดขนาดขั้นต่ำของปุ่ม (ความกว้าง, ความสูง)
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(15), // กำหนดมุมโค้งของปุ่ม
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
+                Padding(
+                  padding:
+                      const EdgeInsets.only(left: 10), // เพิ่ม padding ด้านซ้าย
+                  child: image != null
+                      ? Image.file(
+                          File(image!.path), // แสดงรูปที่เลือก
+                          width: 50.0, // กำหนดขนาดของรูปภาพ
+                          height: 50.0,
+                          fit: BoxFit.cover, // ทำให้รูปเต็มกรอบ
+                        )
+                      : IconButton(
+                          icon: Icon(
+                            Icons.add_photo_alternate_outlined,
+                            color: Color.fromARGB(255, 255, 222, 78),
+                          ),
+                          iconSize: 50.0,
+                          onPressed: () async {
+                            image = await picker.pickImage(
+                                source: ImageSource.camera);
+                            if (image != null) {
+                              log(image!.path.toString());
+                              setState(() {}); // อัพเดต UI เมื่อเลือกรูป
+                            } else {
+                              log('No Image');
+                            }
+                            print('Icon button pressed');
+                          },
+                        ),
+                ),
+              ],
             ),
           ),
-          buildBottomNavigationBar(),
         ],
       ),
     );
-  }
-
-  Widget buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(40.0),
-          topRight: Radius.circular(40.0),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            spreadRadius: 2,
-            blurRadius: 8,
-            offset: Offset(0, -2),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(40.0),
-          topRight: Radius.circular(40.0),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: 0,
-          onTap: _onItemTapped,
-          selectedItemColor: Colors.black, // สีของ icon ที่เลือก
-          unselectedItemColor: Colors.grey, // สีของ icon ที่ไม่ได้เลือก
-          backgroundColor: Colors.white,
-          iconSize: 20,
-          selectedLabelStyle: TextStyle(
-              fontSize: 15, fontWeight: FontWeight.normal), // ปรับขนาดฟอนต์
-          unselectedLabelStyle: TextStyle(fontSize: 10),
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.history_edu_outlined), // Icon for the Add button
-              label: 'History', // Label for the Add button
-            ),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-          ],
-          type: BottomNavigationBarType.fixed, // ใช้ประเภท Fixed
-        ),
-      ),
-    );
-  }
-
-  void _onItemTapped(int index) {
-    setState(() {
-      if (index == 0) {
-        // Navigate to Home page
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-              builder: (context) => RiderHomePage()), // สมมติว่ามี HomePage
-        );
-      } else if (index == 1) {
-        // Navigate to Add page
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                RiderHistoryPage(onClose: () {}, selectedIndex: 1),
-          ),
-        );
-      } else if (index == 2) {
-        // Navigate to Profile page
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                RiderProfilePage(onClose: () {}, selectedIndex: 2),
-          ),
-        );
-      }
-    });
   }
 
   Future<void> loadDataAsync() async {
+    log("IODIDODIOOOOOOOOOOOOOOOOOOOOOOOOIDDIDIIDIDIDIDIDID+${widget.info_oid}");
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
 
     var sender = await http.get(Uri.parse("$url/db/get_Send/${sender_uid}"));
     if (sender.statusCode == 200) {
       send_Info = getUserSearchResFromJson(sender.body);
-      sender_name = send_Info.first.name.toString();
       sender_address = send_Info.first.address.toString();
 
       String? send_coordinates = send_Info.first.coordinates;
@@ -427,7 +311,6 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
         await http.get(Uri.parse("$url/db/get_Receive/${receiver_uid}"));
     if (receiver.statusCode == 200) {
       receive_Info = getUserSearchResFromJson(receiver.body);
-      receiver_name = receive_Info.first.name.toString();
       receiver_address = receive_Info.first.address.toString();
 
       String? re_coordinates = receive_Info.first.coordinates;
@@ -528,14 +411,126 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
     }
   }
 
-  void UpdateStatus(int oid) async {
+  void sendImage() async {
+    // แสดง Dialog Loading
+    showDialog(
+      context: context,
+      barrierDismissible: false, // ไม่ให้ปิดเมื่อแตะนอก
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12), // เปลี่ยนรูปทรงของ Dialog
+          ),
+          child: Container(
+            padding: EdgeInsets.all(24), // เพิ่ม Padding
+            height: 120, // กำหนดความสูง
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 50),
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                        const Color.fromARGB(
+                            255, 139, 15, 188)), // เปลี่ยนสีของวงโหลด
+                  ),
+                ),
+                SizedBox(width: 15),
+                Text(
+                  'Loading...', // ข้อความที่จะแสดง
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.amber),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
 
     http.put(
-      Uri.parse(
-          "$url/db/update_status/${oid}/${2}/${context.read<ShareData>().user_info_send.uid}"),
+      Uri.parse("$url/db/update_status_more/${widget.info_oid}/${3}"),
       headers: {"Content-Type": "application/json; charset=utf-8"},
     );
+
+    final storageRef = FirebaseStorage.instance.ref();
+    final imageRef =
+        storageRef.child('images/${DateTime.now().millisecondsSinceEpoch}.jpg');
+
+    await imageRef.putFile(File(image!.path));
+
+    // รับ URL ของภาพที่อัปโหลด
+    product_imgUrl_status3 = await imageRef.getDownloadURL();
+    log(product_imgUrl_status3.toString());
+
+    if (image == null) {
+      // ปิด Dialog
+      Navigator.of(context).pop();
+
+      Fluttertoast.showToast(
+          msg: "ข้อมูลไม่ถูกต้องโปรดตรวจสอบความถูกต้อง แล้วลองอีกครั้ง",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Color.fromARGB(255, 255, 0, 0),
+          textColor: Colors.white,
+          fontSize: 15.0);
+      Navigator.of(context).pop();
+    } else {
+      try {
+        // กำหนดชื่อเอกสาร
+        var doc = "order${widget.info_oid}";
+
+        // ข้อมูลที่ต้องการอัปเดต
+        var dataToUpdate = {
+          'Order_status': 3,
+          'rider_coordinates':
+              '${send_latLng.latitude},${send_latLng.longitude}',
+          'status3_product_img': product_imgUrl_status3,
+        };
+
+        // อัปเดตข้อมูลใน Firebase
+        await db.collection('Order_Info').doc(doc).update(dataToUpdate);
+
+        log("Document updated successfully");
+
+        Fluttertoast.showToast(
+            msg: "ข้อมูลถูกอัปเดตเรียบร้อยแล้ว",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Colors.green,
+            textColor: Colors.white,
+            fontSize: 15.0);
+
+        // ปิด Dialog หลังจากอัปโหลดเสร็จสิ้น
+        Navigator.of(context).pop();
+        Get.to(() => RiderDeliveryPage(
+            info_send_uid: widget.info_send_uid,
+            info_receive_uid: widget.info_receive_uid,
+            info_oid: widget.info_oid,
+            selectedIndex: 1));
+      } catch (e) {
+        log('Error updating document: $e');
+
+        // ปิด Dialog
+        Navigator.of(context).pop();
+
+        Fluttertoast.showToast(
+            msg: "เกิดข้อผิดพลาดในการอัปเดตข้อมูล",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+            fontSize: 15.0);
+      }
+    }
   }
 }

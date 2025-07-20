@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
@@ -5,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/get_navigation.dart';
 import 'package:http/http.dart' as http;
@@ -16,21 +18,18 @@ import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
-import 'package:mobile_miniproject_app/pages/Profile.dart';
-import 'package:mobile_miniproject_app/pages/RiderDelivery.dart';
-import 'package:mobile_miniproject_app/pages/RiderHistory.dart';
-import 'package:mobile_miniproject_app/pages/RiderHome.dart';
-import 'package:mobile_miniproject_app/pages/RiderProfile.dart';
-import 'package:mobile_miniproject_app/shared/share_data.dart';
-import 'package:provider/provider.dart';
+import 'package:mobile_miniproject_app/pages/customer/Profile.dart';
+import 'package:mobile_miniproject_app/pages/rider/RiderHistory.dart';
+import 'package:mobile_miniproject_app/pages/rider/RiderHome.dart';
+import 'package:mobile_miniproject_app/pages/rider/RiderProfile.dart';
 
-class RiderReceivePage extends StatefulWidget {
+class RiderDeliveryPage extends StatefulWidget {
   int info_send_uid; // ประกาศตัวแปรในคลาสนี้
   int selectedIndex = 0;
   int info_receive_uid; // ประกาศตัวแปรในคลาสนี้
   int info_oid;
 
-  RiderReceivePage({
+  RiderDeliveryPage({
     super.key,
     required this.info_send_uid,
     required this.info_receive_uid,
@@ -39,14 +38,13 @@ class RiderReceivePage extends StatefulWidget {
   });
 
   @override
-  State<RiderReceivePage> createState() => _RiderReceivePageState();
+  State<RiderDeliveryPage> createState() => _RiderDeliveryPageState();
 }
 
-class _RiderReceivePageState extends State<RiderReceivePage> {
+class _RiderDeliveryPageState extends State<RiderDeliveryPage> {
   MapController mapController = MapController();
   List<GetUserSearchRes> send_Info = [];
   List<GetUserSearchRes> receive_Info = [];
-  List<GetUserSearchRes> rider_Info = [];
   List<GetSendOrder> order_one = [];
   int sender_uid = 0; // ประกาศตัวแปรเพื่อเก็บค่า
   int receiver_uid = 0;
@@ -55,10 +53,10 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
   String product_name = "";
   String product_detail = "";
   String product_imgUrl = "";
-  String product_imgUrl_status3 = "";
+  String product_imgUrl_status4 = "";
+  LatLng riderLatLng = LatLng(0, 0);
   LatLng send_latLng = LatLng(0, 0);
   LatLng receive_latLng = LatLng(0, 0);
-  LatLng rider_latLng = LatLng(0, 0);
   List<LatLng> polylinePoints = [];
   var db = FirebaseFirestore.instance;
   int _selectedIndex = 0;
@@ -72,7 +70,14 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
     sender_uid = widget.info_send_uid;
     receiver_uid = widget.info_receive_uid;
     _selectedIndex = widget.selectedIndex;
-    loadDataAsync(); // กำหนดค่าใน initState
+    setupInitialData(); // กำหนดค่าใน initState
+  }
+
+  Future<void> setupInitialData() async {
+    await loadRiderLocation();
+    await loadDataAsync();
+    await getRouteCoordinates();
+    startRiderMovement();
   }
 
   @override
@@ -98,8 +103,6 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
                   TileLayer(
                     urlTemplate:
                         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.example.app',
-                    maxNativeZoom: 19,
                   ),
                   MarkerLayer(
                     markers: [
@@ -112,7 +115,6 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
                           color: Colors.red,
                           size: 40,
                         ),
-                        alignment: Alignment.center,
                       ),
                       Marker(
                         point: receive_latLng,
@@ -123,16 +125,16 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
                           color: Colors.green,
                           size: 40,
                         ),
-                        alignment: Alignment.center,
                       ),
+                      // เพิ่ม Marker ของ Rider
                       Marker(
-                        point: rider_latLng,
-                        width: 60,
-                        height: 60,
+                        point: riderLatLng,
+                        width: 60, // เพิ่มขนาดให้ใหญ่ขึ้น
+                        height: 60, // เพิ่มขนาดให้ใหญ่ขึ้น
                         child: Icon(
                           Icons.motorcycle,
                           color: Colors.blue,
-                          size: 30,
+                          size: 30, // เพิ่มขนาดไอคอน
                         ),
                       ),
                     ],
@@ -141,7 +143,7 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
                     PolylineLayer(
                       polylines: [
                         Polyline(
-                          points: polylinePoints, // แสดงเส้นทางที่คำนวณได้
+                          points: polylinePoints,
                           strokeWidth: 4.0,
                           color: Colors.blue,
                         ),
@@ -233,7 +235,7 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
                         sendImage();
                       },
                       child: Text(
-                        "Receive",
+                        "Delivered",
                         style: TextStyle(fontSize: 17),
                       ),
                       style: FilledButton.styleFrom(
@@ -287,7 +289,6 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
   }
 
   Future<void> loadDataAsync() async {
-    log("IODIDODIOOOOOOOOOOOOOOOOOOOOOOOOIDDIDIIDIDIDIDIDID+${widget.info_oid}");
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
 
@@ -321,20 +322,6 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
           double re_longitude = double.parse(latLngList[1]);
           receive_latLng = LatLng(re_latitude, re_longitude);
         }
-      }
-    }
-
-    var rider = await http.get(Uri.parse(
-        "$url/db/get_Rider/${context.read<ShareData>().user_info_send.uid}"));
-    if (rider.statusCode == 200) {
-      rider_Info = getUserSearchResFromJson(rider.body);
-      if (rider_Info.first.coordinates != null) {
-        final coords = rider_Info.first.coordinates!.split(',');
-        final lat = double.parse(coords[0]);
-        final lng = double.parse(coords[1]);
-        rider_latLng = LatLng(lat, lng);
-      } else {
-        // Handle null case
       }
     }
 
@@ -455,7 +442,7 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
     String url = value['apiEndpoint'];
 
     http.put(
-      Uri.parse("$url/db/update_status_more/${widget.info_oid}/${3}"),
+      Uri.parse("$url/db/update_status_more/${widget.info_oid}/${4}"),
       headers: {"Content-Type": "application/json; charset=utf-8"},
     );
 
@@ -466,8 +453,8 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
     await imageRef.putFile(File(image!.path));
 
     // รับ URL ของภาพที่อัปโหลด
-    product_imgUrl_status3 = await imageRef.getDownloadURL();
-    log(product_imgUrl_status3.toString());
+    product_imgUrl_status4 = await imageRef.getDownloadURL();
+    log(product_imgUrl_status4.toString());
 
     if (image == null) {
       // ปิด Dialog
@@ -489,10 +476,10 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
 
         // ข้อมูลที่ต้องการอัปเดต
         var dataToUpdate = {
-          'Order_status': 3,
+          'Order_status': 4,
           'rider_coordinates':
-              '${send_latLng.latitude},${send_latLng.longitude}',
-          'status3_product_img': product_imgUrl_status3,
+              '${receive_latLng.latitude},${receive_latLng.longitude}',
+          'status4_product_img': product_imgUrl_status4,
         };
 
         // อัปเดตข้อมูลใน Firebase
@@ -511,11 +498,7 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
 
         // ปิด Dialog หลังจากอัปโหลดเสร็จสิ้น
         Navigator.of(context).pop();
-        Get.to(() => RiderDeliveryPage(
-            info_send_uid: widget.info_send_uid,
-            info_receive_uid: widget.info_receive_uid,
-            info_oid: widget.info_oid,
-            selectedIndex: 1));
+        Get.to(() => RiderHomePage());
       } catch (e) {
         log('Error updating document: $e');
 
@@ -531,6 +514,69 @@ class _RiderReceivePageState extends State<RiderReceivePage> {
             textColor: Colors.white,
             fontSize: 15.0);
       }
+    }
+  } // เพิ่ม library สำหรับ Timer
+
+  Future<void> startRiderMovement() async {
+    // ตรวจสอบการอนุญาตตำแหน่ง
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      print("Location services are disabled.");
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        print("Location permissions are denied.");
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      print("Location permissions are permanently denied.");
+      return;
+    }
+
+    // เริ่มติดตามตำแหน่ง GPS
+    Geolocator.getPositionStream(
+      locationSettings: LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10, // ปรับตามความถี่ที่ต้องการให้เปลี่ยนตำแหน่ง
+      ),
+    ).listen((Position position) async {
+      setState(() {
+        riderLatLng = LatLng(position.latitude, position.longitude);
+      });
+
+      // อัปเดตตำแหน่งไปยัง Firebase
+      var doc = "order${widget.info_oid}";
+      await db.collection('Order_Info').doc(doc).update(
+          {'rider_coordinates': '${position.latitude},${position.longitude}'});
+
+      print(
+          "Rider position updated to: ${position.latitude}, ${position.longitude}");
+    });
+  }
+
+  Future<void> loadRiderLocation() async {
+    var riderDoc =
+        await db.collection('Order_Info').doc('order${widget.info_oid}').get();
+    if (riderDoc.exists) {
+      String riderCoordinates = riderDoc.data()?['rider_coordinates'];
+      print('Rider Coordinates: $riderCoordinates'); // เพิ่มการพิมพ์ข้อมูลพิกัด
+      if (riderCoordinates != null) {
+        List<String> latLngList = riderCoordinates.split(',');
+        if (latLngList.length == 2) {
+          double riderLat = double.parse(latLngList[0]);
+          double riderLng = double.parse(latLngList[1]);
+          riderLatLng = LatLng(riderLat, riderLng);
+          print(
+              'Parsed LatLngกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกกก: $riderLatLng'); // ตรวจสอบพิกัด
+        }
+      }
+      setState(() {});
     }
   }
 }

@@ -5,7 +5,7 @@ import 'package:get/get_navigation/get_navigation.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/Home_Receive.dart';
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
-import 'package:mobile_miniproject_app/pages/Profile.dart';
+import 'package:mobile_miniproject_app/pages/customer/Profile.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 

@@ -9,12 +9,12 @@ import 'package:http/http.dart' as http;
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home_Receive.dart';
-import 'package:mobile_miniproject_app/pages/OrderInfo.dart';
+import 'package:mobile_miniproject_app/pages/customer/OrderInfo.dart';
 import 'package:mobile_miniproject_app/pages/Receive_AllMap.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
-import 'package:mobile_miniproject_app/pages/Profile.dart';
+import 'package:mobile_miniproject_app/pages/customer/Profile.dart';
 
 class Home_ReceivePage extends StatefulWidget {
   final int selectedIndex;
