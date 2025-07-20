@@ -232,25 +232,6 @@ class _HomePageState extends State<RestaurantinfoPage> {
     super.dispose();
   }
 
-  void _onItemTapped(int index) {
-    if (index == 2) return;
-    setState(() => _selectedIndex = index);
-    if (index == 4) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) =>
-                ProfilePage(onClose: () {}, selectedIndex: 1)),
-      );
-    } else {
-      _pageController.animateToPage(
-        index > 2 ? index - 1 : index,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final topAdd = context.watch<ShareData>().customer_addresses;
@@ -266,7 +247,6 @@ class _HomePageState extends State<RestaurantinfoPage> {
         ),
       ),
       body: buildMainContent(),
-      bottomNavigationBar: buildBottomNavigationBar(),
       bottomSheet: _selectedMenuCounts.isNotEmpty
           ? Container(
               height: 60,
@@ -311,41 +291,6 @@ class _HomePageState extends State<RestaurantinfoPage> {
               ),
             )
           : null,
-    );
-  }
-
-  Widget buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(40.0)),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, -2)),
-        ],
-      ),
-      child: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        selectedItemColor: const Color.fromARGB(255, 115, 28, 168),
-        unselectedItemColor: Colors.grey,
-        backgroundColor: Colors.white,
-        iconSize: 20,
-        selectedLabelStyle:
-            const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-        unselectedLabelStyle: const TextStyle(fontSize: 10),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.favorite), label: 'Favorite'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.notifications), label: 'Notis'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
-      ),
     );
   }
 

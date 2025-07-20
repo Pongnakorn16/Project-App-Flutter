@@ -51,14 +51,12 @@ class _HomePageState extends State<CustomerHomePage> {
 
   void _onItemTapped(int index) {
     if (index == 2) return;
-    setState(() => _selectedIndex = index);
-    if (index == 4) {
+    if (index == 3) {
       Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) =>
-                ProfilePage(onClose: () {}, selectedIndex: 1)),
-      );
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProfilePage(onClose: () {}, selectedIndex: 3),
+          ));
     } else {
       _pageController.animateToPage(
         index > 2 ? index - 1 : index,
