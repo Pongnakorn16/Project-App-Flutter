@@ -496,7 +496,6 @@ class _ProfilePageState extends State<ProfilePage> {
             final address =
                 "${place.thoroughfare ?? ''} ${place.subThoroughfare ?? ''}, ${place.locality ?? ''}, ${place.country ?? ''}";
             addressCtl.text = address;
-            context.read<ShareData>().cus_selected_add = address;
           } else {
             addressCtl.text = "${value.latitude}, ${value.longitude}";
           }
