@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -36,10 +33,7 @@ class DefaultFirebaseOptions {
           'you can reconfigure this by running the FlutterFire CLI again.',
         );
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -54,9 +48,30 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDkLQEUjXv9tZLwZteOtmL4Ygbp6KtreuI',
-    appId: '1:587837296562:android:47f610590b92762d97deab',
+    appId: '1:587837296562:android:0e35c6345b6fa66a97deab',
     messagingSenderId: '587837296562',
     projectId: 'deliveryapp-351e7',
     storageBucket: 'deliveryapp-351e7.appspot.com',
   );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyBThzdUzHHSd3PT8nW0xmaxRDlDyM1tgj4',
+    appId: '1:587837296562:web:a1b514179c86e02997deab',
+    messagingSenderId: '587837296562',
+    projectId: 'deliveryapp-351e7',
+    authDomain: 'deliveryapp-351e7.firebaseapp.com',
+    storageBucket: 'deliveryapp-351e7.appspot.com',
+    measurementId: 'G-DP28M0MGRH',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyBThzdUzHHSd3PT8nW0xmaxRDlDyM1tgj4',
+    appId: '1:587837296562:web:674f03196a401bd197deab',
+    messagingSenderId: '587837296562',
+    projectId: 'deliveryapp-351e7',
+    authDomain: 'deliveryapp-351e7.firebaseapp.com',
+    storageBucket: 'deliveryapp-351e7.appspot.com',
+    measurementId: 'G-02FDHEVC9F',
+  );
+
 }
