@@ -255,6 +255,23 @@ class _ProfilePageState extends State<ProfilePage> {
                                                   subtitle: Text(
                                                       addresses[0].ca_detail ??
                                                           ''),
+                                                  trailing: SizedBox(
+                                                    width:
+                                                        30, // กำหนดความกว้างให้พอดี
+                                                    height: 30,
+                                                    child: InkWell(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              20),
+                                                      child: Icon(Icons.edit,
+                                                          size: 18,
+                                                          color: Colors.blue),
+                                                      onTap: () {
+                                                        showMapPickerDialog(
+                                                            context);
+                                                      },
+                                                    ),
+                                                  ),
                                                   onTap: () {
                                                     final a = addresses[0];
                                                     final addressText =
@@ -274,6 +291,23 @@ class _ProfilePageState extends State<ProfilePage> {
                                                   subtitle: Text(
                                                       addresses[1].ca_detail ??
                                                           ''),
+                                                  trailing: SizedBox(
+                                                    width:
+                                                        30, // กำหนดความกว้างให้พอดี
+                                                    height: 30,
+                                                    child: InkWell(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              20),
+                                                      child: Icon(Icons.edit,
+                                                          size: 18,
+                                                          color: Colors.blue),
+                                                      onTap: () {
+                                                        showMapPickerDialog(
+                                                            context);
+                                                      },
+                                                    ),
+                                                  ),
                                                   onTap: () {
                                                     final a = addresses[1];
                                                     final addressText =
@@ -283,19 +317,24 @@ class _ProfilePageState extends State<ProfilePage> {
                                                     Navigator.pop(context);
                                                   },
                                                 ),
-                                              Divider(),
-                                              ListTile(
-                                                leading: Icon(Icons.gps_fixed,
-                                                    color: Colors.blue),
-                                                title: Text(
-                                                    "เลือกตำแหน่งจากแผนที่"),
-                                                onTap: () async {
-                                                  Navigator.pop(
-                                                      context); // ปิด popup ที่อยู่
-                                                  await showMapPickerDialog(
-                                                      context); // เรียก popup map
-                                                },
-                                              ),
+                                              if (addresses.length < 2) ...[
+                                                Divider(),
+                                                ListTile(
+                                                  leading: Icon(
+                                                    Icons
+                                                        .add_circle_outline_rounded,
+                                                    color: Colors.blue,
+                                                  ),
+                                                  title: Text(
+                                                      "เพิ่มที่อยู่โดยเลือกตำแหน่งจากแผนที่"),
+                                                  onTap: () async {
+                                                    Navigator.pop(
+                                                        context); // ปิด popup ที่อยู่
+                                                    await showMapPickerDialog(
+                                                        context); // เรียก popup map
+                                                  },
+                                                ),
+                                              ],
                                             ],
                                           ),
                                         );
@@ -546,6 +585,16 @@ class _ProfilePageState extends State<ProfilePage> {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
     int userId = context.read<ShareData>().user_info_send.uid;
+
+    final res_Add = await http.get(Uri.parse("$url/db/loadCusAdd/$userId"));
+    if (res_Add.statusCode == 200) {
+      final List<dynamic> jsonResponse = json.decode(res_Add.body);
+      final List<CusAddressGetResponse> res_addList =
+          jsonResponse.map((e) => CusAddressGetResponse.fromJson(e)).toList();
+      if (res_addList.isNotEmpty) {
+        context.read<ShareData>().customer_addresses = res_addList;
+      }
+    }
 
     final cusAddr = context
         .read<ShareData>()
