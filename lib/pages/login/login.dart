@@ -15,6 +15,8 @@ import 'package:mobile_miniproject_app/pages/restaurant/RestaurantHome.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderHome.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -346,6 +348,48 @@ class _LoginPageState extends State<LoginPage> {
           builder: (context) => const RegisterCustomer(),
         ));
   }
-}
 
-void signInWithGoogle() {}
+  void signInWithGoogle() async {
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) {
+        Fluttertoast.showToast(msg: "ผู้ใช้ยกเลิกการล็อกอิน");
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+
+      final user = userCredential.user;
+
+      if (user != null) {
+        Fluttertoast.showToast(msg: "ล็อกอินด้วย Google สำเร็จ");
+
+        // คุณสามารถเก็บข้อมูลผู้ใช้ไว้ใน ShareData หรือดึงข้อมูลเพิ่มจาก backend ได้ที่นี่
+        print("ชื่อ: ${user.displayName}");
+        print("อีเมล: ${user.email}");
+
+        // ย้ายไปหน้า home หรืออื่น ๆ ได้เลย
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => CustomerHomePage()),
+        );
+      }
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "เกิดข้อผิดพลาด: ${e.toString()}",
+        backgroundColor: Colors.red,
+      );
+    }
+  }
+}
