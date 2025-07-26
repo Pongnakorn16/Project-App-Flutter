@@ -56,22 +56,22 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyBThzdUzHHSd3PT8nW0xmaxRDlDyM1tgj4',
-    appId: '1:587837296562:web:a1b514179c86e02997deab',
-    messagingSenderId: '587837296562',
-    projectId: 'deliveryapp-351e7',
-    authDomain: 'deliveryapp-351e7.firebaseapp.com',
-    storageBucket: 'deliveryapp-351e7.appspot.com',
-    measurementId: 'G-DP28M0MGRH',
-  );
-
-  static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyBThzdUzHHSd3PT8nW0xmaxRDlDyM1tgj4',
     appId: '1:587837296562:web:674f03196a401bd197deab',
     messagingSenderId: '587837296562',
     projectId: 'deliveryapp-351e7',
     authDomain: 'deliveryapp-351e7.firebaseapp.com',
     storageBucket: 'deliveryapp-351e7.appspot.com',
     measurementId: 'G-02FDHEVC9F',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyBThzdUzHHSd3PT8nW0xmaxRDlDyM1tgj4',
+    appId: '1:587837296562:web:067f832d8849571297deab',
+    messagingSenderId: '587837296562',
+    projectId: 'deliveryapp-351e7',
+    authDomain: 'deliveryapp-351e7.firebaseapp.com',
+    storageBucket: 'deliveryapp-351e7.appspot.com',
+    measurementId: 'G-2YCCBVYMVD',
   );
 
 }

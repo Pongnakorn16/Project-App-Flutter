@@ -352,6 +352,7 @@ class _LoginPageState extends State<LoginPage> {
   void signInWithGoogle() async {
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn();
+      await googleSignIn.signOut();
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
       if (googleUser == null) {
@@ -376,8 +377,8 @@ class _LoginPageState extends State<LoginPage> {
         Fluttertoast.showToast(msg: "ล็อกอินด้วย Google สำเร็จ");
 
         // คุณสามารถเก็บข้อมูลผู้ใช้ไว้ใน ShareData หรือดึงข้อมูลเพิ่มจาก backend ได้ที่นี่
-        print("ชื่อ: ${user.displayName}");
-        print("อีเมล: ${user.email}");
+        log("${user.displayName}");
+        log("${user.email}");
 
         // ย้ายไปหน้า home หรืออื่น ๆ ได้เลย
         Navigator.push(
