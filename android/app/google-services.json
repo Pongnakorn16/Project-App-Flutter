@@ -31,7 +31,16 @@
           "package_name": "com.yourname.dinny"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "587837296562-ohrst3hs71tg29qce4okarg3mch0a6a8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yourname.dinny",
+            "certificate_hash": "9fe1c9ac32ce06046467a5e1d9f4903d7f8def8e"
+          }
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDkLQEUjXv9tZLwZteOtmL4Ygbp6KtreuI"

@@ -386,6 +386,7 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } catch (e) {
+      log(e.toString());
       Fluttertoast.showToast(
         msg: "เกิดข้อผิดพลาด: ${e.toString()}",
         backgroundColor: Colors.red,
