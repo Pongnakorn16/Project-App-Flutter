@@ -14,7 +14,7 @@ import 'package:mobile_miniproject_app/pages/Send_AllMap.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
-import 'package:mobile_miniproject_app/pages/customer/Profile.dart';
+import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 
 class Home_SendPage extends StatefulWidget {
   final int selectedIndex;

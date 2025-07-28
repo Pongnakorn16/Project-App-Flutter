@@ -5,6 +5,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/user_login_post_req.dart';
+import 'package:mobile_miniproject_app/models/response/GoogleLoginUser.dart';
 import 'package:mobile_miniproject_app/models/response/UserLoginPostRes.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerHome.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
@@ -167,7 +168,7 @@ class _LoginPageState extends State<LoginPage> {
                                 width: 300,
                                 height: 50,
                                 child: FilledButton(
-                                  onPressed: signInWithGoogle,
+                                  onPressed: signInWithGoogle_Check,
                                   style: ButtonStyle(
                                     backgroundColor: WidgetStateProperty.all(
                                         Color.fromRGBO(66, 133, 244, 1.0)),
@@ -288,19 +289,19 @@ class _LoginPageState extends State<LoginPage> {
         context.read<ShareData>().user_info_send = User;
 
         // นำทางตามประเภทผู้ใช้
-        if (res.source_table == 'BP_rider') {
+        if (res.source_table == 'rider') {
           log("Rider User Logged In");
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => RiderHomePage()),
           );
-        } else if (res.source_table == 'BP_restaurant') {
+        } else if (res.source_table == 'restaurant') {
           log("Restaurant User Logged In");
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => RestaurantHomePage()),
           );
-        } else if (res.source_table == 'BP_customer') {
+        } else if (res.source_table == 'customer') {
           log("Customer User Logged In");
           Navigator.push(
             context,
@@ -349,7 +350,7 @@ class _LoginPageState extends State<LoginPage> {
         ));
   }
 
-  void signInWithGoogle() async {
+  void signInWithGoogle_Check() async {
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn();
       await googleSignIn.signOut();
@@ -374,17 +375,124 @@ class _LoginPageState extends State<LoginPage> {
       final user = userCredential.user;
 
       if (user != null) {
-        Fluttertoast.showToast(msg: "ล็อกอินด้วย Google สำเร็จ");
+        var google_model = GoogleLoginUser(
+            email: user.email.toString(),
+            displayName: user.displayName.toString(),
+            photoUrl: user.photoURL.toString());
+
+        try {
+          var response = await http.post(
+            Uri.parse("$url/db/google_login_check"),
+            headers: {"Content-Type": "application/json; charset=utf-8"},
+            body: GoogleLoginUserToJson(google_model),
+          );
+          log("SPIDERMAN");
+          log(response.body);
+          log("Status Code: ${response.statusCode}");
+
+          if (response.statusCode == 200) {
+            var data = jsonDecode(response.body);
+
+            if (data['status'] == 'exist') {
+              // login สำเร็จ เข้าใช้งานได้เลย
+              // ย้ายไปหน้า home หรืออื่น ๆ ได้เลย
+
+              Map<String, dynamic> jsonResponse = json.decode(response.body);
+              var res = UserLoginPostResponse.fromJson(jsonResponse);
+              log(res.id.toString() + "ASASASDDDDDDDDDDDDDDDDDDDDD");
+              User_Info_Send User = User_Info_Send();
+              User.uid = res.id;
+              User.email = res.email;
+              User.name = res.name;
+              User.phone = res.phone;
+              User.user_image = res.user_image;
+              User.balance = res.balance;
+              User.active_status = res.active_status;
+              User.user_type = res.source_table;
+
+              context.read<ShareData>().user_info_send = User;
+              Fluttertoast.showToast(msg: "ล็อกอินด้วย Google สำเร็จ");
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CustomerHomePage()),
+              );
+              log("Login OK - User exists");
+              Fluttertoast.showToast(msg: "เข้าสู่ระบบสำเร็จ");
+              // ทำอย่างอื่นต่อ เช่นไปหน้า Home
+            } else if (data['status'] == 'new') {
+              // กรณี user ใหม่ ต้องเลือกประเภท
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: Text(
+                      'เนื่องจากใช้บัญชี Google นี้ login เป็นครั้งแรก กรุณาเลือกประเภทผู้ใช้',
+                      style: TextStyle(
+                        fontSize: 15, // ใส่ขนาดที่ต้องการ
+                        fontWeight: FontWeight.bold, // ใส่หรือไม่ใส่ก็ได้
+                      ),
+                    ),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            GoogleRegister(google_model, 'customer');
+                          },
+                          child: Text('ลูกค้า'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            GoogleRegister(google_model, 'restaurant');
+                          },
+                          child: Text('ร้านอาหาร'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            GoogleRegister(google_model, 'rider');
+                          },
+                          child: Text('ไรเดอร์'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            } else {
+              Fluttertoast.showToast(
+                  msg: "เกิดข้อผิดพลาด ไม่สามารถเข้าสู่ระบบได้",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.CENTER,
+                  backgroundColor: Colors.red,
+                  textColor: Colors.white);
+            }
+          } else {
+            Fluttertoast.showToast(
+              msg: "อีเมล หรือ รหัสผ่านไม่ถูกต้อง โปรดลองใหม่อีกครั้ง",
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.CENTER,
+              backgroundColor: Colors.red,
+              textColor: Colors.white,
+            );
+          }
+        } catch (err) {
+          log("Login Failed:");
+          log(err.toString());
+          Fluttertoast.showToast(
+            msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+          );
+        }
 
         // คุณสามารถเก็บข้อมูลผู้ใช้ไว้ใน ShareData หรือดึงข้อมูลเพิ่มจาก backend ได้ที่นี่
         log("${user.displayName}");
         log("${user.email}");
-
-        // ย้ายไปหน้า home หรืออื่น ๆ ได้เลย
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => CustomerHomePage()),
-        );
       }
     } catch (e) {
       log(e.toString());
@@ -392,6 +500,67 @@ class _LoginPageState extends State<LoginPage> {
         msg: "เกิดข้อผิดพลาด: ${e.toString()}",
         backgroundColor: Colors.red,
       );
+    }
+  }
+
+  void GoogleRegister(GoogleLoginUser googleModel, String role) async {
+    Map<String, dynamic> registerBody = {
+      'email': googleModel.email,
+      'displayName': googleModel.displayName,
+      'photoUrl': googleModel.photoUrl,
+      'role': role,
+    };
+
+    try {
+      var registerResponse = await http.post(
+        Uri.parse("$url/db/google_register"),
+        headers: {"Content-Type": "application/json; charset=utf-8"},
+        body: jsonEncode(registerBody),
+      );
+      log("SPIDERMAN");
+      log(registerResponse.body);
+      log("Status Code: ${registerResponse.statusCode}");
+
+      if (registerResponse.statusCode == 200) {
+        Map<String, dynamic> jsonResponse = json.decode(registerResponse.body);
+        var res = UserLoginPostResponse.fromJson(jsonResponse);
+        log("Parsed ID from model: ${res.id}");
+        Fluttertoast.showToast(msg: "สมัครสมาชิกสำเร็จ");
+        log(res.id.toString() + "ASASASDDDDDDDDDDDDDDDDDDDDD");
+        User_Info_Send User = User_Info_Send();
+        User.uid = res.id;
+        User.email = res.email;
+        User.name = res.name;
+        User.phone = res.phone;
+        User.user_image = res.user_image;
+        User.balance = res.balance;
+        User.active_status = res.active_status;
+        User.user_type = res.source_table;
+
+        context.read<ShareData>().user_info_send = User;
+
+        // ไปยังหน้าตาม role
+        if (role == "customer") {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => CustomerHomePage()),
+          );
+        } else if (role == "restaurant") {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => RestaurantHomePage()),
+          );
+        } else if (role == "rider") {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => RiderHomePage()),
+          );
+        }
+      } else {
+        Fluttertoast.showToast(msg: "สมัครสมาชิกไม่สำเร็จ");
+      }
+    } catch (e) {
+      Fluttertoast.showToast(msg: "เกิดข้อผิดพลาดระหว่างสมัครสมาชิก");
     }
   }
 }

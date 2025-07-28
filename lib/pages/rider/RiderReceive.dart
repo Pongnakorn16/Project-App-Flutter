@@ -16,7 +16,7 @@ import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
-import 'package:mobile_miniproject_app/pages/customer/Profile.dart';
+import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderDelivery.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderHistory.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderHome.dart';

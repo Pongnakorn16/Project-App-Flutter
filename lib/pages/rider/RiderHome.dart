@@ -25,7 +25,7 @@ import 'package:mobile_miniproject_app/pages/rider/RiderOrderInfo.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderProfile.dart';
 import 'package:mobile_miniproject_app/pages/Shop.dart';
 import 'package:mobile_miniproject_app/pages/Ticket.dart';
-import 'package:mobile_miniproject_app/pages/customer/Profile.dart';
+import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 

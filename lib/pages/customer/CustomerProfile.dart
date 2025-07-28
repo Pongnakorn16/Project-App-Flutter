@@ -6,6 +6,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/get_navigation.dart';
+import 'package:get/get_utils/get_utils.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
@@ -64,6 +65,11 @@ class _ProfilePageState extends State<ProfilePage> {
   CusInfoGetResponse cus_Info = CusInfoGetResponse();
   late Future<void> loadData;
   bool isLoading = false;
+  String address = '';
+  String detail = '';
+  int ca_id_check = 0;
+  CusAddressGetResponse? cusAddr;
+  var localCusAddr;
 
   @override
   void initState() {
@@ -164,7 +170,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 prefixIcon: Icon(Icons.phone),
                                 hintText: cus_Info.cus_phone.isNotEmpty
                                     ? cus_Info.cus_phone
-                                    : '',
+                                    : 'เพิ่มเบอร์โทร',
                               ),
                             ),
                             SizedBox(height: 15.0), // เพิ่มระยะห่างระหว่างฟิลด์
@@ -187,6 +193,8 @@ class _ProfilePageState extends State<ProfilePage> {
                             TextField(
                               obscureText: true,
                               controller: passwordCtl,
+                              enabled: cus_Info.cus_password
+                                  .isNotEmpty, // ถ้า password ว่าง จะ disable field
                               decoration: InputDecoration(
                                 filled: true,
                                 fillColor: Color.fromARGB(255, 228, 225, 225),
@@ -196,14 +204,16 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 prefixIcon: Icon(Icons.lock),
                                 hintText: cus_Info.cus_password.isNotEmpty
-                                    ? cus_Info.cus_password
-                                    : '', // ทำให้ hintText ว่างไปเลย
+                                    ? '' // ถ้ามี password ก็ไม่ต้องแสดง hint
+                                    : 'เข้าสู่ระบบด้วย Google แก้ไขไม่ได้',
                               ),
                             ),
+
                             SizedBox(height: 15.0), // เพิ่มระยะห่างระหว่างฟิลด์
                             TextField(
                               obscureText: true,
                               controller: conPassCtl,
+                              enabled: cus_Info.cus_password.isNotEmpty,
                               decoration: InputDecoration(
                                 filled: true,
                                 fillColor: Color.fromARGB(255, 228, 225, 225),
@@ -214,7 +224,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 prefixIcon: Icon(Icons.lock),
                                 hintText: cus_Info.cus_password.isNotEmpty
                                     ? cus_Info.cus_password
-                                    : '', // ทำให้ hintText ว่างไปเลย
+                                    : 'เข้าสู่ระบบด้วย Google แก้ไขไม่ได้', // ทำให้ hintText ว่างไปเลย
                               ),
                             ),
                             SizedBox(height: 15.0),
@@ -348,7 +358,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                         .cus_selected_add
                                         .isNotEmpty
                                     ? context.read<ShareData>().cus_selected_add
-                                    : '',
+                                    : 'เพิ่มที่อยู่',
                               ),
                             ),
 
@@ -387,7 +397,29 @@ class _ProfilePageState extends State<ProfilePage> {
                                     FilledButton(
                                       onPressed: () {
                                         Get.to(() => LoginPage());
-                                        gs.remove('Phone');
+                                        context
+                                            .read<ShareData>()
+                                            .cus_selected_add = '';
+                                        context
+                                            .read<ShareData>()
+                                            .user_info_send = User_Info_Send();
+                                        context
+                                                .read<ShareData>()
+                                                .user_info_receive =
+                                            User_Info_Receive();
+                                        context
+                                            .read<ShareData>()
+                                            .customer_addresses = [];
+                                        context
+                                            .read<ShareData>()
+                                            .restaurant_type = [];
+                                        context
+                                            .read<ShareData>()
+                                            .restaurant_near = [];
+                                        context
+                                            .read<ShareData>()
+                                            .restaurant_all = [];
+                                        Get.to(() => LoginPage());
                                       },
                                       style: FilledButton.styleFrom(
                                         backgroundColor: Colors
@@ -585,50 +617,53 @@ class _ProfilePageState extends State<ProfilePage> {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
     int userId = context.read<ShareData>().user_info_send.uid;
+    log("${userId} + IDDDDDIIIIIIIIIIIIIIIIIIDDDDDDDDDDDDDDDIDDDDDDDDDDDDDDDDD");
 
     final res_Add = await http.get(Uri.parse("$url/db/loadCusAdd/$userId"));
     if (res_Add.statusCode == 200) {
       final List<dynamic> jsonResponse = json.decode(res_Add.body);
       final List<CusAddressGetResponse> res_addList =
           jsonResponse.map((e) => CusAddressGetResponse.fromJson(e)).toList();
-      if (res_addList.isNotEmpty) {
-        context.read<ShareData>().customer_addresses = res_addList;
-      }
+
+      context.read<ShareData>().customer_addresses = res_addList;
     }
 
-    final cusAddr = context
-        .read<ShareData>()
-        .customer_addresses[0]; ////////เดี์ยวหาวิธีแก้ก่อนหาคิดก่อน
-
-    final addressText = "${cusAddr.ca_address}, ${cusAddr.ca_detail}";
+    String addressText = '';
+    if (context.read<ShareData>().customer_addresses.isNotEmpty) {
+      final cusAddr = context.read<ShareData>().customer_addresses[0];
+      addressText = "${cusAddr.ca_address}, ${cusAddr.ca_detail}";
+      context.read<ShareData>().cus_selected_add = addressText;
+      addressCtl.text = addressText;
+    }
 
     try {
-      var res = await http.get(Uri.parse("$url/db/get_Profile/${userId}"));
+      var res = await http.get(Uri.parse("$url/db/get_CusProfile/$userId"));
       log("Response status: ${res.statusCode}");
       log("Response body: ${res.body}");
 
       if (res.statusCode == 200) {
         final decoded = jsonDecode(res.body);
-        cus_Info = CusInfoGetResponse.fromJson(decoded[0]);
+        if (decoded != null && decoded.isNotEmpty) {
+          cus_Info = CusInfoGetResponse.fromJson(decoded[0]);
 
-        phoneCtl.text = cus_Info.cus_phone;
-        nameCtl.text = cus_Info.cus_name;
-        passwordCtl.text = cus_Info.cus_password;
-        conPassCtl.text = cus_Info.cus_password;
-        addressCtl.text = addressText;
-        context.read<ShareData>().cus_selected_add = addressText;
-        if (cus_Info != null) {
-          log("CUS_Info : " + cus_Info.toString());
-          log(cus_Info.cus_name.toString());
-          setState(() {});
+          if (cus_Info != null) {
+            phoneCtl.text = cus_Info.cus_phone;
+            nameCtl.text = cus_Info.cus_name;
+            passwordCtl.text = cus_Info.cus_password;
+            conPassCtl.text = cus_Info.cus_password;
+
+            log("CUS_Info : " + cus_Info.toString());
+            log(cus_Info.cus_name.toString());
+            setState(() {});
+          }
         } else {
-          log("Failed to parse user info.");
+          log("ไม่มีข้อมูลผู้ใช้");
         }
       } else {
-        log('Failed to load user info. Status code: ${res.statusCode}');
+        log('โหลดข้อมูลผู้ใช้ไม่สำเร็จ: ${res.statusCode}');
       }
     } catch (e) {
-      log("Error occurred: $e");
+      log("เกิดข้อผิดพลาด: $e");
     }
   }
 
@@ -636,7 +671,6 @@ class _ProfilePageState extends State<ProfilePage> {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
 
-    // Validate input fields
     if (passwordCtl.text != conPassCtl.text) {
       Fluttertoast.showToast(
           msg:
@@ -651,7 +685,19 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     if (phoneCtl.text.isEmpty) {
-      phoneCtl.text = cus_Info.cus_phone;
+      if (cus_Info.cus_phone.isEmpty) {
+        Fluttertoast.showToast(
+          msg: "กรุณากรอกหมายเลขโทรศัพท์",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Color.fromARGB(255, 255, 0, 0),
+          textColor: Colors.white,
+          fontSize: 15.0,
+        );
+      } else {
+        phoneCtl.text = cus_Info.cus_phone;
+      }
     }
 
     if (nameCtl.text.isEmpty) {
@@ -659,16 +705,34 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     if (passwordCtl.text.isEmpty) {
+      if (cus_Info.cus_password.isEmpty) {
+        passwordCtl.text = "";
+      }
       passwordCtl.text = cus_Info.cus_password;
     }
 
     if (conPassCtl.text.isEmpty) {
+      if (cus_Info.cus_password.isEmpty) {
+        conPassCtl.text = "";
+      }
       conPassCtl.text = cus_Info.cus_password; // กำหนดให้ตรงกับ password
     }
 
     if (addressCtl.text.isEmpty) {
-      addressCtl.text = context.read<ShareData>().customer_addresses.toString();
-      ;
+      if (context.read<ShareData>().customer_addresses.isEmpty) {
+        Fluttertoast.showToast(
+          msg: "กรุณาเพิ่มที่อยู่",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Color.fromARGB(255, 255, 0, 0),
+          textColor: Colors.white,
+          fontSize: 15.0,
+        );
+      } else {
+        addressCtl.text =
+            context.read<ShareData>().customer_addresses.toString();
+      }
     }
 
     // Getting coordinates from the address
@@ -682,81 +746,85 @@ class _ProfilePageState extends State<ProfilePage> {
       coor = LatLng(0, 0); // Default value in case of error
     }
 
-    final cusAddr = context
-        .read<ShareData>()
-        .customer_addresses[0]; ////////เดี์ยวหาวิธีแก้ก่อนหาคิดก่อน
+    if (context.read<ShareData>().customer_addresses.isNotEmpty) {
+      cusAddr = context
+          .read<ShareData>()
+          .customer_addresses[0]; ////////เดี์ยวหาวิธีแก้ก่อนหาคิดก่อน
 
-    final address = "${cusAddr.ca_address}";
-    final detail = "${cusAddr.ca_detail}";
+      address = cusAddr!.ca_address;
+      detail = cusAddr!.ca_detail;
+    } else {
+      localCusAddr = cusAddr;
+      cusAddr = null;
+      address = "";
+      detail = "";
+    }
+
+    context.read<ShareData>().cus_selected_add = addressCtl.text;
+    List<String> addressParts =
+        context.read<ShareData>().cus_selected_add.split(',');
+    String addressFromUI =
+        addressParts.isNotEmpty ? addressParts[0].trim() : '';
+    String detailFromUI =
+        addressParts.length > 1 ? addressParts.sublist(1).join(',').trim() : '';
+    log("cus_selected_add: ${context.read<ShareData>().cus_selected_add}");
+    log("addressFromUI: $addressFromUI");
+    log("detailFromUI: $detailFromUI");
 
     // Create the model only with changed fields
 
-    // var model = CusProEditPostRequest(
-    //   cus_id: cus_Info.cus_id, // แทนที่ userId ด้วย ID ของผู้ใช้ที่กำลังอัปเดต
-    //   cus_phone: phoneCtl.text == cus_Info.cus_phone
-    //       ? cus_Info.cus_phone
-    //       : phoneCtl.text,
-    //   cus_name: nameCtl.text == cus_Info.cus_name
-    //       ? cus_Info.cus_name
-    //       : nameCtl.text,
-    //   cus_password: passwordCtl.text == cus_Info.cus_password
-    //       ? cus_Info.cus_password
-    //       : passwordCtl.text,
-    //   ca_address: context.read<ShareData>().cus_selected_add.split(',').first.trim() == address
-    // ? address
-    // : context.read<ShareData>().cus_selected_add.split(',').reversed.take(2).toList().reversed.join(',').trim(),
+    var model = CusProEditPostRequest(
+      cus_id: cus_Info.cus_id,
+      cus_phone: phoneCtl.text == cus_Info.cus_phone
+          ? cus_Info.cus_phone
+          : phoneCtl.text,
+      cus_name:
+          nameCtl.text == cus_Info.cus_name ? cus_Info.cus_name : nameCtl.text,
+      cus_password: passwordCtl.text == cus_Info.cus_password
+          ? cus_Info.cus_password
+          : passwordCtl.text,
+      cus_image: cus_Info.cus_image,
+      ca_id: localCusAddr != null ? localCusAddr.ca_id : ca_id_check,
+      ca_address: addressFromUI,
+      ca_detail: detailFromUI,
+      ca_coordinates: "${coor.latitude},${coor.longitude}",
+    );
 
-    //   ca_detail: context.read<ShareData>().cus_selected_add.split(',').length > 1
-    // ? context.read<ShareData>().cus_selected_add.split(',')[1].trim() == detail
-    //     ? detail
-    //     : context.read<ShareData>().cus_selected_add.split(',')[1].trim()
-    // : detail,
+    var response = await http.put(
+      Uri.parse("$url/db/edit_CusProfile"),
+      headers: {"Content-Type": "application/json; charset=utf-8"},
+      body: jsonEncode(model),
+    );
 
-    //   ca_coordinates: "${coor.latitude},${coor.longitude}",
-    // );
-
-//     Filter out null values
-//       var updatedModel = model.toJson()
-//         ..removeWhere((key, value) => value == null);
-
-//       var response = await http.put(
-//         Uri.parse("$url/db/editProfile/user"),
-//         headers: {"Content-Type": "application/json; charset=utf-8"},
-//         body: jsonEncode(updatedModel),
-//       );
-
-//       if (response.statusCode == 200) {
-//         log('Update is successful');
-//         Fluttertoast.showToast(
-//           msg: "แก้ไขข้อมูลสำเร็จแล้ว",
-//           toastLength: Toast.LENGTH_SHORT,
-//           gravity: ToastGravity.CENTER,
-//           timeInSecForIosWeb: 1,
-//           backgroundColor: Color.fromARGB(255, 7, 173, 45),
-//           textColor: Colors.white,
-//           fontSize: 15.0,
-//         );
-//         setState(() async {
-//           await loadProfileData();
-//           context.read<ShareData>().user_info_send.name = user_Info.first.name;
-//         });
-//       } else {
-//         // If the status code is not 200, get the message from response body
-//         var responseBody = jsonDecode(response.body);
-//         setState(() {
-//           Fluttertoast.showToast(
-//             msg: "หมายเลขโทรศัพท์นี้เป็นสมาชิกแล้ว!!!",
-//             toastLength: Toast.LENGTH_SHORT,
-//             gravity: ToastGravity.CENTER,
-//             timeInSecForIosWeb: 1,
-//             backgroundColor: Color.fromARGB(255, 255, 0, 0),
-//             textColor: Colors.white,
-//             fontSize: 15.0,
-//           );
-//         });
-//         log(responseBody['error']);
-//   }
-// }
+    if (response.statusCode == 200) {
+      log('Update is successful');
+      Fluttertoast.showToast(
+        msg: "แก้ไขข้อมูลสำเร็จแล้ว",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Color.fromARGB(255, 7, 173, 45),
+        textColor: Colors.white,
+        fontSize: 15.0,
+      );
+      await loadProfileData();
+      setState(() {});
+    } else {
+      // If the status code is not 200, get the message from response body
+      var responseBody = jsonDecode(response.body);
+      setState(() {
+        Fluttertoast.showToast(
+          msg: "หมายเลขโทรศัพท์นี้เป็นสมาชิกแล้ว!!!",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Color.fromARGB(255, 255, 0, 0),
+          textColor: Colors.white,
+          fontSize: 15.0,
+        );
+      });
+      log(responseBody['error']);
+    }
   }
 
   Future<void> uploadProfileImage() async {

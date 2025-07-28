@@ -43,34 +43,34 @@ class UserLoginPostResponse {
 
   factory UserLoginPostResponse.fromJson(Map<String, dynamic> json) =>
       UserLoginPostResponse(
-        id: json["cus_id"] ?? 0,
-        email: json["cus_email"] ?? '',
-        phone: json["cus_phone"] ?? '',
-        name: json["cus_name"] ?? '',
-        password: json["cus_password"] ?? '',
-        user_image: json["cus_image"] ?? '',
-        address: json["address"], // ถ้ายังไม่มีใน JSON ก็ไม่ต้องแก้
+        id: json["id"] ?? 0,
+        email: json["email"] ?? '',
+        phone: json["phone"] ?? '',
+        name: json["name"] ?? '',
+        password: '', // เนื่องจาก backend ไม่ส่ง password มา
+        user_image: json["user_image"] ?? '',
+        address: json["address"], // ถ้ามี
         address_detail: json["address_detail"],
         coordinates: json["coordinates"],
         license_plate: json["license_plate"],
-        balance: json["cus_balance"] ?? 0,
-        active_status: json["cus_active_status"] ?? 0,
+        balance: json["balance"] ?? 0,
+        active_status: json["active_status"] ?? 0,
         source_table: json["source_table"] ?? '',
       );
 
   Map<String, dynamic> toJson() => {
-        "cus_id": id,
-        "cus_email": email,
-        "cus_phone": phone,
-        "cus_name": name,
-        "cus_password": password,
-        "cus_image": user_image,
+        "id": id,
+        "email": email,
+        "phone": phone,
+        "name": name,
+        "password": password,
+        "user_image": user_image,
         "address": address,
         "address_detail": address_detail,
         "coordinates": coordinates,
         "license_plate": license_plate,
-        "cus_balance": balance,
-        "cus_active_status": active_status,
+        "balance": balance,
+        "active_status": active_status,
         "source_table": source_table,
       };
 }
