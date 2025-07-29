@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/get_navigation.dart';
 import 'package:get/get_utils/get_utils.dart';
@@ -277,8 +278,19 @@ class _ProfilePageState extends State<ProfilePage> {
                                                           size: 18,
                                                           color: Colors.blue),
                                                       onTap: () {
-                                                        showMapPickerDialog(
-                                                            context);
+                                                        context
+                                                                .read<ShareData>()
+                                                                .selected_ca_id =
+                                                            addresses[0].ca_id;
+                                                        context
+                                                            .read<ShareData>()
+                                                            .selected_address_index = 0;
+                                                        edit_cusShowMap(
+                                                            context,
+                                                            context
+                                                                .read<
+                                                                    ShareData>()
+                                                                .selected_ca_id);
                                                       },
                                                     ),
                                                   ),
@@ -288,6 +300,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                                         "${a.ca_address}, ${a.ca_detail}";
                                                     addressCtl.text =
                                                         addressText;
+                                                    context
+                                                        .read<ShareData>()
+                                                        .selected_address_index = 0;
                                                     Navigator.pop(context);
                                                   },
                                                 ),
@@ -313,8 +328,19 @@ class _ProfilePageState extends State<ProfilePage> {
                                                           size: 18,
                                                           color: Colors.blue),
                                                       onTap: () {
-                                                        showMapPickerDialog(
-                                                            context);
+                                                        context
+                                                                .read<ShareData>()
+                                                                .selected_ca_id =
+                                                            addresses[1].ca_id;
+                                                        context
+                                                            .read<ShareData>()
+                                                            .selected_address_index = 1;
+                                                        edit_cusShowMap(
+                                                            context,
+                                                            context
+                                                                .read<
+                                                                    ShareData>()
+                                                                .selected_ca_id);
                                                       },
                                                     ),
                                                   ),
@@ -324,6 +350,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                                         "${a.ca_address}, ${a.ca_detail}";
                                                     addressCtl.text =
                                                         addressText;
+                                                    context
+                                                        .read<ShareData>()
+                                                        .selected_address_index = 1;
                                                     Navigator.pop(context);
                                                   },
                                                 ),
@@ -371,7 +400,31 @@ class _ProfilePageState extends State<ProfilePage> {
                                   children: [
                                     FilledButton(
                                       onPressed: () {
-                                        updateProfile();
+                                        if (phoneCtl.text ==
+                                                cus_Info.cus_phone &&
+                                            nameCtl.text == cus_Info.cus_name &&
+                                            passwordCtl.text ==
+                                                cus_Info.cus_password &&
+                                            conPassCtl.text ==
+                                                cus_Info.cus_password &&
+                                            addressCtl.text ==
+                                                context
+                                                    .read<ShareData>()
+                                                    .cus_selected_add) {
+                                          Fluttertoast.showToast(
+                                            msg: "กรุณาแก้ไขข้อมูลก่อนกดบันทึก",
+                                            toastLength: Toast.LENGTH_SHORT,
+                                            gravity: ToastGravity.CENTER,
+                                            timeInSecForIosWeb: 1,
+                                            backgroundColor: Color.fromARGB(
+                                                255, 255, 247, 0),
+                                            textColor: const Color.fromARGB(
+                                                255, 0, 0, 0),
+                                            fontSize: 15.0,
+                                          );
+                                        } else {
+                                          updateProfile();
+                                        }
                                       },
                                       style: FilledButton.styleFrom(
                                         backgroundColor: Colors
@@ -488,73 +541,112 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<LatLng> getCurrentLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      await Geolocator.openLocationSettings();
+      throw Exception("Location services are disabled.");
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        throw Exception("Location permission denied.");
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      throw Exception("Location permissions are permanently denied.");
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
+    return LatLng(position.latitude, position.longitude);
+  }
+
   Future<void> showMapPickerDialog(BuildContext context) async {
     LatLng? pickedLocation;
 
-    await showDialog(
+    await await showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('เลือกตำแหน่งบนแผนที่'),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 300,
-            child: StatefulBuilder(
-              builder: (context, setState) {
-                return FlutterMap(
-                  options: MapOptions(
-                    initialCenter: LatLng(13.7563, 100.5018),
-                    initialZoom: 13,
-                    onTap: (tapPosition, latlng) {
-                      setState(() {
-                        pickedLocation = latlng;
-                      });
-                    },
-                  ),
-                  children: [
-                    TileLayer(
-                      urlTemplate:
-                          "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
-                      subdomains: ['a', 'b', 'c'],
-                    ),
-                    if (pickedLocation != null)
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: pickedLocation!,
-                            width: 40,
-                            height: 40,
-                            child: Icon(
-                              Icons.location_on,
-                              color: Colors.red,
-                              size: 40,
-                            ),
-                          ),
-                        ],
+        return FutureBuilder<LatLng>(
+          future: getCurrentLocation(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return AlertDialog(
+                title: Text('กำลังโหลดตำแหน่ง...'),
+                content: Center(child: CircularProgressIndicator()),
+              );
+            } else if (snapshot.hasError) {
+              return AlertDialog(
+                title: Text('เกิดข้อผิดพลาด'),
+                content: Text('ไม่สามารถดึงตำแหน่งได้: ${snapshot.error}'),
+              );
+            }
+
+            LatLng currentCenter = snapshot.data!;
+
+            return AlertDialog(
+              title: Text('เลือกตำแหน่งบนแผนที่'),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 300,
+                child: StatefulBuilder(
+                  builder: (context, setState) {
+                    return FlutterMap(
+                      options: MapOptions(
+                        initialCenter: currentCenter,
+                        initialZoom: 13,
+                        onTap: (tapPosition, latlng) {
+                          setState(() {
+                            pickedLocation = latlng;
+                          });
+                        },
                       ),
-                  ],
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('ยกเลิก'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (pickedLocation != null) {
-                  Navigator.pop(context, pickedLocation);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('กรุณาเลือกตำแหน่งก่อน')),
-                  );
-                }
-              },
-              child: Text('ตกลง'),
-            ),
-          ],
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
+                          subdomains: ['a', 'b', 'c'],
+                        ),
+                        if (pickedLocation != null)
+                          MarkerLayer(
+                            markers: [
+                              Marker(
+                                point: pickedLocation!,
+                                width: 40,
+                                height: 40,
+                                child: Icon(Icons.location_on,
+                                    color: Colors.red, size: 40),
+                              ),
+                            ],
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('ยกเลิก')),
+                ElevatedButton(
+                  onPressed: () {
+                    if (pickedLocation != null) {
+                      Navigator.pop(context, pickedLocation);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('กรุณาเลือกตำแหน่งก่อน')),
+                      );
+                    }
+                  },
+                  child: Text('ตกลง'),
+                ),
+              ],
+            );
+          },
         );
       },
     ).then((value) async {
@@ -575,6 +667,153 @@ class _ProfilePageState extends State<ProfilePage> {
           addressCtl.text = "${value.latitude}, ${value.longitude}";
         }
       }
+    });
+  }
+
+  Future<void> edit_cusShowMap(BuildContext context, int selected_ca_id) async {
+    LatLng? pickedLocation;
+    var config = await Configuration.getConfig();
+    String url = config['apiEndpoint'];
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return FutureBuilder<LatLng>(
+          future: getCurrentLocation(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return AlertDialog(
+                title: Text('กำลังโหลดตำแหน่ง...'),
+                content: SizedBox(
+                  height: 100,
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              );
+            } else if (snapshot.hasError) {
+              return AlertDialog(
+                title: Text('เกิดข้อผิดพลาด'),
+                content: Text('ไม่สามารถดึงตำแหน่งได้: ${snapshot.error}'),
+              );
+            }
+
+            LatLng initialCenter = snapshot.data!;
+
+            return AlertDialog(
+              title: Text('เลือกตำแหน่งบนแผนที่'),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 300,
+                child: StatefulBuilder(
+                  builder: (context, setState) {
+                    return FlutterMap(
+                      options: MapOptions(
+                        initialCenter: initialCenter,
+                        initialZoom: 13,
+                        onTap: (tapPosition, latlng) {
+                          setState(() {
+                            pickedLocation = latlng;
+                          });
+                        },
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
+                          subdomains: ['a', 'b', 'c'],
+                        ),
+                        if (pickedLocation != null)
+                          MarkerLayer(
+                            markers: [
+                              Marker(
+                                point: pickedLocation!,
+                                width: 40,
+                                height: 40,
+                                child: Icon(
+                                  Icons.location_on,
+                                  color: Colors.red,
+                                  size: 40,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('ยกเลิก'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (pickedLocation != null) {
+                      Navigator.pop(context, pickedLocation);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('กรุณาเลือกตำแหน่งก่อน')),
+                      );
+                    }
+                  },
+                  child: Text('ตกลง'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).then((value) async {
+      if (value != null && value is LatLng) {
+        pickedLocation = value;
+        try {
+          List<Placemark> placemarks =
+              await placemarkFromCoordinates(value.latitude, value.longitude);
+          if (placemarks.isNotEmpty) {
+            final place = placemarks.first;
+            final address =
+                "${place.thoroughfare ?? ''} ${place.subThoroughfare ?? ''}, ${place.locality ?? ''}, ${place.country ?? ''}";
+            addressCtl.text = address;
+          } else {
+            addressCtl.text = "${value.latitude}, ${value.longitude}";
+          }
+        } catch (e) {
+          print('Error in reverse geocoding: $e');
+          addressCtl.text = "${value.latitude}, ${value.longitude}";
+        }
+      }
+
+      if (pickedLocation != null) {
+        int select_ca_id = context.read<ShareData>().selected_ca_id;
+        context.read<ShareData>().cus_selected_add = addressCtl.text;
+        List<String> addressParts =
+            context.read<ShareData>().cus_selected_add.split(',');
+        String addressFromUI =
+            addressParts.isNotEmpty ? addressParts[0].trim() : '';
+        String detailFromUI = addressParts.length > 1
+            ? addressParts.sublist(1).join(',').trim()
+            : '';
+
+        var model = {
+          "coordinate":
+              "${pickedLocation!.latitude}, ${pickedLocation!.longitude}", // รวมเป็น string เดียว
+          "address": addressFromUI,
+          "detail": detailFromUI
+        };
+        log("${context.read<ShareData>().selected_ca_id}");
+        log("${model}");
+
+        var response = await http.put(
+          Uri.parse("$url/db/edit_cusAdd/$select_ca_id"),
+          headers: {"Content-Type": "application/json; charset=utf-8"},
+          body: jsonEncode(model),
+        );
+
+        log("Response status: ${response.statusCode}");
+        log("Response body: ${response.body}");
+      }
+      Navigator.pop(context);
+      loadProfileData();
     });
   }
 
@@ -630,8 +869,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
     String addressText = '';
     if (context.read<ShareData>().customer_addresses.isNotEmpty) {
-      final cusAddr = context.read<ShareData>().customer_addresses[0];
-      addressText = "${cusAddr.ca_address}, ${cusAddr.ca_detail}";
+      if (context.read<ShareData>().selected_address_index == 0) {
+        final cusAddr = context.read<ShareData>().customer_addresses[0];
+        addressText = "${cusAddr.ca_address}, ${cusAddr.ca_detail}";
+      } else {
+        final cusAddr = context.read<ShareData>().customer_addresses[1];
+        addressText = "${cusAddr.ca_address}, ${cusAddr.ca_detail}";
+      }
       context.read<ShareData>().cus_selected_add = addressText;
       addressCtl.text = addressText;
     }
@@ -795,6 +1039,9 @@ class _ProfilePageState extends State<ProfilePage> {
       headers: {"Content-Type": "application/json; charset=utf-8"},
       body: jsonEncode(model),
     );
+
+    log('Response status code: ${response.statusCode}');
+    log('Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       log('Update is successful');

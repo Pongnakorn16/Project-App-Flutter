@@ -9,6 +9,8 @@ import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
 class ShareData with ChangeNotifier {
   //Shared data
   int selected_index = 0;
+  int selected_ca_id = 0;
+  int selected_address_index = 0;
   String cus_selected_add = "";
   late User_Info_Send user_info_send;
   late User_Info_Receive user_info_receive;
