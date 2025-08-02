@@ -455,6 +455,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                             .cus_selected_add = '';
                                         context
                                             .read<ShareData>()
+                                            .selected_address_index = 0;
+                                        context
+                                            .read<ShareData>()
                                             .user_info_send = User_Info_Send();
                                         context
                                                 .read<ShareData>()

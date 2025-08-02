@@ -19,15 +19,15 @@ import 'package:provider/provider.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 
-class RestaurantinfoPage extends StatefulWidget {
-  final int ResId;
-  const RestaurantinfoPage({super.key, required this.ResId});
+class OptionPage extends StatefulWidget {
+  final int menu_id;
+  const OptionPage({super.key, required this.menu_id});
 
   @override
-  State<RestaurantinfoPage> createState() => _HomePageState();
+  State<OptionPage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<RestaurantinfoPage> {
+class _HomePageState extends State<OptionPage> {
   int _selectedIndex = 0;
   late PageController _pageController;
   String url = '';
@@ -47,41 +47,11 @@ class _HomePageState extends State<RestaurantinfoPage> {
     super.initState();
     Configuration.getConfig().then((value) {
       url = value['apiEndpoint'];
-      context.read<ShareData>().res_id = widget.ResId;
       LoadResInfo();
       setState(() {});
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _getAddressFromCoordinates();
-      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {});
     });
     _pageController = PageController();
-  }
-
-  void _getAddressFromCoordinates() async {
-    final AllRes = context.read<ShareData>().restaurant_all;
-    final matchedRestaurant =
-        AllRes.firstWhere((res) => res.res_id == widget.ResId);
-
-    final coords = matchedRestaurant.res_coordinate.split(',');
-    final double lat = double.parse(coords[0]);
-    final double lng = double.parse(coords[1]);
-
-    try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
-      if (placemarks.isNotEmpty) {
-        final Placemark place = placemarks.first;
-
-        setState(() {
-          _address =
-              "${(place.subLocality ?? '').trim()} ${(place.locality ?? '').trim()} ${(place.administrativeArea ?? '').trim()} ${(place.postalCode ?? '').trim()}";
-        });
-      }
-    } catch (e) {
-      print("Error in geocoding: $e");
-      setState(() {
-        _address = "ไม่พบที่อยู่";
-      });
-    }
   }
 
   String calculateDeliveryTime({
@@ -268,7 +238,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("รายละเอียดร้านอาหาร"),
+        title: const Text("รายละเอียดตัวเลือกเพิ่มเติม"),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -324,53 +294,12 @@ class _HomePageState extends State<RestaurantinfoPage> {
     );
   }
 
-  Widget buildCategoryChip(String label) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 0, right: 12),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: Colors.deepPurple, width: 1.5),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: TextButton(
-          onPressed: () {
-            // TODO: เขียน logic การเลือกเมนูภายในร้าน เช่น filter list
-            print("เลือกหมวด: $label");
-          },
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            foregroundColor: const Color.fromARGB(255, 0, 0, 0),
-          ),
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.normal,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget buildMainContent() {
     final Caterogy = context.watch<ShareData>().restaurant_type;
     final AllRes = context.watch<ShareData>().restaurant_all;
     final topAdd = context.watch<ShareData>().customer_addresses;
 
-    final matchedRestaurant =
-        AllRes.firstWhere((res) => res.res_id == widget.ResId);
+    final matchedRestaurant = AllRes.firstWhere((res) => res.res_id == 0);
 
     // ถ้าไม่มีพิกัดลูกค้า
     if (topAdd.isEmpty) {
@@ -565,15 +494,6 @@ class _HomePageState extends State<RestaurantinfoPage> {
             ),
             const SizedBox(height: 10),
 
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _restaurantCategories.map((category) {
-                  return buildCategoryChip(category.cat_name);
-                }).toList(),
-              ),
-            ),
-
             const SizedBox(height: 20),
             ...categoryCards,
           ],
@@ -597,8 +517,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
         }
       }
 
-      final res_Cat =
-          await http.get(Uri.parse("$url/db/loadCat/${widget.ResId}"));
+      final res_Cat = await http.get(Uri.parse("$url/db/loadCat/${1}"));
 
       if (res_Cat.statusCode == 200) {
         final List<ResCatGetResponse> list = (json.decode(res_Cat.body) as List)
@@ -609,12 +528,13 @@ class _HomePageState extends State<RestaurantinfoPage> {
         });
       }
 
-      final res_Menu =
-          await http.get(Uri.parse("$url/db/loadMenu/${widget.ResId}"));
-      log("Raw JSON from API: ${res_Menu.body}");
-      if (res_Menu.statusCode == 200) {
+      var menu_id = widget.menu_id;
+      final res_Option =
+          await http.get(Uri.parse("$url/db/loadOption/$menu_id"));
+      log("Raw JSON from API: ${res_Option.body}");
+      if (res_Option.statusCode == 200) {
         final List<MenuInfoGetResponse> list =
-            (json.decode(res_Menu.body) as List)
+            (json.decode(res_Option.body) as List)
                 .map((e) => MenuInfoGetResponse.fromJson(e))
                 .toList();
         setState(() {

@@ -590,7 +590,7 @@ class _HomePageState extends State<CustomerHomePage> {
         final List<CusAddressGetResponse> res_addList =
             jsonResponse.map((e) => CusAddressGetResponse.fromJson(e)).toList();
         if (res_addList.isNotEmpty) {
-          context.read<ShareData>().customer_addresses = [res_addList[0]];
+          context.read<ShareData>().customer_addresses = res_addList;
         }
       }
 
