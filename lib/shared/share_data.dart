@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
+import 'package:mobile_miniproject_app/models/response/MenuInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
 
@@ -19,6 +20,7 @@ class ShareData with ChangeNotifier {
   List<ResTypeGetResponse> restaurant_type = [];
   List<ResInfoResponse> restaurant_near = [];
   List<ResInfoResponse> restaurant_all = [];
+  List<MenuInfoGetResponse> all_menu_in_res = [];
 
   List<GetSendOrder> send_order_share = [];
   List<GetSendOrder> snack_order_share = [];
@@ -44,4 +46,20 @@ class User_Info_Receive {
   String name = '';
   String user_type = '';
   String user_image = '';
+}
+
+class SelectedMenu {
+  final int menuId;
+  final String menuName;
+  final String menuImage;
+  final int count;
+  final List<Map<String, dynamic>> selectedOptions; // เก็บชื่อด้วย
+
+  SelectedMenu({
+    required this.menuId,
+    required this.menuName,
+    required this.menuImage,
+    required this.count,
+    required this.selectedOptions,
+  });
 }

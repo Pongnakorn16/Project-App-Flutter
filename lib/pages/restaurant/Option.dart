@@ -15,6 +15,7 @@ import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/customer/Cart.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/Option.dart';
+import 'package:mobile_miniproject_app/pages/restaurant/RestaurantInfo.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 import 'package:geocoding/geocoding.dart';
@@ -22,7 +23,16 @@ import 'package:geolocator/geolocator.dart';
 
 class OptionPage extends StatefulWidget {
   final int menu_id;
-  const OptionPage({super.key, required this.menu_id});
+  final List<Map<String, dynamic>>? initSelectedOptions;
+  final int? initCount;
+  final int? menuIndex;
+  const OptionPage({
+    super.key,
+    this.initSelectedOptions,
+    required this.menu_id,
+    this.initCount,
+    this.menuIndex,
+  });
 
   @override
   State<OptionPage> createState() => _HomePageState();
@@ -36,7 +46,10 @@ class _HomePageState extends State<OptionPage> {
   String? _address; // เก็บที่อยู่ที่ได้
   List<ResCatGetResponse> _restaurantCategories = [];
   List<MenuInfoGetResponse> _restaurantMenu = [];
-  List<OptionGetResponse> _restaurantOption = [];
+  OptionGetResponse? _restaurantOption;
+  int _menuCount = 1; // จำนวนเมนูที่สั่ง
+  Map<int, int> _selectedOptions = {}; // op_cat_id -> op_id ที่เลือก
+
   Map<int, int> _selectedMenuCounts = {};
   List<MenuInfoGetResponse> get selectedMenus {
     return _restaurantMenu
@@ -47,6 +60,18 @@ class _HomePageState extends State<OptionPage> {
   @override
   void initState() {
     super.initState();
+    // ✅ โหลดค่าจาก parameter ที่ส่งเข้ามา
+    if (widget.initSelectedOptions != null) {
+      for (var option in widget.initSelectedOptions!) {
+        final opCatId = option['op_cat_id'];
+        final opId = option['op_id'];
+        _selectedOptions[opCatId] = opId;
+      }
+    }
+
+    if (widget.initCount != null) {
+      _menuCount = widget.initCount!;
+    }
     Configuration.getConfig().then((value) {
       url = value['apiEndpoint'];
       LoadResInfo();
@@ -57,15 +82,7 @@ class _HomePageState extends State<OptionPage> {
   }
 
   @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final topAdd = context.watch<ShareData>().customer_addresses;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("รายละเอียดตัวเลือกเพิ่มเติม"),
@@ -77,259 +94,248 @@ class _HomePageState extends State<OptionPage> {
         ),
       ),
       body: buildMainContent(),
-      bottomSheet: _selectedMenuCounts.isNotEmpty
-          ? Container(
-              height: 60,
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.deepPurple,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 8,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "ไปที่ตะกร้า (${_selectedMenuCounts.length} รายการ)",
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      // ส่งรายการไปหน้าตะกร้า
-                      Get.to(() => CartPage(
-                            selectedMenus: selectedMenus,
-                            counts: _selectedMenuCounts,
-                          ));
-                    },
-                    child: const Text(
-                      "ดูตะกร้า",
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : null,
     );
   }
 
   Widget buildMainContent() {
-    final Caterogy = context.watch<ShareData>().restaurant_type;
-    final AllRes = context.watch<ShareData>().restaurant_all;
-    final topAdd = context.watch<ShareData>().customer_addresses;
+    final menu_in_res = context.watch<ShareData>().all_menu_in_res;
+    final matchedMenu =
+        menu_in_res.firstWhere((men) => men.menu_id == widget.menu_id);
 
-    // // ถ้าไม่มีพิกัดลูกค้า
-    // if (topAdd.isEmpty) {
-    //   return const Center(
-    //     child: CircularProgressIndicator(strokeWidth: 2),
-    //   );
-    // }
+    if (_restaurantOption == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-    // final customer = topAdd[0];
-
-    // // แยกพิกัดร้าน
-    // final coordsRes = matchedRestaurant.res_coordinate.split(',');
-    // final double resLat = double.parse(coordsRes[0]);
-    // final double resLng = double.parse(coordsRes[1]);
-
-    // // แยกพิกัดลูกค้า
-    // final coordsCus = customer.ca_coordinate.split(',');
-    // final double cusLat = double.parse(coordsCus[0]);
-    // final double cusLng = double.parse(coordsCus[1]);
-
-    // // คำนวณระยะทาง
-    // double distanceInMeters =
-    //     Geolocator.distanceBetween(cusLat, cusLng, resLat, resLng);
-    // double distanceInKm = distanceInMeters / 1000;
-
-    // // คำนวณเวลาโดยเงื่อนไขที่ให้มา
-    // String deliveryTime;
-    // if (distanceInKm <= 1) {
-    //   deliveryTime = "10 นาที";
-    // } else if (distanceInKm <= 2) {
-    //   deliveryTime = "15 นาที";
-    // } else if (distanceInKm <= 3) {
-    //   deliveryTime = "20 นาที";
-    // } else if (distanceInKm <= 4) {
-    //   deliveryTime = "25 นาที";
-    // } else if (distanceInKm <= 5) {
-    //   deliveryTime = "30 นาที";
-    // } else {
-    //   deliveryTime = "35 นาทีขึ้นไป";
-    // }
-
-    List<Widget> categoryCards = _restaurantCategories
-        .map((category) {
-          final menusInCategory = _restaurantMenu
-              .where((menu) => menu.cat_id == category.cat_id)
-              .toList();
-
-          if (menusInCategory.isEmpty) {
-            return SizedBox.shrink(); // ไม่แสดงหมวดเปล่า
-          }
-
-          return Card(
-            margin: const EdgeInsets.only(bottom: 20),
-            elevation: 3,
-            shape: RoundedRectangleBorder(
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 10, left: 30, right: 30),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
               borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // หัวข้อหมวดหมู่
-                  Text(
-                    category.cat_name,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // แสดงเมนูในหมวดนี้
-                  Column(
-                    children: menusInCategory.map((menu) {
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.white,
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // รูปภาพเมนู
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                menu.menu_image,
-                                width: 60,
-                                height: 60,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) =>
-                                    const Icon(Icons.fastfood),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            // ข้อมูลเมนู
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    menu.menu_name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    menu.menu_des,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        fontSize: 13, color: Colors.grey),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    "฿ ${menu.menu_price}",
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.deepPurple,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  )
-                ],
+              child: Image.network(
+                matchedMenu.menu_image,
+                width: double.infinity,
+                height: 200,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) =>
+                    const Icon(Icons.fastfood, size: 60),
+                loadingBuilder: (_, child, loading) {
+                  if (loading == null) return child;
+                  return const SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  );
+                },
               ),
             ),
-          );
-        })
-        .where((widget) => widget is! SizedBox)
-        .toList();
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "ระยะทาง:  กม.",
-            style: const TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            "เวลาจัดส่งโดยประมาณ: ",
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 20),
-          ...categoryCards,
-        ],
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    matchedMenu.menu_name,
+                    style: const TextStyle(
+                        fontSize: 25, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            /// ✅ แสดงหมวดหมู่ + options ตาม op_cat_id
+            ..._restaurantOption!.categories.map((category) {
+              final catOptions = _restaurantOption!.options
+                  .where((op) => op.opCatId == category.opCatId)
+                  .toList();
+
+              // ถ้าไม่มี options → แสดงแค่ปุ่มเพิ่มลด
+              if (catOptions.isEmpty) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      category.opCatName,
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle_outline),
+                          onPressed: () {
+                            setState(() {
+                              if (_menuCount > 1) _menuCount--;
+                            });
+                          },
+                        ),
+                        Text('$_menuCount',
+                            style: const TextStyle(fontSize: 18)),
+                        IconButton(
+                          icon: const Icon(Icons.add_circle_outline),
+                          onPressed: () {
+                            setState(() {
+                              _menuCount++;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }
+
+              // ถ้ามี options → แสดงหมวดพร้อม radio ให้เลือก
+              return Card(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                elevation: 3,
+                margin: const EdgeInsets.only(bottom: 15),
+                child: Padding(
+                  padding: const EdgeInsets.all(15),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        category.opCatName,
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 10),
+                      ...catOptions.map((op) => RadioListTile<int>(
+                            title: Text(op.opName),
+                            subtitle: op.opPrice == 0
+                                ? null
+                                : Text("+${op.opPrice} บาท"),
+                            value: op.opId,
+                            groupValue: _selectedOptions[category.opCatId],
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedOptions[category.opCatId] = value!;
+                              });
+                            },
+                          )),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.remove_circle_outline),
+                  onPressed: () {
+                    setState(() {
+                      if (_menuCount > 1) _menuCount--;
+                    });
+                  },
+                ),
+                Text('$_menuCount', style: const TextStyle(fontSize: 20)),
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline),
+                  onPressed: () {
+                    setState(() {
+                      _menuCount++;
+                    });
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Center(
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.deepPurple,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    final selectedOptionsWithNames =
+                        _selectedOptions.entries.map((entry) {
+                      final opCatId = entry.key;
+                      final opId = entry.value;
+
+                      final catName = _restaurantOption!.categories
+                          .firstWhere((cat) => cat.opCatId == opCatId)
+                          .opCatName;
+
+                      final opData = _restaurantOption!.options
+                          .firstWhere((op) => op.opId == opId);
+
+                      return {
+                        'op_cat_id': opCatId,
+                        'op_cat_name': catName,
+                        'op_id': opId,
+                        'op_name': opData.opName,
+                        'op_price': opData.opPrice,
+                      };
+                    }).toList();
+
+                    final matchedMenu = context
+                        .read<ShareData>()
+                        .all_menu_in_res
+                        .firstWhere((men) => men.menu_id == widget.menu_id);
+
+                    Navigator.pop(context, {
+                      'menu_id': widget.menu_id,
+                      'menu_name': matchedMenu.menu_name,
+                      'menu_image': matchedMenu.menu_image,
+                      'count': _menuCount,
+                      'selectedOptions': selectedOptionsWithNames,
+
+                      // ส่งค่าเมนูเดิมเพื่อจะได้ลบออกได้
+                      'original_menu_id': widget.menu_id,
+                      'originalOptions': widget.initSelectedOptions,
+                    });
+                  },
+                  child: Text(
+                    widget.menuIndex != null
+                        ? "อัปเดตตระกร้า"
+                        : "เพิ่มลงในตะกร้า",
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   void LoadResInfo() async {
     try {
       int userId = context.read<ShareData>().user_info_send.uid;
 
-      context.read<ShareData>().customer_addresses = [];
-      final res_Add = await http.get(Uri.parse("$url/db/loadCusAdd/$userId"));
-      if (res_Add.statusCode == 200) {
-        final List<dynamic> jsonResponse = json.decode(res_Add.body);
-        final List<CusAddressGetResponse> res_addList =
-            jsonResponse.map((e) => CusAddressGetResponse.fromJson(e)).toList();
-        if (res_addList.isNotEmpty) {
-          context.read<ShareData>().customer_addresses = [res_addList[0]];
-        }
-      }
-
-      final res_Cat = await http.get(Uri.parse("$url/db/loadCat/${1}"));
-
-      if (res_Cat.statusCode == 200) {
-        final List<ResCatGetResponse> list = (json.decode(res_Cat.body) as List)
-            .map((e) => ResCatGetResponse.fromJson(e))
-            .toList();
-        setState(() {
-          _restaurantCategories = list;
-        });
-      }
-
       var menu_id = widget.menu_id;
-      final res_Option =
-          await http.get(Uri.parse("$url/db/loadOption/$menu_id"));
-      log("Raw JSON from API: ${res_Option.body}");
-      if (res_Option.statusCode == 200) {
-        final List<OptionGetResponse> list =
-            (json.decode(res_Option.body) as List)
-                .map((e) => OptionGetResponse.fromJson(e))
-                .toList();
+
+      final res = await http.get(Uri.parse("$url/db/loadOption/$menu_id"));
+      if (res.statusCode == 200) {
+        final OptionGetResponse data =
+            OptionGetResponse.fromJson(json.decode(res.body));
         setState(() {
-          _restaurantOption = list;
-          log("MENUUUUUUUUUUUUUUUUUUUUUUUU" + _restaurantOption.toString());
+          _restaurantOption = data;
         });
       }
     } catch (e) {
