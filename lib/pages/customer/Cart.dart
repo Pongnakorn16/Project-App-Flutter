@@ -12,6 +12,7 @@ import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
+import 'package:mobile_miniproject_app/pages/customer/TopUp.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 import 'package:geocoding/geocoding.dart';
@@ -360,6 +361,11 @@ class _HomePageState extends State<CartPage> {
                             TextButton(
                               onPressed: () {
                                 Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => TopupPage()),
+                                );
                               },
                               child: const Text("ใช่"),
                             ),
@@ -404,6 +410,10 @@ class _HomePageState extends State<CartPage> {
                     TextButton(
                       onPressed: () {
                         Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => TopupPage()),
+                        );
                       },
                       child: const Text("ใช่"),
                     ),
