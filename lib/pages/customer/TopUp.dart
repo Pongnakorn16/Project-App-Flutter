@@ -104,7 +104,7 @@ class _HomePageState extends State<TopupPage> {
         const SizedBox(height: 20),
         ElevatedButton(
           onPressed: () {
-            final phone = "0973366595"; // เบอร์พร้อมเพย์
+            final phone = "0878012368"; // เบอร์พร้อมเพย์
             final input = _amountController.text;
             final amount = double.tryParse(input);
 
@@ -202,38 +202,40 @@ class _HomePageState extends State<TopupPage> {
   }
 
   String generatePromptPayQR(String phoneNumber, double? amount) {
-    final buffer = StringBuffer();
-
     String formatPhoneNumber(String number) {
       if (number.startsWith("0")) {
-        return "66${number.substring(1)}";
+        return "0066${number.substring(1)}";
       } else if (number.startsWith("+66")) {
-        return number.substring(1);
+        return "0066${number.substring(3)}";
       }
       return number;
     }
 
-    String target = formatPhoneNumber(phoneNumber);
+    final target = formatPhoneNumber(phoneNumber);
 
+    final buffer = StringBuffer();
     buffer.write("000201"); // Payload Format Indicator
-    buffer.write("010212"); // Point of Initiation Method (dynamic)
+    buffer.write("010212"); // Point of Initiation Method (Dynamic QR)
 
-    // Merchant account information - PromptPay
-    final payload =
-        "0016A000000677010111${target.length.toString().padLeft(2, '0')}$target";
-    buffer.write("29${payload.length.toString().padLeft(2, '0')}$payload");
+    // Merchant Account Information (ID 29)
+    final merchantInfo = StringBuffer();
+    merchantInfo.write("0016A000000677010111"); // Application ID (PromptPay)
+    merchantInfo.write("01${target.length.toString().padLeft(2, '0')}$target");
+
+    buffer.write(
+        "29${merchantInfo.length.toString().padLeft(2, '0')}${merchantInfo.toString()}");
 
     buffer.write("5802TH"); // Country Code
     buffer.write("5303764"); // Currency Code (THB)
 
-    // Include amount only if provided
     if (amount != null && amount > 0) {
       final amountStr = amount.toStringAsFixed(2);
       buffer
           .write("54${amountStr.length.toString().padLeft(2, '0')}$amountStr");
     }
 
-    buffer.write("6304"); // CRC placeholder
+    buffer.write("6304"); // CRC Placeholder
+
     final crc = _calculateCRC(buffer.toString());
     buffer.write(crc);
 
@@ -246,11 +248,10 @@ class _HomePageState extends State<TopupPage> {
       crc ^= input.codeUnitAt(i) << 8;
       for (int j = 0; j < 8; j++) {
         if ((crc & 0x8000) != 0) {
-          crc = (crc << 1) ^ 0x1021;
+          crc = ((crc << 1) ^ 0x1021) & 0xFFFF;
         } else {
-          crc <<= 1;
+          crc = (crc << 1) & 0xFFFF;
         }
-        crc &= 0xFFFF;
       }
     }
     return crc.toRadixString(16).toUpperCase().padLeft(4, '0');

@@ -290,6 +290,7 @@ class _HomePageState extends State<OptionPage> {
                       'menu_id': widget.menu_id,
                       'menu_name': matchedMenu.menu_name,
                       'menu_image': matchedMenu.menu_image,
+                      'price': matchedMenu.menu_price,
                       'count': _menuCount,
                       'selectedOptions': selectedOptionsWithNames,
 

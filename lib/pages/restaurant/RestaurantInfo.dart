@@ -38,11 +38,12 @@ class _HomePageState extends State<RestaurantinfoPage> {
   List<ResCatGetResponse> _restaurantCategories = [];
   List<MenuInfoGetResponse> _restaurantMenu = [];
   List<OpCatLinkGetResponse> _Menu_check = [];
-  Map<int, int> _selectedMenuCounts = {};
-  List<SelectedMenu> _selectedMenus = [];
+  Map<int, int> _selectedMenu_no_op = {};
+  List<SelectedMenu> _selectedMenu_op = [];
+  List<Map<String, dynamic>> mergedMenus = [];
   List<MenuInfoGetResponse> get selectedMenus {
     return _restaurantMenu
-        .where((menu) => _selectedMenuCounts.containsKey(menu.menu_id))
+        .where((menu) => _selectedMenu_no_op.containsKey(menu.menu_id))
         .toList();
   }
 
@@ -64,6 +65,9 @@ class _HomePageState extends State<RestaurantinfoPage> {
   @override
   Widget build(BuildContext context) {
     final topAdd = context.watch<ShareData>().customer_addresses;
+    int totalCount =
+        _selectedMenu_no_op.values.fold(0, (sum, item) => sum + item) +
+            _selectedMenu_op.fold(0, (sum, item) => sum + item.count);
 
     return Scaffold(
       appBar: AppBar(
@@ -76,7 +80,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
         ),
       ),
       body: buildMainContent(),
-      bottomSheet: _selectedMenuCounts.isNotEmpty
+      bottomSheet: _selectedMenu_no_op.isNotEmpty || _selectedMenu_op.isNotEmpty
           ? Container(
               height: 60,
               width: double.infinity,
@@ -97,7 +101,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "ไปที่ตะกร้า (${_selectedMenuCounts.length} รายการ)",
+                    "ไปที่ตะกร้า (${totalCount} รายการ)",
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -105,11 +109,33 @@ class _HomePageState extends State<RestaurantinfoPage> {
                   ),
                   TextButton(
                     onPressed: () {
+                      mergedMenus.clear();
+                      // จาก _selectedMenus (เมนูมี option)
+                      mergedMenus.addAll(_selectedMenu_op.map((e) => {
+                            "menu_id": e.menuId,
+                            "menu_name": e.menuName,
+                            "menu_image": e.menuImage,
+                            "menu_price": e.menuPrice, // เพิ่มบรรทัดนี้
+                            "count": e.count,
+                            "selectedOptions": e.selectedOptions,
+                          }));
+
+                      // จาก _selectedMenuCounts (เมนูไม่มี option)
+                      _selectedMenu_no_op.forEach((menuId, count) {
+                        final menu = _restaurantMenu
+                            .firstWhere((m) => m.menu_id == menuId);
+                        mergedMenus.add({
+                          "menu_id": menu.menu_id,
+                          "menu_name": menu.menu_name,
+                          "menu_image": menu.menu_image,
+                          "menu_price": menu.menu_price, // เพิ่มบรรทัดนี้
+                          "count": count,
+                          "selectedOptions": [], // ไม่มี option
+                        });
+                      });
+
                       // ส่งรายการไปหน้าตะกร้า
-                      Get.to(() => CartPage(
-                            selectedMenus: selectedMenus,
-                            counts: _selectedMenuCounts,
-                          ));
+                      Get.to(() => CartPage(mergedMenus: mergedMenus));
                     },
                     child: const Text(
                       "ดูตะกร้า",
@@ -474,7 +500,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
 
   int getTotalCountForMenu(int menuId) {
     int total = 0;
-    for (var item in _selectedMenus) {
+    for (var item in _selectedMenu_op) {
       if (item.menuId == menuId) {
         total += item.count;
       }
@@ -484,7 +510,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
 
   Widget buildMenuItem(MenuInfoGetResponse menu) {
     final cal_count = getTotalCountForMenu(menu.menu_id);
-    final count = _selectedMenuCounts[menu.menu_id] ?? 0;
+    final count = _selectedMenu_no_op[menu.menu_id] ?? 0;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -539,10 +565,10 @@ class _HomePageState extends State<RestaurantinfoPage> {
               Row(
                 children: [
                   if (_Menu_check.any((item) => item.menu_id == menu.menu_id))
-                    count > 0
+                    cal_count > 0
                         ? GestureDetector(
                             onTap: () {
-                              final filteredMenus = _selectedMenus
+                              final filteredMenus = _selectedMenu_op
                                   .where((m) => m.menuId == menu.menu_id)
                                   .toList();
                               showDialog(
@@ -620,6 +646,8 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                                               'menu_image'],
                                                           count:
                                                               result['count'],
+                                                          menuPrice:
+                                                              result['price'],
                                                           selectedOptions: List<
                                                               Map<String,
                                                                   dynamic>>.from(result[
@@ -628,7 +656,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
 
                                                         setState(() {
                                                           // 🔥 1. ลบเมนูเดิมออกก่อน (ที่ index เดิมจากหน้าแก้ไข)
-                                                          final indexToRemove = _selectedMenus.indexWhere((menu) =>
+                                                          final indexToRemove = _selectedMenu_op.indexWhere((menu) =>
                                                               menu.menuId ==
                                                                   result[
                                                                       'original_menu_id'] &&
@@ -642,14 +670,14 @@ class _HomePageState extends State<RestaurantinfoPage> {
 
                                                           if (indexToRemove !=
                                                               -1) {
-                                                            _selectedMenus
+                                                            _selectedMenu_op
                                                                 .removeAt(
                                                                     indexToRemove);
                                                           }
 
                                                           // 🔥 2. เช็คว่ามีเมนูแบบนี้อยู่แล้วมั้ย → ถ้ามี → เพิ่ม count
                                                           final existingIndex =
-                                                              _selectedMenus.indexWhere((menu) =>
+                                                              _selectedMenu_op.indexWhere((menu) =>
                                                                   menu.menuId ==
                                                                       updatedMenu
                                                                           .menuId &&
@@ -662,9 +690,9 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                                           if (existingIndex !=
                                                               -1) {
                                                             final existing =
-                                                                _selectedMenus[
+                                                                _selectedMenu_op[
                                                                     existingIndex];
-                                                            _selectedMenus[
+                                                            _selectedMenu_op[
                                                                     existingIndex] =
                                                                 SelectedMenu(
                                                               menuId: existing
@@ -677,13 +705,15 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                                                       .count +
                                                                   updatedMenu
                                                                       .count,
+                                                              menuPrice: existing
+                                                                  .menuPrice,
                                                               selectedOptions:
                                                                   existing
                                                                       .selectedOptions,
                                                             );
                                                           } else {
                                                             // ถ้าไม่มีเมนูซ้ำ → เพิ่มเข้าใหม่
-                                                            _selectedMenus.add(
+                                                            _selectedMenu_op.add(
                                                                 updatedMenu);
                                                           }
                                                         });
@@ -750,6 +780,8 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                                   result['menu_image'];
                                               final int returnedCount =
                                                   result['count'];
+                                              final int returnedPrice =
+                                                  result['price'];
                                               final List<Map<String, dynamic>>
                                                   returnedOptions = List<
                                                       Map<String,
@@ -760,10 +792,10 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                                 bool found = false;
 
                                                 for (int i = 0;
-                                                    i < _selectedMenus.length;
+                                                    i < _selectedMenu_op.length;
                                                     i++) {
                                                   final existing =
-                                                      _selectedMenus[i];
+                                                      _selectedMenu_op[i];
                                                   if (existing.menuId ==
                                                           returnedMenuId &&
                                                       _isSameOption(
@@ -771,7 +803,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                                               .selectedOptions,
                                                           returnedOptions)) {
                                                     // ถ้า menu_id + options ตรงกัน → เพิ่ม count เดิม
-                                                    _selectedMenus[i] =
+                                                    _selectedMenu_op[i] =
                                                         SelectedMenu(
                                                       menuId: existing.menuId,
                                                       menuName:
@@ -780,6 +812,8 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                                           existing.menuImage,
                                                       count: existing.count +
                                                           returnedCount,
+                                                      menuPrice:
+                                                          existing.menuPrice,
                                                       selectedOptions: existing
                                                           .selectedOptions,
                                                     );
@@ -790,7 +824,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
 
                                                 if (!found) {
                                                   // ถ้าไม่มีเมนูเหมือนกันเลย → เพิ่มใหม่
-                                                  _selectedMenus.add(
+                                                  _selectedMenu_op.add(
                                                     SelectedMenu(
                                                       menuId: returnedMenuId,
                                                       menuName:
@@ -798,6 +832,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                                       menuImage:
                                                           returnedMenuImage,
                                                       count: returnedCount,
+                                                      menuPrice: returnedPrice,
                                                       selectedOptions:
                                                           returnedOptions,
                                                     ),
@@ -853,27 +888,23 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                 final String returnedMenuImage =
                                     result['menu_image'];
                                 final int returnedCount = result['count'];
+                                final int returnedPrice = result['price'];
                                 final List<Map<String, dynamic>>
                                     returnedOptions =
                                     List<Map<String, dynamic>>.from(
                                         result['selectedOptions']);
 
                                 setState(() {
-                                  _selectedMenus.add(
+                                  _selectedMenu_op.add(
                                     SelectedMenu(
                                       menuId: returnedMenuId,
                                       menuName: returnedMenuName,
                                       menuImage: returnedMenuImage,
                                       count: returnedCount,
+                                      menuPrice: returnedPrice,
                                       selectedOptions: returnedOptions,
                                     ),
                                   );
-
-                                  // อัปเดตจำนวนรวมที่เลือกไว้
-                                  _selectedMenuCounts[returnedMenuId] =
-                                      (_selectedMenuCounts[returnedMenuId] ??
-                                              0) +
-                                          returnedCount;
                                 });
                               }
                             },
@@ -887,11 +918,11 @@ class _HomePageState extends State<RestaurantinfoPage> {
                             icon: const Icon(Icons.remove_circle_outline),
                             onPressed: () {
                               setState(() {
-                                if (_selectedMenuCounts[menu.menu_id]! > 1) {
-                                  _selectedMenuCounts[menu.menu_id] =
-                                      _selectedMenuCounts[menu.menu_id]! - 1;
+                                if (_selectedMenu_no_op[menu.menu_id]! > 1) {
+                                  _selectedMenu_no_op[menu.menu_id] =
+                                      _selectedMenu_no_op[menu.menu_id]! - 1;
                                 } else {
-                                  _selectedMenuCounts.remove(menu.menu_id);
+                                  _selectedMenu_no_op.remove(menu.menu_id);
                                 }
                               });
                             },
@@ -905,8 +936,8 @@ class _HomePageState extends State<RestaurantinfoPage> {
                           icon: const Icon(Icons.add_circle_outline),
                           onPressed: () {
                             setState(() {
-                              _selectedMenuCounts[menu.menu_id] =
-                                  (_selectedMenuCounts[menu.menu_id] ?? 0) + 1;
+                              _selectedMenu_no_op[menu.menu_id] =
+                                  (_selectedMenu_no_op[menu.menu_id] ?? 0) + 1;
                             });
                           },
                         ),
@@ -923,26 +954,27 @@ class _HomePageState extends State<RestaurantinfoPage> {
 
   void updateOrMergeMenu(int indexToUpdate, SelectedMenu updatedMenu) {
     // หา index ที่มี menu_id + selectedOptions เหมือนกัน (ยกเว้น indexToUpdate)
-    final foundIndex = _selectedMenus.indexWhere((menu) =>
+    final foundIndex = _selectedMenu_op.indexWhere((menu) =>
         menu.menuId == updatedMenu.menuId &&
         _isSameOption(menu.selectedOptions, updatedMenu.selectedOptions) &&
-        _selectedMenus.indexOf(menu) != indexToUpdate);
+        _selectedMenu_op.indexOf(menu) != indexToUpdate);
 
     setState(() {
       if (foundIndex != -1) {
         // รวมรายการ (เพิ่มจำนวน count)
-        _selectedMenus[foundIndex] = SelectedMenu(
+        _selectedMenu_op[foundIndex] = SelectedMenu(
           menuId: updatedMenu.menuId,
           menuName: updatedMenu.menuName,
           menuImage: updatedMenu.menuImage,
-          count: _selectedMenus[foundIndex].count + updatedMenu.count,
+          count: _selectedMenu_op[foundIndex].count + updatedMenu.count,
+          menuPrice: updatedMenu.menuPrice,
           selectedOptions: updatedMenu.selectedOptions,
         );
         // แล้วลบรายการเก่าที่อัปเดตทับไป (indexToUpdate)
-        _selectedMenus.removeAt(indexToUpdate);
+        _selectedMenu_op.removeAt(indexToUpdate);
       } else {
         // ไม่เจอเมนูเหมือนกันเลย อัปเดตรายการเดิมตาม index
-        _selectedMenus[indexToUpdate] = updatedMenu;
+        _selectedMenu_op[indexToUpdate] = updatedMenu;
       }
     });
   }

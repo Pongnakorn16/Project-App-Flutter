@@ -53,6 +53,7 @@ class SelectedMenu {
   final String menuName;
   final String menuImage;
   final int count;
+  final int menuPrice; // เพิ่มตรงนี้
   final List<Map<String, dynamic>> selectedOptions; // เก็บชื่อด้วย
 
   SelectedMenu({
@@ -60,6 +61,7 @@ class SelectedMenu {
     required this.menuName,
     required this.menuImage,
     required this.count,
+    required this.menuPrice, // เพิ่มใน constructor ด้วย
     required this.selectedOptions,
   });
 }

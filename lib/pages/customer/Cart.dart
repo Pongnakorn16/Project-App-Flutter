@@ -6,48 +6,28 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
-import 'package:mobile_miniproject_app/models/response/MenuInfoGetRes.dart';
-import 'package:mobile_miniproject_app/models/response/ResCatGetRes.dart';
-import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
-import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
-import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/pages/customer/TopUp.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:geolocator/geolocator.dart';
 
 class CartPage extends StatefulWidget {
-  final List<MenuInfoGetResponse> selectedMenus;
-  final Map<int, int> counts;
+  final List<Map<String, dynamic>> mergedMenus;
 
-  const CartPage({
-    super.key,
-    required this.selectedMenus,
-    required this.counts,
-  });
+  const CartPage({Key? key, required this.mergedMenus}) : super(key: key);
 
   @override
-  State<CartPage> createState() => _HomePageState();
+  State<CartPage> createState() => _CartPageState();
 }
 
-class _HomePageState extends State<CartPage> {
+class _CartPageState extends State<CartPage> {
   int _selectedIndex = 1;
   late PageController _pageController;
   String url = '';
-  bool isFavorite = false;
   bool isLoading = true;
   String? _address; // เก็บที่อยู่ที่ได้
-  List<ResCatGetResponse> _restaurantCategories = [];
-  List<MenuInfoGetResponse> _restaurantMenu = [];
-  Map<int, int> _selectedMenuCounts = {};
   String? _selectedCustomerAddress;
-  List<MenuInfoGetResponse> get selectedMenus {
-    return _restaurantMenu
-        .where((menu) => _selectedMenuCounts.containsKey(menu.menu_id))
-        .toList();
-  }
 
   @override
   void initState() {
@@ -57,9 +37,6 @@ class _HomePageState extends State<CartPage> {
       LoadCusAdd();
       _getAddressFromCoordinates();
       setState(() {});
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        // _getAddressFromCoordinates();
-      });
     });
     _pageController = PageController();
   }
@@ -155,7 +132,6 @@ class _HomePageState extends State<CartPage> {
   }
 
   @override
-  @override
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Scaffold(
@@ -197,10 +173,10 @@ class _HomePageState extends State<CartPage> {
   }
 
   Widget buildAddressSection(List<CusAddressGetResponse> customerAdd) {
-    final restaurantAddress = _address.toString();
+    final restaurantAddress = _address ?? "กำลังโหลดที่อยู่ร้าน...";
     final customerAddress = customerAdd.isNotEmpty
-        ? customerAdd[0].ca_address + "  " + customerAdd[0].ca_detail
-        : "กำลังโหลดที่อยู่...";
+        ? "${customerAdd[0].ca_address}  ${customerAdd[0].ca_detail}"
+        : "กำลังโหลดที่อยู่ลูกค้า...";
 
     return Card(
       elevation: 2,
@@ -223,7 +199,7 @@ class _HomePageState extends State<CartPage> {
                       style:
                           TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
-                    Text(restaurantAddress), // ใช้ค่าจากตัวแปร
+                    Text(restaurantAddress),
                   ],
                 ),
               ],
@@ -288,21 +264,64 @@ class _HomePageState extends State<CartPage> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            ...widget.selectedMenus.map((menu) {
-              final count = widget.counts[menu.menu_id] ?? 1;
-              final totalPrice = menu.menu_price * count;
+
+            // แสดงรายการเมนู
+            ...widget.mergedMenus.map((menu) {
+              final count = menu["count"] ?? 1;
+              final menuPrice =
+                  (menu["menu_price"] ?? 0).toDouble(); // ถ้าเมนูมีราคาด้วย
+
+              // คำนวณราคาตัวเลือก
+              final List<dynamic> options = menu["selectedOptions"] ?? [];
+              double optionsTotalPrice = 0;
+              for (var opt in options) {
+                optionsTotalPrice += (opt["op_price"] ?? 0).toDouble();
+              }
+
+              final totalPrice = (menuPrice + optionsTotalPrice) * count;
+
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(child: Text("${menu.menu_name} x$count")),
-                    Text("${totalPrice.toStringAsFixed(0)} บาท"),
+                    // ชื่อเมนู + จำนวน
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(child: Text("${menu["menu_name"]} x$count")),
+                        Text("${totalPrice.toStringAsFixed(0)} บาท"),
+                      ],
+                    ),
+
+                    // แสดง option ถ้ามี
+                    if (options.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16, top: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: options.map<Widget>((opt) {
+                            final opPrice = (opt["op_price"] ?? 0).toDouble();
+                            return Text(
+                              opPrice > 0
+                                  ? "- ${opt["op_name"]} (+${opPrice.toStringAsFixed(0)} บาท)"
+                                  : "- ${opt["op_name"]}",
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
                   ],
                 ),
               );
             }),
+
             const Divider(),
+
+            // รวมทั้งหมด
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -425,6 +444,7 @@ class _HomePageState extends State<CartPage> {
                 );
               },
             );
+            return;
           }
           Fluttertoast.showToast(msg: "ทำการสั่งซื้อเรียบร้อยแล้ว");
         },
@@ -439,15 +459,20 @@ class _HomePageState extends State<CartPage> {
 
   double calculateTotal() {
     double total = 0;
-    for (var menu in widget.selectedMenus) {
-      final count = widget.counts[menu.menu_id] ?? 1;
-      total += menu.menu_price * count;
+    for (var menu in widget.mergedMenus) {
+      final count = menu["count"] ?? 1;
+      final menuPrice = (menu["menu_price"] ?? 0).toDouble();
+
+      final List<dynamic> options = menu["selectedOptions"] ?? [];
+      double optionsTotalPrice = 0;
+      for (var opt in options) {
+        optionsTotalPrice += (opt["price"] ?? 0).toDouble();
+      }
+
+      total += (menuPrice + optionsTotalPrice) * count;
     }
     return total;
   }
-
-// เพิ่ม
-  String _selectedPayment = "COD";
 
   Widget buildBottomNavigationBar() {
     return Container(
@@ -503,7 +528,7 @@ class _HomePageState extends State<CartPage> {
           textColor: Colors.white);
     } finally {
       setState(() {
-        isLoading = false; // ✅ หลังโหลดเสร็จ
+        isLoading = false; // หลังโหลดเสร็จ
       });
     }
   }
