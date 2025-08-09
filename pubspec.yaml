@@ -58,6 +58,7 @@ dependencies:
   firebase_auth: ^5.7.0
   google_sign_in: ^6.2.1
   qr_flutter: ^4.0.0
+  flutter_slidable: ^3.0.1
   
 
 

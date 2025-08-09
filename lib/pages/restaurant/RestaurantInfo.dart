@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -34,6 +35,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
   late PageController _pageController;
   String url = '';
   bool isFavorite = false;
+  bool _isDeleting = false;
   String? _address; // เก็บที่อยู่ที่ได้
   List<ResCatGetResponse> _restaurantCategories = [];
   List<MenuInfoGetResponse> _restaurantMenu = [];
@@ -508,6 +510,341 @@ class _HomePageState extends State<RestaurantinfoPage> {
     return total;
   }
 
+  // วิธีที่ดีกว่า: ใช้ CompleteCompleter เพื่อควบคุม async operation
+  // วิธีที่ดีกว่า: ใช้ CompleteCompleter เพื่อควบคุม async operation
+  void _showEditMenuDialog(int menu_id) {
+    showDialog(
+      context: context,
+      barrierDismissible: !_isDeleting, // ปิดได้เมื่อไม่ได้ loading เท่านั้น
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            // ย้าย filteredMenus มาไว้ใน builder เพื่อให้อัพเดททุกครั้ง
+            final filteredMenus =
+                _selectedMenu_op.where((m) => m.menuId == menu_id).toList();
+
+            return AlertDialog(
+              title: const Text('แก้ไขเมนู'),
+              content: SizedBox(
+                height: 300,
+                width: double.maxFinite,
+                child: _isDeleting
+                    ? const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text('กำลังลบรายการ...'),
+                          ],
+                        ),
+                      )
+                    : filteredMenus.isEmpty
+                        ? const Center(
+                            child: Text('ไม่มีรายการในตะกร้า'),
+                          )
+                        : ListView.builder(
+                            itemCount: filteredMenus.length,
+                            itemBuilder: (context, index) {
+                              final menu = filteredMenus[index];
+
+                              return Slidable(
+                                key: ValueKey(
+                                    "${menu.menuId}_${menu.selectedOptions}"),
+                                endActionPane: ActionPane(
+                                  motion: const DrawerMotion(),
+                                  children: [
+                                    CustomSlidableAction(
+                                      onPressed: (context) async {
+                                        // เริ่ม loading
+                                        setDialogState(() {
+                                          _isDeleting = true;
+                                        });
+
+                                        // รอสักครู่ (simulate processing)
+                                        await Future.delayed(
+                                            const Duration(milliseconds: 800));
+
+                                        // ลบข้อมูลจริง
+                                        final indexToRemove =
+                                            _selectedMenu_op.indexWhere((m) =>
+                                                m.menuId == menu.menuId &&
+                                                _isSameOption(m.selectedOptions,
+                                                    menu.selectedOptions));
+                                        if (indexToRemove != -1) {
+                                          _selectedMenu_op
+                                              .removeAt(indexToRemove);
+                                        }
+
+                                        // หยุด loading และ refresh dialog
+                                        setDialogState(() {
+                                          _isDeleting = false;
+                                        });
+
+                                        // อัพเดท main widget state เพื่อให้ UI หลักเปลี่ยน
+                                        setState(() {});
+                                      },
+                                      backgroundColor: Colors.red,
+                                      borderRadius: BorderRadius.circular(90),
+                                      padding: const EdgeInsets.all(1),
+                                      child: SizedBox(
+                                        width: 35,
+                                        height: 35,
+                                        child: Icon(
+                                          Icons.delete,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                child: Card(
+                                  margin:
+                                      const EdgeInsets.symmetric(vertical: 8),
+                                  child: ListTile(
+                                    leading: Image.network(
+                                      menu.menuImage,
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                    ),
+                                    title: Text(menu.menuName),
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: menu.selectedOptions.map((op) {
+                                        return Text(
+                                          '${op['op_name']}',
+                                          style: const TextStyle(
+                                              fontSize: 12, color: Colors.grey),
+                                        );
+                                      }).toList(),
+                                    ),
+                                    trailing: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () async {
+                                            Navigator.pop(context);
+                                            final result = await Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    OptionPage(
+                                                  menu_id: menu.menuId,
+                                                  initSelectedOptions:
+                                                      menu.selectedOptions,
+                                                  initCount: menu.count,
+                                                ),
+                                              ),
+                                            );
+
+                                            if (result != null &&
+                                                result
+                                                    is Map<String, dynamic>) {
+                                              final updatedMenu = SelectedMenu(
+                                                menuId: result['menu_id'],
+                                                menuName: result['menu_name'],
+                                                menuImage: result['menu_image'],
+                                                count: result['count'],
+                                                menuPrice: result['price'],
+                                                selectedOptions: List<
+                                                        Map<String,
+                                                            dynamic>>.from(
+                                                    result['selectedOptions']),
+                                              );
+
+                                              setState(() {
+                                                final indexToRemove =
+                                                    _selectedMenu_op.indexWhere((m) =>
+                                                        m.menuId ==
+                                                            result[
+                                                                'original_menu_id'] &&
+                                                        _isSameOption(
+                                                            m.selectedOptions,
+                                                            List<
+                                                                Map<String,
+                                                                    dynamic>>.from(result[
+                                                                'originalOptions'])));
+
+                                                if (indexToRemove != -1) {
+                                                  _selectedMenu_op
+                                                      .removeAt(indexToRemove);
+                                                }
+
+                                                final existingIndex =
+                                                    _selectedMenu_op.indexWhere((m) =>
+                                                        m.menuId ==
+                                                            updatedMenu
+                                                                .menuId &&
+                                                        _isSameOption(
+                                                            m.selectedOptions,
+                                                            updatedMenu
+                                                                .selectedOptions));
+
+                                                if (existingIndex != -1) {
+                                                  final existing =
+                                                      _selectedMenu_op[
+                                                          existingIndex];
+                                                  _selectedMenu_op[
+                                                          existingIndex] =
+                                                      SelectedMenu(
+                                                    menuId: existing.menuId,
+                                                    menuName: existing.menuName,
+                                                    menuImage:
+                                                        existing.menuImage,
+                                                    count: existing.count +
+                                                        updatedMenu.count,
+                                                    menuPrice:
+                                                        existing.menuPrice,
+                                                    selectedOptions: existing
+                                                        .selectedOptions,
+                                                  );
+                                                } else {
+                                                  _selectedMenu_op
+                                                      .add(updatedMenu);
+                                                }
+                                              });
+                                            }
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 14, vertical: 8),
+                                            decoration: BoxDecoration(
+                                              color: Colors.deepPurple,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: Text(
+                                              '${menu.count}',
+                                              style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 16),
+                                            ),
+                                          ),
+                                        )
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+              ),
+              actions: [
+                if (!_isDeleting &&
+                    filteredMenus
+                        .isNotEmpty) // แสดงปุ่มเฉพาะเมื่อไม่ loading และมีรายการ
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.deepPurple,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(context);
+
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => OptionPage(menu_id: menu_id),
+                          ),
+                        );
+
+                        if (result != null && result is Map) {
+                          final int returnedMenuId = result['menu_id'];
+                          final String returnedMenuName = result['menu_name'];
+                          final String returnedMenuImage = result['menu_image'];
+                          final int returnedCount = result['count'];
+                          final int returnedPrice = result['price'];
+                          final List<Map<String, dynamic>> returnedOptions =
+                              List<Map<String, dynamic>>.from(
+                                  result['selectedOptions']);
+
+                          setState(() {
+                            bool found = false;
+
+                            for (int i = 0; i < _selectedMenu_op.length; i++) {
+                              final existing = _selectedMenu_op[i];
+                              if (existing.menuId == returnedMenuId &&
+                                  _isSameOption(existing.selectedOptions,
+                                      returnedOptions)) {
+                                _selectedMenu_op[i] = SelectedMenu(
+                                  menuId: existing.menuId,
+                                  menuName: existing.menuName,
+                                  menuImage: existing.menuImage,
+                                  count: existing.count + returnedCount,
+                                  menuPrice: existing.menuPrice,
+                                  selectedOptions: existing.selectedOptions,
+                                );
+                                found = true;
+                                break;
+                              }
+                            }
+
+                            if (!found) {
+                              _selectedMenu_op.add(
+                                SelectedMenu(
+                                  menuId: returnedMenuId,
+                                  menuName: returnedMenuName,
+                                  menuImage: returnedMenuImage,
+                                  count: returnedCount,
+                                  menuPrice: returnedPrice,
+                                  selectedOptions: returnedOptions,
+                                ),
+                              );
+                            }
+                          });
+                        }
+                      },
+                      child: const Text(
+                        "ต้องการสั่งเมนูนี้เพิ่ม",
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white),
+                      ),
+                    ),
+                  ),
+                if (_isDeleting ||
+                    filteredMenus
+                        .isEmpty) // ปุ่มปิดเมื่อ loading หรือไม่มีรายการ
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.grey,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: _isDeleting
+                          ? null
+                          : () {
+                              Navigator.pop(context);
+                            },
+                      child: Text(
+                        _isDeleting ? "กำลังประมวลผล..." : "ปิด",
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget buildMenuItem(MenuInfoGetResponse menu) {
     final cal_count = getTotalCountForMenu(menu.menu_id);
     final count = _selectedMenu_no_op[menu.menu_id] ?? 0;
@@ -568,292 +905,338 @@ class _HomePageState extends State<RestaurantinfoPage> {
                     cal_count > 0
                         ? GestureDetector(
                             onTap: () {
-                              final filteredMenus = _selectedMenu_op
-                                  .where((m) => m.menuId == menu.menu_id)
-                                  .toList();
-                              showDialog(
-                                context: context,
-                                builder: (context) {
-                                  return AlertDialog(
-                                    title: const Text('แก้ไขเมนู'),
-                                    content: SizedBox(
-                                      height: 300,
-                                      width: double.maxFinite,
-                                      child: ListView.builder(
-                                        itemCount: filteredMenus.length,
-                                        itemBuilder: (context, index) {
-                                          final menu = filteredMenus[
-                                              index]; // เป็น SelectedMenu object
+                              _showEditMenuDialog(menu.menu_id);
+                              // final filteredMenus = _selectedMenu_op
+                              //     .where((m) => m.menuId == menu.menu_id)
+                              //     .toList();
+                              // showDialog(
+                              //   context: context,
+                              //   builder: (context) {
+                              //     return AlertDialog(
+                              //       title: const Text('แก้ไขเมนู'),
+                              //       content: SizedBox(
+                              //         height: 300,
+                              //         width: double.maxFinite,
+                              //         child: ListView.builder(
+                              //           itemCount: filteredMenus.length,
+                              //           itemBuilder: (context, index) {
+                              //             final menu = filteredMenus[
+                              //                 index]; // เป็น SelectedMenu object
 
-                                          return Card(
-                                            margin: const EdgeInsets.symmetric(
-                                                vertical: 8),
-                                            child: ListTile(
-                                              leading: Image.network(
-                                                menu.menuImage,
-                                                width: 50,
-                                                height: 50,
-                                                fit: BoxFit.cover,
-                                              ),
-                                              title: Text(menu.menuName),
-                                              subtitle: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: menu.selectedOptions
-                                                    .map((op) {
-                                                  return Text(
-                                                    '${op['op_name']}',
-                                                    style: const TextStyle(
-                                                        fontSize: 12,
-                                                        color: Colors.grey),
-                                                  );
-                                                }).toList(),
-                                              ),
-                                              trailing: Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  GestureDetector(
-                                                    onTap: () async {
-                                                      Navigator.pop(context);
-                                                      final result =
-                                                          await Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                          builder: (context) =>
-                                                              OptionPage(
-                                                            menu_id:
-                                                                menu.menuId,
-                                                            initSelectedOptions:
-                                                                menu.selectedOptions,
-                                                            initCount:
-                                                                menu.count,
-                                                            // ไม่ต้องส่ง index แล้ว
-                                                          ),
-                                                        ),
-                                                      );
+                              //             return Slidable(
+                              //               key: ValueKey(
+                              //                   "${menu.menuId}_${menu.selectedOptions}"),
+                              //               endActionPane: ActionPane(
+                              //                 motion:
+                              //                     const DrawerMotion(), // หรือ ScrollMotion() ก็ได้
+                              //                 children: [
+                              //                   CustomSlidableAction(
+                              //                     onPressed: (context) {
+                              //                       setState(() {
+                              //                         final indexToRemove =
+                              //                             _selectedMenu_op.indexWhere((m) =>
+                              //                                 m.menuId ==
+                              //                                     menu.menuId &&
+                              //                                 _isSameOption(
+                              //                                     m.selectedOptions,
+                              //                                     menu.selectedOptions));
+                              //                         if (indexToRemove != -1) {
+                              //                           _selectedMenu_op
+                              //                               .removeAt(
+                              //                                   indexToRemove);
+                              //                         }
+                              //                       });
+                              //                     },
+                              //                     backgroundColor: Colors.red,
+                              //                     borderRadius:
+                              //                         BorderRadius.circular(90),
+                              //                     padding: const EdgeInsets.all(
+                              //                         1), // padding น้อยมาก
+                              //                     child: SizedBox(
+                              //                       width: 35, // เล็กกว่าเดิม
+                              //                       height: 35, // เล็กกว่าเดิม
+                              //                       child: Icon(
+                              //                         Icons.delete,
+                              //                         color: Colors.white,
+                              //                         size: 20, // icon เล็กลง
+                              //                       ),
+                              //                     ),
+                              //                   ),
+                              //                 ],
+                              //               ),
+                              //               child: Card(
+                              //                 margin:
+                              //                     const EdgeInsets.symmetric(
+                              //                         vertical: 8),
+                              //                 child: ListTile(
+                              //                   leading: Image.network(
+                              //                     menu.menuImage,
+                              //                     width: 50,
+                              //                     height: 50,
+                              //                     fit: BoxFit.cover,
+                              //                   ),
+                              //                   title: Text(menu.menuName),
+                              //                   subtitle: Column(
+                              //                     crossAxisAlignment:
+                              //                         CrossAxisAlignment.start,
+                              //                     children: menu.selectedOptions
+                              //                         .map((op) {
+                              //                       return Text(
+                              //                         '${op['op_name']}',
+                              //                         style: const TextStyle(
+                              //                             fontSize: 12,
+                              //                             color: Colors.grey),
+                              //                       );
+                              //                     }).toList(),
+                              //                   ),
+                              //                   trailing: Column(
+                              //                     mainAxisAlignment:
+                              //                         MainAxisAlignment.center,
+                              //                     children: [
+                              //                       GestureDetector(
+                              //                         onTap: () async {
+                              //                           Navigator.pop(context);
+                              //                           final result =
+                              //                               await Navigator
+                              //                                   .push(
+                              //                             context,
+                              //                             MaterialPageRoute(
+                              //                               builder:
+                              //                                   (context) =>
+                              //                                       OptionPage(
+                              //                                 menu_id:
+                              //                                     menu.menuId,
+                              //                                 initSelectedOptions:
+                              //                                     menu.selectedOptions,
+                              //                                 initCount:
+                              //                                     menu.count,
+                              //                               ),
+                              //                             ),
+                              //                           );
 
-                                                      if (result != null &&
-                                                          result is Map<String,
-                                                              dynamic>) {
-                                                        final updatedMenu =
-                                                            SelectedMenu(
-                                                          menuId:
-                                                              result['menu_id'],
-                                                          menuName: result[
-                                                              'menu_name'],
-                                                          menuImage: result[
-                                                              'menu_image'],
-                                                          count:
-                                                              result['count'],
-                                                          menuPrice:
-                                                              result['price'],
-                                                          selectedOptions: List<
-                                                              Map<String,
-                                                                  dynamic>>.from(result[
-                                                              'selectedOptions']),
-                                                        );
+                              //                           if (result != null &&
+                              //                               result is Map<
+                              //                                   String,
+                              //                                   dynamic>) {
+                              //                             final updatedMenu =
+                              //                                 SelectedMenu(
+                              //                               menuId: result[
+                              //                                   'menu_id'],
+                              //                               menuName: result[
+                              //                                   'menu_name'],
+                              //                               menuImage: result[
+                              //                                   'menu_image'],
+                              //                               count:
+                              //                                   result['count'],
+                              //                               menuPrice:
+                              //                                   result['price'],
+                              //                               selectedOptions: List<
+                              //                                   Map<String,
+                              //                                       dynamic>>.from(result[
+                              //                                   'selectedOptions']),
+                              //                             );
 
-                                                        setState(() {
-                                                          // 🔥 1. ลบเมนูเดิมออกก่อน (ที่ index เดิมจากหน้าแก้ไข)
-                                                          final indexToRemove = _selectedMenu_op.indexWhere((menu) =>
-                                                              menu.menuId ==
-                                                                  result[
-                                                                      'original_menu_id'] &&
-                                                              _isSameOption(
-                                                                  menu
-                                                                      .selectedOptions,
-                                                                  List<
-                                                                      Map<String,
-                                                                          dynamic>>.from(result[
-                                                                      'originalOptions'])));
+                              //                             setState(() {
+                              //                               final indexToRemove = _selectedMenu_op.indexWhere((m) =>
+                              //                                   m.menuId ==
+                              //                                       result[
+                              //                                           'original_menu_id'] &&
+                              //                                   _isSameOption(
+                              //                                       m
+                              //                                           .selectedOptions,
+                              //                                       List<
+                              //                                           Map<String,
+                              //                                               dynamic>>.from(result[
+                              //                                           'originalOptions'])));
 
-                                                          if (indexToRemove !=
-                                                              -1) {
-                                                            _selectedMenu_op
-                                                                .removeAt(
-                                                                    indexToRemove);
-                                                          }
+                              //                               if (indexToRemove !=
+                              //                                   -1) {
+                              //                                 _selectedMenu_op
+                              //                                     .removeAt(
+                              //                                         indexToRemove);
+                              //                               }
 
-                                                          // 🔥 2. เช็คว่ามีเมนูแบบนี้อยู่แล้วมั้ย → ถ้ามี → เพิ่ม count
-                                                          final existingIndex =
-                                                              _selectedMenu_op.indexWhere((menu) =>
-                                                                  menu.menuId ==
-                                                                      updatedMenu
-                                                                          .menuId &&
-                                                                  _isSameOption(
-                                                                      menu
-                                                                          .selectedOptions,
-                                                                      updatedMenu
-                                                                          .selectedOptions));
+                              //                               final existingIndex = _selectedMenu_op.indexWhere((m) =>
+                              //                                   m.menuId ==
+                              //                                       updatedMenu
+                              //                                           .menuId &&
+                              //                                   _isSameOption(
+                              //                                       m
+                              //                                           .selectedOptions,
+                              //                                       updatedMenu
+                              //                                           .selectedOptions));
 
-                                                          if (existingIndex !=
-                                                              -1) {
-                                                            final existing =
-                                                                _selectedMenu_op[
-                                                                    existingIndex];
-                                                            _selectedMenu_op[
-                                                                    existingIndex] =
-                                                                SelectedMenu(
-                                                              menuId: existing
-                                                                  .menuId,
-                                                              menuName: existing
-                                                                  .menuName,
-                                                              menuImage: existing
-                                                                  .menuImage,
-                                                              count: existing
-                                                                      .count +
-                                                                  updatedMenu
-                                                                      .count,
-                                                              menuPrice: existing
-                                                                  .menuPrice,
-                                                              selectedOptions:
-                                                                  existing
-                                                                      .selectedOptions,
-                                                            );
-                                                          } else {
-                                                            // ถ้าไม่มีเมนูซ้ำ → เพิ่มเข้าใหม่
-                                                            _selectedMenu_op.add(
-                                                                updatedMenu);
-                                                          }
-                                                        });
-                                                      }
-                                                    },
-                                                    child: Container(
-                                                      padding: const EdgeInsets
-                                                          .symmetric(
-                                                          horizontal: 14,
-                                                          vertical: 8),
-                                                      decoration: BoxDecoration(
-                                                        color:
-                                                            Colors.deepPurple,
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(20),
-                                                      ),
-                                                      child: Text(
-                                                        '${menu.count}',
-                                                        style: const TextStyle(
-                                                            color: Colors.white,
-                                                            fontSize: 16),
-                                                      ),
-                                                    ),
-                                                  )
-                                                ],
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                    actions: [
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 16),
-                                            backgroundColor: Colors.deepPurple,
-                                            shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(12)),
-                                          ),
-                                          onPressed: () async {
-                                            Navigator.pop(context);
+                              //                               if (existingIndex !=
+                              //                                   -1) {
+                              //                                 final existing =
+                              //                                     _selectedMenu_op[
+                              //                                         existingIndex];
+                              //                                 _selectedMenu_op[
+                              //                                         existingIndex] =
+                              //                                     SelectedMenu(
+                              //                                   menuId: existing
+                              //                                       .menuId,
+                              //                                   menuName: existing
+                              //                                       .menuName,
+                              //                                   menuImage: existing
+                              //                                       .menuImage,
+                              //                                   count: existing
+                              //                                           .count +
+                              //                                       updatedMenu
+                              //                                           .count,
+                              //                                   menuPrice: existing
+                              //                                       .menuPrice,
+                              //                                   selectedOptions:
+                              //                                       existing
+                              //                                           .selectedOptions,
+                              //                                 );
+                              //                               } else {
+                              //                                 _selectedMenu_op.add(
+                              //                                     updatedMenu);
+                              //                               }
+                              //                             });
+                              //                           }
+                              //                         },
+                              //                         child: Container(
+                              //                           padding:
+                              //                               const EdgeInsets
+                              //                                   .symmetric(
+                              //                                   horizontal: 14,
+                              //                                   vertical: 8),
+                              //                           decoration:
+                              //                               BoxDecoration(
+                              //                             color:
+                              //                                 Colors.deepPurple,
+                              //                             borderRadius:
+                              //                                 BorderRadius
+                              //                                     .circular(20),
+                              //                           ),
+                              //                           child: Text(
+                              //                             '${menu.count}',
+                              //                             style:
+                              //                                 const TextStyle(
+                              //                                     color: Colors
+                              //                                         .white,
+                              //                                     fontSize: 16),
+                              //                           ),
+                              //                         ),
+                              //                       )
+                              //                     ],
+                              //                   ),
+                              //                 ),
+                              //               ),
+                              //             );
+                              //           },
+                              //         ),
+                              //       ),
+                              //       actions: [
+                              //         SizedBox(
+                              //           width: double.infinity,
+                              //           child: ElevatedButton(
+                              //             style: ElevatedButton.styleFrom(
+                              //               padding: const EdgeInsets.symmetric(
+                              //                   vertical: 16),
+                              //               backgroundColor: Colors.deepPurple,
+                              //               shape: RoundedRectangleBorder(
+                              //                   borderRadius:
+                              //                       BorderRadius.circular(12)),
+                              //             ),
+                              //             onPressed: () async {
+                              //               Navigator.pop(context);
 
-                                            final result = await Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    OptionPage(
-                                                        menu_id: menu.menu_id),
-                                              ),
-                                            );
+                              //               final result = await Navigator.push(
+                              //                 context,
+                              //                 MaterialPageRoute(
+                              //                   builder: (context) =>
+                              //                       OptionPage(
+                              //                           menu_id: menu.menu_id),
+                              //                 ),
+                              //               );
 
-                                            if (result != null &&
-                                                result is Map) {
-                                              final int returnedMenuId =
-                                                  result['menu_id'];
-                                              final String returnedMenuName =
-                                                  result['menu_name'];
-                                              final String returnedMenuImage =
-                                                  result['menu_image'];
-                                              final int returnedCount =
-                                                  result['count'];
-                                              final int returnedPrice =
-                                                  result['price'];
-                                              final List<Map<String, dynamic>>
-                                                  returnedOptions = List<
-                                                      Map<String,
-                                                          dynamic>>.from(result[
-                                                      'selectedOptions']);
+                              //               if (result != null &&
+                              //                   result is Map) {
+                              //                 final int returnedMenuId =
+                              //                     result['menu_id'];
+                              //                 final String returnedMenuName =
+                              //                     result['menu_name'];
+                              //                 final String returnedMenuImage =
+                              //                     result['menu_image'];
+                              //                 final int returnedCount =
+                              //                     result['count'];
+                              //                 final int returnedPrice =
+                              //                     result['price'];
+                              //                 final List<Map<String, dynamic>>
+                              //                     returnedOptions = List<
+                              //                         Map<String,
+                              //                             dynamic>>.from(result[
+                              //                         'selectedOptions']);
 
-                                              setState(() {
-                                                bool found = false;
+                              //                 setState(() {
+                              //                   bool found = false;
 
-                                                for (int i = 0;
-                                                    i < _selectedMenu_op.length;
-                                                    i++) {
-                                                  final existing =
-                                                      _selectedMenu_op[i];
-                                                  if (existing.menuId ==
-                                                          returnedMenuId &&
-                                                      _isSameOption(
-                                                          existing
-                                                              .selectedOptions,
-                                                          returnedOptions)) {
-                                                    // ถ้า menu_id + options ตรงกัน → เพิ่ม count เดิม
-                                                    _selectedMenu_op[i] =
-                                                        SelectedMenu(
-                                                      menuId: existing.menuId,
-                                                      menuName:
-                                                          existing.menuName,
-                                                      menuImage:
-                                                          existing.menuImage,
-                                                      count: existing.count +
-                                                          returnedCount,
-                                                      menuPrice:
-                                                          existing.menuPrice,
-                                                      selectedOptions: existing
-                                                          .selectedOptions,
-                                                    );
-                                                    found = true;
-                                                    break;
-                                                  }
-                                                }
+                              //                   for (int i = 0;
+                              //                       i < _selectedMenu_op.length;
+                              //                       i++) {
+                              //                     final existing =
+                              //                         _selectedMenu_op[i];
+                              //                     if (existing.menuId ==
+                              //                             returnedMenuId &&
+                              //                         _isSameOption(
+                              //                             existing
+                              //                                 .selectedOptions,
+                              //                             returnedOptions)) {
+                              //                       // ถ้า menu_id + options ตรงกัน → เพิ่ม count เดิม
+                              //                       _selectedMenu_op[i] =
+                              //                           SelectedMenu(
+                              //                         menuId: existing.menuId,
+                              //                         menuName:
+                              //                             existing.menuName,
+                              //                         menuImage:
+                              //                             existing.menuImage,
+                              //                         count: existing.count +
+                              //                             returnedCount,
+                              //                         menuPrice:
+                              //                             existing.menuPrice,
+                              //                         selectedOptions: existing
+                              //                             .selectedOptions,
+                              //                       );
+                              //                       found = true;
+                              //                       break;
+                              //                     }
+                              //                   }
 
-                                                if (!found) {
-                                                  // ถ้าไม่มีเมนูเหมือนกันเลย → เพิ่มใหม่
-                                                  _selectedMenu_op.add(
-                                                    SelectedMenu(
-                                                      menuId: returnedMenuId,
-                                                      menuName:
-                                                          returnedMenuName,
-                                                      menuImage:
-                                                          returnedMenuImage,
-                                                      count: returnedCount,
-                                                      menuPrice: returnedPrice,
-                                                      selectedOptions:
-                                                          returnedOptions,
-                                                    ),
-                                                  );
-                                                }
-                                              });
-                                            }
-                                          },
-                                          child: const Text(
-                                            "ต้องการสั่งเมนูนี้เพิ่ม",
-                                            style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              );
+                              //                   if (!found) {
+                              //                     // ถ้าไม่มีเมนูเหมือนกันเลย → เพิ่มใหม่
+                              //                     _selectedMenu_op.add(
+                              //                       SelectedMenu(
+                              //                         menuId: returnedMenuId,
+                              //                         menuName:
+                              //                             returnedMenuName,
+                              //                         menuImage:
+                              //                             returnedMenuImage,
+                              //                         count: returnedCount,
+                              //                         menuPrice: returnedPrice,
+                              //                         selectedOptions:
+                              //                             returnedOptions,
+                              //                       ),
+                              //                     );
+                              //                   }
+                              //                 });
+                              //               }
+                              //             },
+                              //             child: const Text(
+                              //               "ต้องการสั่งเมนูนี้เพิ่ม",
+                              //               style: TextStyle(
+                              //                   fontSize: 16,
+                              //                   fontWeight: FontWeight.bold,
+                              //                   color: Colors.white),
+                              //             ),
+                              //           ),
+                              //         ),
+                              //       ],
+                              //     );
+                              //   },
+                              // );
                             },
                             child: Container(
                               padding: const EdgeInsets.symmetric(

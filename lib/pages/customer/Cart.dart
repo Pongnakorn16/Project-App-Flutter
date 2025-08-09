@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
@@ -342,6 +343,8 @@ class _CartPageState extends State<CartPage> {
   }
 
   Widget buildPaymentMethod() {
+    final balance = context.read<ShareData>().user_info_send.balance ?? 0;
+    final formattedBalance = NumberFormat("#,###").format(balance);
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -364,7 +367,7 @@ class _CartPageState extends State<CartPage> {
                     children: [
                       const Text("D-wallet"),
                       Text(
-                        "${context.read<ShareData>().user_info_send.balance} บาท",
+                        "$formattedBalance บาท",
                       ),
                     ],
                   ),
