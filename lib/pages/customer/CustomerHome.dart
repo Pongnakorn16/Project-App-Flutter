@@ -481,8 +481,10 @@ class _HomePageState extends State<CustomerHomePage> {
           ),
 
           /// ร้านใกล้เคียง
-          sectionTitle("ร้านใกล้เคียง"),
-          horizontalRestaurantScroll(NearByRes),
+          if (NearByRes.isNotEmpty) ...[
+            sectionTitle("ร้านใกล้เคียง"),
+            horizontalRestaurantScroll(NearByRes),
+          ],
 
           /// ร้านแนะนำ
           sectionTitle("ร้านแนะนำ"),

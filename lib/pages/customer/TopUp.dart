@@ -135,6 +135,22 @@ class _HomePageState extends State<TopupPage> {
             version: QrVersions.auto,
             size: 250.0,
           ),
+          SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () {
+              Fluttertoast.showToast(msg: "ทำการเติมเงินเรียบร้อยแล้ว");
+              final InputValue = int.parse(_amountController.text);
+              TopUp(InputValue);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green, // สีพื้นหลังปุ่ม
+              foregroundColor: Colors.white, // สีตัวอักษร
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              textStyle:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            child: const Text("ยืนยันการโอนเงิน"),
+          )
         ],
       ],
     );
@@ -279,6 +295,47 @@ class _HomePageState extends State<TopupPage> {
     } finally {
       setState(() {
         isLoading = false; // ✅ หลังโหลดเสร็จ
+      });
+    }
+  }
+
+  TopUp(int InputValue) async {
+    int cus_id = context.read<ShareData>().user_info_send.uid;
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final res_Add = await http.put(
+        Uri.parse("$url/db/TopUpCus_balance"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "InputValue": InputValue,
+          "cus_id": cus_id,
+        }),
+      );
+
+      if (res_Add.statusCode == 200) {
+        // ทำอย่างอื่นถ้าต้องการ
+      } else {
+        // handle error กรณี response ไม่ใช่ 200
+        Fluttertoast.showToast(
+          msg: "เกิดข้อผิดพลาดจาก server",
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+      }
+    } catch (e) {
+      log("LoadCusHome Error: $e");
+      Fluttertoast.showToast(
+        msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
       });
     }
   }

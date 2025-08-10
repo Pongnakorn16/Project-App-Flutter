@@ -74,22 +74,6 @@ class _HomePageState extends State<RestaurantHomePage> {
         ],
       ),
       bottomNavigationBar: buildBottomNavigationBar(),
-      floatingActionButton: Container(
-        height: 80,
-        width: 80,
-        child: FloatingActionButton(
-          onPressed: () {
-            Get.to(() => AddItemPage());
-            log("ADDD");
-          },
-          backgroundColor: Colors.yellow,
-          child: Icon(Icons.add, size: 50, color: Colors.white),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(40),
-          ),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
@@ -97,39 +81,31 @@ class _HomePageState extends State<RestaurantHomePage> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(40.0),
-          topRight: Radius.circular(40.0),
-        ),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(40.0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            spreadRadius: 2,
-            blurRadius: 8,
-            offset: Offset(0, -2),
-          ),
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, -2)),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(40.0),
-          topRight: Radius.circular(40.0),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
-          selectedItemColor: const Color.fromARGB(255, 115, 28, 168),
-          unselectedItemColor: Colors.grey,
-          backgroundColor: Colors.white,
-          iconSize: 20,
-          selectedLabelStyle:
-              TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-          unselectedLabelStyle: TextStyle(fontSize: 10),
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-          ],
-        ),
+      child: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        selectedItemColor: const Color.fromARGB(255, 115, 28, 168),
+        unselectedItemColor: Colors.grey,
+        backgroundColor: Colors.white,
+        iconSize: 20,
+        selectedLabelStyle:
+            const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        unselectedLabelStyle: const TextStyle(fontSize: 10),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.list_alt_rounded), label: 'Order'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+        ],
       ),
     );
   }

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/material.dart';
@@ -9,29 +8,28 @@ import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
-import 'package:mobile_miniproject_app/pages/customer/Order.dart';
 import 'package:mobile_miniproject_app/pages/customer/TopUp.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 import 'package:geocoding/geocoding.dart';
 
-class CartPage extends StatefulWidget {
+class OrderPage extends StatefulWidget {
   final List<Map<String, dynamic>> mergedMenus;
 
-  const CartPage({Key? key, required this.mergedMenus}) : super(key: key);
+  const OrderPage({Key? key, required this.mergedMenus}) : super(key: key);
 
   @override
-  State<CartPage> createState() => _CartPageState();
+  State<OrderPage> createState() => _CartPageState();
 }
 
-class _CartPageState extends State<CartPage> {
+class _CartPageState extends State<OrderPage> {
   int _selectedIndex = 1;
   late PageController _pageController;
   String url = '';
   bool isLoading = true;
-  var totalPrice;
   String? _address; // เก็บที่อยู่ที่ได้
   String? _selectedCustomerAddress;
+  var totalPrice;
 
   @override
   void initState() {
@@ -149,13 +147,9 @@ class _CartPageState extends State<CartPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("ตรวจสอบคำสั่งซื้อ"),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-        ),
+        title: const Text("ติดตามสถานะการสั่งซื้อ"),
+        automaticallyImplyLeading: false, // ปิดปุ่มย้อนกลับอัตโนมัติ
+        // หรือถ้าเคยใส่ leading ให้ลบออกด้วยนะ
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -166,9 +160,6 @@ class _CartPageState extends State<CartPage> {
             const SizedBox(height: 20),
             buildOrderSummary(),
             const SizedBox(height: 20),
-            buildPaymentMethod(),
-            const SizedBox(height: 20),
-            buildPlaceOrderButton(),
           ],
         ),
       ),
@@ -235,16 +226,6 @@ class _CartPageState extends State<CartPage> {
                       )
                     ],
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.grey),
-                  onPressed: () {
-                    if (customerAdd.isNotEmpty) {
-                      _showAddressDialog(customerAdd);
-                    } else {
-                      Fluttertoast.showToast(msg: "ไม่พบที่อยู่ของลูกค้า");
-                    }
-                  },
                 ),
               ],
             )
@@ -345,200 +326,6 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  Widget buildPaymentMethod() {
-    final balance = context.read<ShareData>().user_info_send.balance ?? 0;
-    final formattedBalance = NumberFormat("#,###").format(balance);
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "ชำระเงินด้วย D-wallet",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Column(
-              children: [
-                ListTile(
-                  leading: Icon(Icons.account_balance_wallet),
-                  title: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("D-wallet"),
-                      Text(
-                        "$formattedBalance บาท",
-                      ),
-                    ],
-                  ),
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: const Text("แจ้งเตือน"),
-                          content:
-                              const Text("คุณต้องการเติม D-wallet หรือไม่"),
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => TopupPage()),
-                                );
-                              },
-                              child: const Text("ใช่"),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text("ปิด"),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  },
-                ),
-              ],
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget buildPlaceOrderButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          backgroundColor: Colors.deepPurple,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        onPressed: () {
-          if (calculateTotal() >
-              context.read<ShareData>().user_info_send.balance) {
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return AlertDialog(
-                  title: const Text("จำนวน D-wallet ของคุณไม่เพียงพอ!!!"),
-                  content: const Text("คุณต้องการเติม D-wallet หรือไม่"),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => TopupPage()),
-                        );
-                      },
-                      child: const Text("ใช่"),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text("ปิด"),
-                    ),
-                  ],
-                );
-              },
-            );
-            return;
-          }
-          // แสดง dialog ยืนยันก่อนจะไปหน้า OrderPage
-          showConfirmOrderDialog(context, () {
-            final total = calculateTotal();
-            update_cus_balance(total);
-            Fluttertoast.showToast(msg: "ทำการสั่งซื้อเรียบร้อยแล้ว");
-            Get.to(() => OrderPage(mergedMenus: widget.mergedMenus));
-          });
-        },
-        child: const Text(
-          "สั่งซื้อ",
-          style: TextStyle(
-              fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-      ),
-    );
-  }
-
-  void showConfirmOrderDialog(BuildContext context, VoidCallback onConfirmed) {
-    const totalSeconds = 5;
-    int secondsLeft = totalSeconds;
-    Timer? timer;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            void startTimer() {
-              timer = Timer.periodic(const Duration(seconds: 1), (_) {
-                if (secondsLeft == 0) {
-                  timer?.cancel();
-                  Navigator.pop(context); // ปิด dialog
-                  onConfirmed(); // ไปหน้า OrderPage
-                } else {
-                  setState(() {
-                    secondsLeft--;
-                  });
-                }
-              });
-            }
-
-            if (timer == null) {
-              startTimer();
-            }
-
-            return AlertDialog(
-              title: const Text('ยืนยันการสั่งซื้อ'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('ระบบจะดำเนินการในอีก $secondsLeft วินาที'),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 50,
-                    width: 50,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        CircularProgressIndicator(
-                          value: secondsLeft / totalSeconds,
-                          strokeWidth: 6,
-                          color: Colors.deepPurple,
-                          backgroundColor: Colors.grey.shade300,
-                        ),
-                        Center(child: Text('$secondsLeft')),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    timer?.cancel();
-                    Navigator.pop(context); // ปิด dialog
-                  },
-                  child: const Text('ยกเลิก'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
   double calculateTotal() {
     double total = 0;
     for (var menu in widget.mergedMenus) {
@@ -602,18 +389,6 @@ class _CartPageState extends State<CartPage> {
           context.read<ShareData>().customer_addresses = res_addList;
         }
       }
-      final res_balance =
-          await http.get(Uri.parse("$url/db/loadCusbalance/$userId"));
-      print('Status code: ${res_balance.statusCode}');
-      print('Response body: ${res_balance.body}');
-
-      if (res_balance.statusCode == 200) {
-        final data = jsonDecode(res_balance.body);
-        final int balance = data['balance'] ?? 0;
-        context.read<ShareData>().user_info_send.balance = balance;
-      } else {
-        Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
-      }
     } catch (e) {
       log("LoadCusHome Error: $e");
       Fluttertoast.showToast(
@@ -623,48 +398,6 @@ class _CartPageState extends State<CartPage> {
     } finally {
       setState(() {
         isLoading = false; // หลังโหลดเสร็จ
-      });
-    }
-  }
-
-  void update_cus_balance(double d_total) async {
-    int cus_id = context.read<ShareData>().user_info_send.uid;
-    int total = d_total.toInt();
-
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      final res_Add = await http.put(
-        Uri.parse("$url/db/updateCus_balance"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "total": total,
-          "cus_id": cus_id,
-        }),
-      );
-
-      if (res_Add.statusCode == 200) {
-        // ทำอย่างอื่นถ้าต้องการ
-      } else {
-        // handle error กรณี response ไม่ใช่ 200
-        Fluttertoast.showToast(
-          msg: "เกิดข้อผิดพลาดจาก server",
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-        );
-      }
-    } catch (e) {
-      log("LoadCusHome Error: $e");
-      Fluttertoast.showToast(
-        msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
-    } finally {
-      setState(() {
-        isLoading = false;
       });
     }
   }

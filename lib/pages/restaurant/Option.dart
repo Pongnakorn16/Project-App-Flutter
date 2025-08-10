@@ -300,7 +300,7 @@ class _HomePageState extends State<OptionPage> {
                     });
                   },
                   child: Text(
-                    widget.menuIndex != null
+                    widget.initSelectedOptions != null
                         ? "อัปเดตตระกร้า"
                         : "เพิ่มลงในตะกร้า",
                     style: const TextStyle(
