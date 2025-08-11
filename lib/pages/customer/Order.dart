@@ -236,6 +236,55 @@ class _CartPageState extends State<OrderPage> {
   }
 
   Widget buildOrderSummary() {
+    double finalPrice = 0; // ประกาศตัวแปรเก็บผลรวมใหม่ทุกครั้ง
+
+    List<Widget> menuWidgets = widget.mergedMenus.map((menu) {
+      final count = menu["count"] ?? 1;
+      final menuPrice = (menu["menu_price"] ?? 0).toDouble();
+
+      final List<dynamic> options = menu["selectedOptions"] ?? [];
+      double optionsTotalPrice = 0;
+      for (var opt in options) {
+        optionsTotalPrice += (opt["op_price"] ?? 0).toDouble();
+      }
+
+      final totalPrice = (menuPrice + optionsTotalPrice) * count;
+
+      finalPrice += totalPrice; // บวกราคานี้ลงตัวแปรผลรวม
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(child: Text("${menu["menu_name"]} x$count")),
+                Text("${totalPrice.toStringAsFixed(0)} บาท"),
+              ],
+            ),
+            if (options.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 16, top: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: options.map<Widget>((opt) {
+                    final opPrice = (opt["op_price"] ?? 0).toDouble();
+                    return Text(
+                      opPrice > 0
+                          ? "- ${opt["op_name"]} (+${opPrice.toStringAsFixed(0)} บาท)"
+                          : "- ${opt["op_name"]}",
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    );
+                  }).toList(),
+                ),
+              ),
+          ],
+        ),
+      );
+    }).toList();
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -249,64 +298,8 @@ class _CartPageState extends State<OrderPage> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-
-            // แสดงรายการเมนู
-            ...widget.mergedMenus.map((menu) {
-              final count = menu["count"] ?? 1;
-              final menuPrice =
-                  (menu["menu_price"] ?? 0).toDouble(); // ถ้าเมนูมีราคาด้วย
-
-              // คำนวณราคาตัวเลือก
-              final List<dynamic> options = menu["selectedOptions"] ?? [];
-              double optionsTotalPrice = 0;
-              for (var opt in options) {
-                optionsTotalPrice += (opt["op_price"] ?? 0).toDouble();
-              }
-
-              totalPrice = (menuPrice + optionsTotalPrice) * count;
-
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ชื่อเมนู + จำนวน
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(child: Text("${menu["menu_name"]} x$count")),
-                        Text("${totalPrice.toStringAsFixed(0)} บาท"),
-                      ],
-                    ),
-
-                    // แสดง option ถ้ามี
-                    if (options.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16, top: 4),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: options.map<Widget>((opt) {
-                            final opPrice = (opt["op_price"] ?? 0).toDouble();
-                            return Text(
-                              opPrice > 0
-                                  ? "- ${opt["op_name"]} (+${opPrice.toStringAsFixed(0)} บาท)"
-                                  : "- ${opt["op_name"]}",
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            }),
-
+            ...menuWidgets,
             const Divider(),
-
-            // รวมทั้งหมด
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -315,7 +308,7 @@ class _CartPageState extends State<OrderPage> {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  "${totalPrice.toStringAsFixed(0)} บาท",
+                  "${finalPrice.toStringAsFixed(0)} บาท",
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
