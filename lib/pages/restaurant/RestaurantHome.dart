@@ -13,6 +13,7 @@ import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/Home_Receive.dart';
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
+import 'package:mobile_miniproject_app/pages/restaurant/AddMenu.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/EditMenu.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
@@ -633,13 +634,26 @@ class _HomePageState extends State<RestaurantHomePage> {
                                 MainAxisSize.min, // ทำให้ Row กว้างแค่พอดีไอคอน
                             children: [
                               IconButton(
-                                icon:
-                                    const Icon(Icons.edit, color: Colors.blue),
-                                onPressed: () {
-                                  Get.to(EditMenuPage(
-                                      restaurantMenu: _restaurantMenu));
-                                },
-                              ),
+                                  icon: const Icon(Icons.edit,
+                                      color: Colors.blue),
+                                  onPressed: () async {
+                                    final result = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => EditMenuPage(
+                                          menu_id: men.menu_id,
+                                          restaurantCategories:
+                                              _restaurantCategories,
+                                        ),
+                                      ),
+                                    );
+
+                                    if (result == true) {
+                                      await LoadResInfo();
+                                      Navigator.of(context).pop();
+                                      POP_UPMenu();
+                                    }
+                                  }),
                               IconButton(
                                 icon:
                                     const Icon(Icons.delete, color: Colors.red),
@@ -652,7 +666,7 @@ class _HomePageState extends State<RestaurantHomePage> {
                                       return AlertDialog(
                                         title: const Text('ยืนยันการลบ'),
                                         content: Text(
-                                            'ต้องการลบหมวดหมู่ "${men.menu_name}" หรือไม่?'),
+                                            'ต้องการลบเมนู "${men.menu_name}" หรือไม่?'),
                                         actions: [
                                           TextButton(
                                             onPressed: () =>
@@ -661,8 +675,8 @@ class _HomePageState extends State<RestaurantHomePage> {
                                           ),
                                           ElevatedButton(
                                             onPressed: () async {
-                                              // เรียกฟังก์ชันลบหมวดหมู่ เช่น DeleteCategory(cat.cat_id);
-                                              await DeleteCategory(men.menu_id);
+                                              // เรียกฟังก์ชันลบเมนู
+                                              await DeleteMenu(men.menu_id);
                                               await LoadResInfo();
 
                                               Navigator.of(context)
@@ -671,7 +685,7 @@ class _HomePageState extends State<RestaurantHomePage> {
                                                   .pop(); // ปิด popup list หมวดหมู่
 
                                               // เปิด popup ใหม่ เพื่อ refresh ข้อมูล
-                                              POP_UPCaterogy();
+                                              POP_UPMenu();
 
                                               Fluttertoast.showToast(
                                                 msg: 'ลบหมวดหมู่เรียบร้อยแล้ว',
@@ -693,71 +707,30 @@ class _HomePageState extends State<RestaurantHomePage> {
                       );
                     }).toList(),
                     const SizedBox(height: 8),
-                    // ปุ่มเพิ่มหมวดหมู่
+                    // ปุ่มเพิ่มเมนู
                     ElevatedButton.icon(
-                      onPressed: () {
-                        final TextEditingController _AddCatController =
-                            TextEditingController();
-
-                        showDialog(
-                          context: context,
-                          builder: (context) {
-                            return AlertDialog(
-                              title: const Text("เพิ่มหมวดหมู่เมนูอาหาร"),
-                              content: TextField(
-                                controller:
-                                    _AddCatController, // ผูก controller ที่นี่
-                                decoration: InputDecoration(
-                                  hintText: 'กรอกชื่อหมวดหมู่',
-                                  labelText: 'ชื่อหมวดหมู่',
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context)
-                                        .pop(); // ยกเลิก ปิด dialog
-                                  },
-                                  child: const Text("ยกเลิก"),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () async {
-                                    final newName =
-                                        _AddCatController.text.trim();
-                                    if (newName.isNotEmpty) {
-                                      await AddCaterogy(
-                                          newName); // รอเพิ่มข้อมูล
-                                      await LoadResInfo(); // รอโหลดข้อมูลใหม่
-
-                                      Fluttertoast.showToast(
-                                        msg: "เพิ่มข้อมูลแล้ว",
-                                        backgroundColor: Colors.green,
-                                        textColor: Colors.white,
-                                      );
-
-                                      Navigator.of(context).pop();
-                                      Navigator.of(context).pop(); // ปิด dialog
-
-                                      POP_UPCaterogy(); // เปิด popup ใหม่ถ้าต้องการ
-                                    } else {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                            content:
-                                                Text("กรุณากรอกชื่อหมวดหมู่")),
-                                      );
-                                    }
-                                  },
-                                  child: const Text("บันทึก"),
-                                ),
-                              ],
-                            );
-                          },
+                      onPressed: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AddMenuPage(
+                              restaurantCategories: _restaurantCategories,
+                            ),
+                          ),
                         );
+
+                        if (result == true) {
+                          await LoadResInfo();
+                          Navigator.of(context).pop(); // รีเฟรชข้อมูล
+                          POP_UPMenu();
+                        }
                       },
-                      icon: const Icon(Icons.add),
-                      label: const Text("เพิ่มหมวดหมู่"),
+                      icon: const Icon(
+                        Icons.add,
+                        color: Colors.white,
+                      ),
+                      label: const Text("เพิ่มเมนู",
+                          style: TextStyle(color: Colors.white)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                       ),
@@ -903,14 +876,76 @@ class _HomePageState extends State<RestaurantHomePage> {
     }
   }
 
+  Future<void> AddMenu(String name, String desc, double price, String imageUrl,
+      int catId) async {
+    try {
+      final res_Add = await http.post(
+        Uri.parse("$url/db/add_Menu"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "menu_name": name,
+          "menu_des": desc,
+          "menu_price": price,
+          "menu_image": imageUrl,
+          "cat_id": catId,
+        }),
+      );
+
+      if (res_Add.statusCode == 200) {
+        // ทำอย่างอื่นถ้าต้องการ
+      } else {
+        // handle error กรณี response ไม่ใช่ 200
+        Fluttertoast.showToast(
+          msg: "เกิดข้อผิดพลาดจาก server",
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+      }
+    } catch (e) {
+      log("LoadCusHome Error: $e");
+      Fluttertoast.showToast(
+        msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    }
+  }
+
   Future<void> DeleteCategory(int cat_id) async {
     try {
-      final res_Add = await http.delete(
+      final cat_del = await http.delete(
         Uri.parse("$url/db/delete_catName/${cat_id}"),
         headers: {"Content-Type": "application/json"},
       );
 
-      if (res_Add.statusCode == 200) {
+      if (cat_del.statusCode == 200) {
+        // ทำอย่างอื่นถ้าต้องการ
+      } else {
+        // handle error กรณี response ไม่ใช่ 200
+        Fluttertoast.showToast(
+          msg: "เกิดข้อผิดพลาดจาก server",
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+      }
+    } catch (e) {
+      log("LoadCusHome Error: $e");
+      Fluttertoast.showToast(
+        msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    }
+  }
+
+  Future<void> DeleteMenu(int menu_id) async {
+    try {
+      final men_del = await http.delete(
+        Uri.parse("$url/db/delete_menu/${menu_id}"),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      if (men_del.statusCode == 200) {
         // ทำอย่างอื่นถ้าต้องการ
       } else {
         // handle error กรณี response ไม่ใช่ 200

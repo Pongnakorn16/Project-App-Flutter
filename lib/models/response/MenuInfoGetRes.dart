@@ -30,7 +30,7 @@ class MenuInfoGetResponse {
     return MenuInfoGetResponse(
       menu_id: json['menu_id'] ?? 0,
       menu_name: json['menu_name'] ?? '',
-      menu_des: json['menu_des)'] ?? '',
+      menu_des: json['menu_des'] ?? '',
       menu_image: json['menu_image'] ?? '',
       menu_price: json['menu_price'] ?? 0,
       op_cat_id: json['op_cat_id'] ?? 0,
