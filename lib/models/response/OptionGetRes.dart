@@ -29,16 +29,19 @@ class OptionGetResponse {
 class Category {
   int opCatId;
   String opCatName;
+  int resId;
 
   Category({
     required this.opCatId,
     required this.opCatName,
+    required this.resId,
   });
 
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
       opCatId: json["op_cat_id"] ?? 0,
       opCatName: json["op_cat_name"] ?? '',
+      resId: json["res_id"] ?? 0,
     );
   }
 }

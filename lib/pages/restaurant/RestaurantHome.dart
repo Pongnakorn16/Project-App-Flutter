@@ -13,8 +13,10 @@ import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/Home_Receive.dart';
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
+import 'package:mobile_miniproject_app/pages/customer/Order.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/AddMenu.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/EditMenu.dart';
+import 'package:mobile_miniproject_app/pages/restaurant/ResOrder.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
@@ -62,21 +64,17 @@ class _HomePageState extends State<RestaurantHomePage> {
           TextSpan(
             children: [
               TextSpan(
-                text: 'หน้าร้านค้า : ', // ข้อความปกติ
+                text: 'หน้าร้านค้า : ',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                 ),
               ),
               TextSpan(
-                text: context
-                    .read<ShareData>()
-                    .user_info_send
-                    .name, // ข้อความที่ต้องการเปลี่ยนสี
+                text: context.read<ShareData>().user_info_send.name,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Color.fromARGB(
-                      255, 241, 199, 12), // เปลี่ยนสีตามที่ต้องการ
+                  color: Color.fromARGB(255, 241, 199, 12),
                 ),
               ),
             ],
@@ -84,219 +82,235 @@ class _HomePageState extends State<RestaurantHomePage> {
         ),
         automaticallyImplyLeading: false,
       ),
-      body: _restaurantInfo.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // รูป + ข้อมูลร้าน
-                  Stack(
+
+      // PageView แทน body ปกติ
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        children: [
+          buildRestaurantHomeBody(), // หน้าหลักร้าน (ย้าย body เดิมมาใส่ในฟังก์ชันนี้)
+          ResOrderPage(), // หน้ารับออเดอร์
+          ProfilePage(onClose: () {}, selectedIndex: 2), // โปรไฟล์
+        ],
+      ),
+
+      bottomNavigationBar: buildBottomNavigationBar(),
+    );
+  }
+
+  Widget buildRestaurantHomeBody() {
+    if (_restaurantInfo.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // รูป + ข้อมูลร้าน
+          Stack(
+            children: [
+              Image.network(
+                _restaurantInfo[0].res_image ?? '',
+                width: double.infinity,
+                height: 200,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: Colors.grey[300],
+                  height: 200,
+                  child: const Icon(Icons.store, size: 80),
+                ),
+              ),
+            ],
+          ),
+          // Description, คะแนน, ปุ่มจัดการ ฯลฯ
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Rating
+                Row(
+                  children: [
+                    const Icon(Icons.star, color: Colors.yellow, size: 18),
+                    const SizedBox(width: 4),
+                    Text(
+                      "Rating : ${_restaurantInfo[0].res_rating ?? 0.0}",
+                      style: const TextStyle(color: Colors.black),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                // Description
+                Row(
+                  children: [
+                    const Icon(Icons.description_outlined,
+                        color: Colors.black, size: 18),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        "Description : ${_restaurantInfo[0].res_description ?? ''}",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                // ปุ่มจัดการ
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      Image.network(
-                        _restaurantInfo[0].res_image ?? '', // ใส่ field รูปร้าน
-                        width: double.infinity,
-                        height: 200,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          color: Colors.grey[300],
-                          height: 200,
-                          child: const Icon(Icons.store, size: 80),
+                      ElevatedButton.icon(
+                        onPressed: () => POP_UPCaterogy(),
+                        icon: const Icon(Icons.category),
+                        label: const Text("จัดการหมวดหมู่เมนู"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () => POP_UPMenu(),
+                        icon: const Icon(Icons.fastfood),
+                        label: const Text("จัดการเมนู"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          // จัดการหมวดหมู่ตัวเลือกเพิ่มเติม
+                        },
+                        icon: const Icon(Icons.playlist_add),
+                        label: const Text("จัดการหมวดหมู่ตัวเลือกเพิ่มเติม"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
                         ),
                       ),
                     ],
                   ),
-
-                  // Description
+                ),
+              ],
+            ),
+          ),
+          // หมวดหมู่ + เมนู
+          ..._restaurantCategories.map((cat) {
+            final menusInCat = _restaurantMenu
+                .where((menu) => menu.cat_id == cat.cat_id)
+                .toList();
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // คะแนนรีวิว
-                        Row(
-                          children: [
-                            const Icon(Icons.star,
-                                color: Colors.yellow, size: 18),
-                            const SizedBox(width: 4),
-                            Text(
-                              "Rating : ${_restaurantInfo[0].res_rating ?? 0.0}",
-                              style: const TextStyle(color: Colors.black),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        // คำอธิบายร้าน
-                        Row(
-                          children: [
-                            const Icon(Icons.description_outlined,
-                                color: Colors.black, size: 18),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                "Description : ${_restaurantInfo[0].res_description ?? ''}",
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16.0, vertical: 8.0),
-                          child: Wrap(
-                            spacing: 8, // ระยะห่างระหว่างปุ่ม
-                            runSpacing: 8, // ระยะห่างเมื่อขึ้นบรรทัดใหม่
-                            children: [
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  POP_UPCaterogy();
-                                },
-                                icon: const Icon(Icons.category),
-                                label: const Text("จัดการหมวดหมู่เมนู"),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange,
-                                ),
-                              ),
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  POP_UPMenu();
-                                },
-                                icon: const Icon(Icons.fastfood),
-                                label: const Text("จัดการเมนู"),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                ),
-                              ),
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  // ไปหน้า จัดการหมวดหมู่ตัวเลือกเพิ่มเติม
-                                },
-                                icon: const Icon(Icons.playlist_add),
-                                label: const Text(
-                                    "จัดการหมวดหมู่ตัวเลือกเพิ่มเติม"),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      cat.cat_name ?? '',
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
-
-                  // หมวดหมู่ + เมนู
-                  ..._restaurantCategories.map((cat) {
-                    // ดึงเมนูที่ตรงกับหมวดหมู่นี้
-                    final menusInCat = _restaurantMenu
-                        .where((menu) => menu.cat_id == cat.cat_id)
-                        .toList();
-
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // ชื่อหมวดหมู่
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 16.0),
-                            child: Text(
-                              cat.cat_name ?? '',
-                              style: const TextStyle(
-                                  fontSize: 20, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-
-                          // แสดงเมนูในหมวดหมู่
-                          menusInCat.isEmpty
-                              ? const Padding(
-                                  padding:
-                                      EdgeInsets.symmetric(horizontal: 16.0),
-                                  child: Text("ไม่มีเมนูในหมวดหมู่นี้"),
-                                )
-                              : SizedBox(
-                                  height: 200,
-                                  child: ListView.builder(
-                                    scrollDirection: Axis.horizontal,
-                                    itemCount: menusInCat.length,
-                                    itemBuilder: (context, index) {
-                                      final menu = menusInCat[index];
-                                      return Container(
-                                        width: 150,
-                                        margin: const EdgeInsets.only(left: 16),
-                                        child: Card(
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              ClipRRect(
-                                                borderRadius: const BorderRadius
-                                                    .vertical(
-                                                    top: Radius.circular(12)),
-                                                child: Image.network(
-                                                  menu.menu_image ?? '',
-                                                  height: 100,
-                                                  width: double.infinity,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error,
-                                                          stackTrace) =>
-                                                      Container(
-                                                    color: Colors.grey[300],
-                                                    height: 100,
-                                                    child: const Icon(
-                                                        Icons.fastfood,
-                                                        size: 50),
-                                                  ),
-                                                ),
-                                              ),
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets.all(8.0),
-                                                child: Text(
-                                                  menu.menu_name ?? '',
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold),
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 8.0),
-                                                child: Text(
-                                                  "฿${menu.menu_price?.toStringAsFixed(2) ?? '0.00'}",
-                                                  style: const TextStyle(
-                                                      color: Colors.green),
-                                                ),
-                                              ),
-                                            ],
+                  const SizedBox(height: 8),
+                  menusInCat.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Text("ไม่มีเมนูในหมวดหมู่นี้"),
+                        )
+                      : SizedBox(
+                          height: 200,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: menusInCat.length,
+                            itemBuilder: (context, index) {
+                              final menu = menusInCat[index];
+                              return GestureDetector(
+                                onTap: () async {
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => EditMenuPage(
+                                        menu_id: menu.menu_id,
+                                        restaurantCategories:
+                                            _restaurantCategories,
+                                      ),
+                                    ),
+                                  );
+                                  if (result == true) {
+                                    await LoadResInfo();
+                                    POP_UPMenu();
+                                  }
+                                },
+                                child: Container(
+                                  width: 150,
+                                  margin: const EdgeInsets.only(left: 16),
+                                  child: Card(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius:
+                                              const BorderRadius.vertical(
+                                                  top: Radius.circular(12)),
+                                          child: Image.network(
+                                            menu.menu_image ?? '',
+                                            height: 100,
+                                            width: double.infinity,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    Container(
+                                              color: Colors.grey[300],
+                                              height: 100,
+                                              child: const Icon(Icons.fastfood,
+                                                  size: 50),
+                                            ),
                                           ),
                                         ),
-                                      );
-                                    },
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                            menu.menu_name ?? '',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8.0),
+                                          child: Text(
+                                            "฿${menu.menu_price?.toStringAsFixed(2) ?? '0.00'}",
+                                            style: const TextStyle(
+                                                color: Colors.green),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+                              );
+                            },
+                          ),
+                        ),
                 ],
               ),
-            ),
-      bottomNavigationBar: buildBottomNavigationBar(),
+            );
+          }).toList(),
+        ],
+      ),
     );
   }
 
@@ -342,23 +356,8 @@ class _HomePageState extends State<RestaurantHomePage> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
-      if (index == 2) {
-        // Navigate to Profile page
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (context) =>
-                  ProfilePage(onClose: () {}, selectedIndex: 2)),
-        );
-      } else {
-        // Animate to the corresponding page in PageView
-        _pageController.animateToPage(
-          index,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      }
     });
+    _pageController.jumpToPage(index);
   }
 
   void POP_UPCaterogy() {

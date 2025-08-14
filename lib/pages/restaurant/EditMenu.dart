@@ -10,6 +10,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/MenuInfoGetRes.dart';
+import 'package:mobile_miniproject_app/models/response/OpCatGetRes.dart';
+import 'package:mobile_miniproject_app/models/response/OpCatLinkGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/OptionGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResCatGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
@@ -17,6 +19,7 @@ import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/customer/Cart.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
+import 'package:mobile_miniproject_app/pages/restaurant/EditOption.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/Option.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/RestaurantInfo.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
@@ -43,7 +46,9 @@ class _HomePageState extends State<EditMenuPage> {
   String url = '';
 
   List<ResCatGetResponse> _restaurantCategories = [];
+  OptionGetResponse? _Menu_Option;
   MenuInfoGetResponse? _MenuInfo;
+  List<OpCatGetResponse> _AllopCat_res = [];
 
   int? _selectedCatId;
   final TextEditingController _nameController = TextEditingController();
@@ -248,9 +253,26 @@ class _HomePageState extends State<EditMenuPage> {
 
             // ปุ่มตัวเลือกเพิ่มเติม
             TextButton(
-              onPressed: () {
-                // TODO: ทำ logic เปิดหน้า/popup ตัวเลือกเพิ่มเติม
-                Fluttertoast.showToast(msg: "ตัวเลือกเพิ่มเติม กดแล้ว");
+              onPressed: () async {
+                // แสดง loading dialog
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) =>
+                      const Center(child: CircularProgressIndicator()),
+                );
+
+                await LoadMenuInfo();
+
+                // ปิด loading
+                Navigator.of(context).pop();
+
+                if (_Menu_Option == null || _Menu_Option!.categories == null) {
+                  POP_UPOptionCat();
+                  return;
+                }
+
+                POP_UPOptionCat();
               },
               child: const Text(
                 "ตัวเลือกเพิ่มเติม",
@@ -301,6 +323,391 @@ class _HomePageState extends State<EditMenuPage> {
     );
   }
 
+  void POP_UPOptionCat() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final hasCategories = _Menu_Option != null &&
+            _Menu_Option!.categories != null &&
+            _Menu_Option!.categories!.isNotEmpty;
+
+        return AlertDialog(
+          title: const Text("รายการหมวดหมู่ตัวเลือกเพิ่มเติมของเมนูนี้"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.6,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!hasCategories)
+                      const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text(
+                          "เมนูนี้ยังไม่ได้เลือกหมวดหมู่เพิ่มเติม",
+                          style: TextStyle(color: Colors.orange),
+                        ),
+                      ),
+                    if (hasCategories)
+                      ..._Menu_Option!.categories!.map((opt) {
+                        return Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 2,
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          child: ListTile(
+                            title: Text(opt.opCatName ?? ''),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                    icon: const Icon(Icons.edit,
+                                        color: Colors.blue),
+                                    onPressed: () async {
+                                      final result = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => EditOptionPage(
+                                              op_cat_id: opt.opCatId),
+                                        ),
+                                      );
+
+                                      if (result == true) {
+                                        await LoadMenuInfo();
+                                        Navigator.of(context).pop();
+                                        POP_UPOptionCat();
+                                      }
+                                    }),
+                                IconButton(
+                                  icon: const Icon(Icons.delete,
+                                      color: Colors.red),
+                                  onPressed: () {
+                                    // ลบหมวดหมู่
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) {
+                                        return AlertDialog(
+                                          title: const Text('ยืนยันการลบ'),
+                                          content: Text(
+                                              'ต้องการลบหมวดหมู่ "${opt.opCatName}" ออกจากเมนูนี้หรือไม่?'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(context).pop(),
+                                              child: const Text('ยกเลิก'),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () async {
+                                                await DeleteOptionCat(
+                                                    opt.opCatId);
+                                                await LoadMenuInfo();
+
+                                                Navigator.of(context)
+                                                    .pop(); // ปิด confirm
+                                                Navigator.of(context)
+                                                    .pop(); // ปิด popup list
+                                                POP_UPOptionCat(); // refresh
+
+                                                Fluttertoast.showToast(
+                                                  msg:
+                                                      'ลบหมวดหมู่เรียบร้อยแล้ว',
+                                                  backgroundColor: Colors.green,
+                                                  textColor: Colors.white,
+                                                );
+                                              },
+                                              child: const Text('ตกลง'),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    const SizedBox(height: 8),
+                    // ปุ่มเพิ่มเมนู
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        await loadAllCat();
+                        POP_UPallOpcat();
+                      },
+                      icon: const Icon(
+                        Icons.add,
+                        color: Colors.white,
+                      ),
+                      label: const Text("เพิ่ม",
+                          style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("ปิด"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void POP_UPallOpcat() {
+    final availableCategories = (_AllopCat_res ?? [])
+        .where((allCat) =>
+            _Menu_Option?.categories == null ||
+            !_Menu_Option!.categories
+                .any((menuCat) => menuCat.opCatId == allCat.opCatId))
+        .toList();
+
+    if (availableCategories.isEmpty) {
+      Fluttertoast.showToast(
+        msg: "ไม่มีหมวดหมู่เพิ่มเติมให้เลือก",
+        backgroundColor: Colors.orange,
+        textColor: Colors.white,
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("รายการหมวดหมู่ตัวเลือกเพิ่มเติมของร้าน"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.6,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ...availableCategories.map((opt) {
+                      return Card(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 2,
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        child: ListTile(
+                          title: Text(opt.opCatName ?? ''),
+                          onTap: () async {
+                            await Add_op_cat(opt.opCatId);
+                            await LoadMenuInfo();
+
+                            Navigator.of(context).pop();
+                            Navigator.of(context).pop();
+                            POP_UPOptionCat();
+
+                            Fluttertoast.showToast(
+                              msg: 'เพิ่มหมวดหมู่ในเมนูแล้ว',
+                              backgroundColor: Colors.green,
+                              textColor: Colors.white,
+                            );
+                          },
+                        ),
+                      );
+                    }).toList(),
+                    const SizedBox(height: 8),
+                    // ปุ่มเพิ่มเมนู
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        POP_UPAddOpcat();
+                      },
+                      icon: const Icon(
+                        Icons.add,
+                        color: Colors.white,
+                      ),
+                      label: const Text("เพิ่ม",
+                          style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("ปิด"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void POP_UPAddOpcat() {
+    final TextEditingController editCatController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("เพิ่มหมวดหมู่ตัวเลือกเพิ่มเติม"),
+          content: TextField(
+            controller: editCatController,
+            decoration: const InputDecoration(
+              hintText: 'กรอกชื่อหมวดหมู่',
+              labelText: 'ชื่อหมวดหมู่',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(), // ปิด dialog
+              child: const Text("ยกเลิก"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newName = editCatController.text.trim();
+
+                if (newName.isEmpty) {
+                  Fluttertoast.showToast(
+                    msg: "กรุณากรอกชื่อหมวดหมู่",
+                    backgroundColor: Colors.orange,
+                    textColor: Colors.white,
+                  );
+                  return;
+                }
+
+                try {
+                  await AddNewOpCat(newName); // รอแก้ไขเสร็จ
+                  Navigator.of(context).pop();
+                  await loadAllCat(); // โหลดข้อมูลใหม่
+
+                  Fluttertoast.showToast(
+                    msg: "เพิ่มข้อมูลแล้ว",
+                    backgroundColor: Colors.green,
+                    textColor: Colors.white,
+                  );
+
+                  Navigator.of(context).pop(); // ปิด dialog ปัจจุบัน
+
+                  // ถ้าต้องการเปิด popup อื่นต่อ
+                  POP_UPallOpcat();
+                } catch (e) {
+                  Fluttertoast.showToast(
+                    msg: "เกิดข้อผิดพลาด: $e",
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                  );
+                }
+              },
+              child: const Text("บันทึก"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> AddNewOpCat(String NewOpCat) async {
+    final res_id = context.read<ShareData>().user_info_send.uid;
+    try {
+      final opcat_add_to_menu = await http.post(
+        Uri.parse("$url/db/add_op_cat"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"op_cat_name": NewOpCat, "res_id": res_id}),
+      );
+
+      if (opcat_add_to_menu.statusCode == 200) {
+        // ทำอย่างอื่นถ้าต้องการ
+      } else {
+        log(opcat_add_to_menu.body);
+        // handle error กรณี response ไม่ใช่ 200
+        Fluttertoast.showToast(
+          msg: "เกิดข้อผิดพลาดจาก server",
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+      }
+    } catch (e) {
+      log("LoadCusHome Error: $e");
+      Fluttertoast.showToast(
+        msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    }
+  }
+
+  Future<void> Add_op_cat(int op_cat_id) async {
+    final menu_id = widget.menu_id;
+    try {
+      final opcat_add_to_menu = await http.post(
+        Uri.parse("$url/db/add_op_cat_to_menu"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"opCat_id": op_cat_id, "menu_id": menu_id}),
+      );
+
+      if (opcat_add_to_menu.statusCode == 200) {
+        // ทำอย่างอื่นถ้าต้องการ
+      } else {
+        // handle error กรณี response ไม่ใช่ 200
+        Fluttertoast.showToast(
+          msg: "เกิดข้อผิดพลาดจาก server",
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+      }
+    } catch (e) {
+      log("LoadCusHome Error: $e");
+      Fluttertoast.showToast(
+        msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    }
+  }
+
+  Future<void> DeleteOptionCat(int opCat_id) async {
+    final menu_id = widget.menu_id;
+    try {
+      final opcat_del_from_menu = await http.delete(
+        Uri.parse("$url/db/delete_opcat_from_menu"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"opCat_id": opCat_id, "menu_id": menu_id}),
+      );
+
+      if (opcat_del_from_menu.statusCode == 200) {
+        // ทำอย่างอื่นถ้าต้องการ
+      } else {
+        // handle error กรณี response ไม่ใช่ 200
+        Fluttertoast.showToast(
+          msg: "เกิดข้อผิดพลาดจาก server",
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+      }
+    } catch (e) {
+      log("LoadCusHome Error: $e");
+      Fluttertoast.showToast(
+        msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    }
+  }
+
   void _saveMenuChanges() {
     // Validate ข้อมูล
     if (_selectedCatId == null ||
@@ -330,10 +737,11 @@ class _HomePageState extends State<EditMenuPage> {
         updatedPrice, _MenuInfo!.menu_image);
   }
 
-  void LoadMenuInfo() async {
+  Future<void> LoadMenuInfo() async {
     try {
       log("Loading menu info for ID: ${widget.menu_id}");
-      var menu_id = widget.menu_id;
+      final res_id = context.read<ShareData>().user_info_send.uid;
+      final menu_id = widget.menu_id;
 
       final res = await http.get(Uri.parse("$url/db/loadMenuInfo/$menu_id"));
       if (res.statusCode == 200) {
@@ -364,11 +772,22 @@ class _HomePageState extends State<EditMenuPage> {
           textColor: Colors.white,
         );
       }
+      final men_option =
+          await http.get(Uri.parse("$url/db/loadOption/$menu_id"));
+
+      if (res.statusCode == 200) {
+        log(men_option.body + "XDSADSADASDADS");
+        final OptionGetResponse data =
+            OptionGetResponse.fromJson(json.decode(men_option.body));
+        setState(() {
+          _Menu_Option = data;
+        });
+      }
     } catch (e) {
       log("LoadMenuInfo Error: $e");
       Fluttertoast.showToast(
-          msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
-          backgroundColor: Colors.red,
+          msg: "เมนูนี้ยังไม่ได้เพิ่มตัวเลือกเพิ่มเติม",
+          backgroundColor: Colors.amber,
           textColor: Colors.white);
     }
   }
@@ -403,6 +822,23 @@ class _HomePageState extends State<EditMenuPage> {
     } catch (e) {
       log("UpdateMenuAPI Error: $e");
       throw e;
+    }
+  }
+
+  Future<void> loadAllCat() async {
+    final res_id = context.read<ShareData>().user_info_send.uid;
+    final all_opcat = await http.get(Uri.parse("$url/db/loadAllOpCat/$res_id"));
+
+    if (all_opcat.statusCode == 200) {
+      log(all_opcat.body + "XDSADSADASDADS");
+
+      final List<OpCatGetResponse> data = (json.decode(all_opcat.body) as List)
+          .map((x) => OpCatGetResponse.fromJson(x))
+          .toList();
+
+      setState(() {
+        _AllopCat_res = data;
+      });
     }
   }
 

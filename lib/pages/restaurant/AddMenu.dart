@@ -15,10 +15,10 @@ class AddMenuPage extends StatefulWidget {
   const AddMenuPage({super.key, required this.restaurantCategories});
 
   @override
-  State<AddMenuPage> createState() => _AddMenuPageState();
+  State<AddMenuPage> createState() => _HomePageState();
 }
 
-class _AddMenuPageState extends State<AddMenuPage> {
+class _HomePageState extends State<AddMenuPage> {
   String url = '';
 
   List<ResCatGetResponse> _restaurantCategories = [];

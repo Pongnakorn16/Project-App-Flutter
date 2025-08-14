@@ -386,7 +386,7 @@ class _LoginPageState extends State<LoginPage> {
             headers: {"Content-Type": "application/json; charset=utf-8"},
             body: GoogleLoginUserToJson(google_model),
           );
-          log("SPIDERMAN");
+
           log(response.body);
           log("Status Code: ${response.statusCode}");
 
