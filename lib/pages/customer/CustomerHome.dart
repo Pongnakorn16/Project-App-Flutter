@@ -488,7 +488,7 @@ class _HomePageState extends State<CustomerHomePage> {
 
           /// ร้านแนะนำ
           sectionTitle("ร้านแนะนำ"),
-          horizontalRestaurantScroll(AllRes, menuLabel: "ชื่อเมนู"),
+          horizontalRestaurantScroll(AllRes),
         ],
       ),
     );
@@ -611,7 +611,7 @@ class _HomePageState extends State<CustomerHomePage> {
       if (context.read<ShareData>().customer_addresses.isNotEmpty) {
         final customerLocationStr =
             context.read<ShareData>().customer_addresses[0].ca_coordinate;
-        log("Customer location: $customerLocationStr"); // ✅ log ดูก่อน
+        log("Customer location: $customerLocationStr");
         final List<String> cusSplit = customerLocationStr.split(',');
         final double cusLat = double.parse(cusSplit[0].trim());
         final double cusLng = double.parse(cusSplit[1].trim());
