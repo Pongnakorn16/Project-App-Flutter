@@ -11,6 +11,7 @@ import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
+import 'package:mobile_miniproject_app/pages/customer/CusAllOrder.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/RestaurantInfo.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
@@ -50,20 +51,14 @@ class _HomePageState extends State<CustomerHomePage> {
   }
 
   void _onItemTapped(int index) {
-    if (index == 2) return;
-    if (index == 3) {
-      Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ProfilePage(onClose: () {}, selectedIndex: 3),
-          ));
-    } else {
-      _pageController.animateToPage(
-        index > 2 ? index - 1 : index,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
+    setState(() {
+      _selectedIndex = index;
+    });
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
@@ -77,76 +72,94 @@ class _HomePageState extends State<CustomerHomePage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Row(
-          children: [
-            const Icon(Icons.location_on, color: Colors.red, size: 20),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  topAdd.isNotEmpty ? topAdd[0].ca_detail : 'ไม่มีที่อยู่',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 19,
-                      color: Colors.black),
+      appBar: _selectedIndex == 0 ? buildHomeAppBar(topAdd) : null,
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        children: [
+          // Home Page
+          buildHomePage(),
+          // Order Page
+          CusallorderPage(),
+          // Profile Page
+          ProfilePage(onClose: () {}, selectedIndex: 2),
+        ],
+      ),
+      bottomNavigationBar: buildBottomNavigationBar(),
+    );
+  }
+
+  AppBar buildHomeAppBar(dynamic topAdd) {
+    return AppBar(
+      automaticallyImplyLeading: false,
+      title: Row(
+        children: [
+          const Icon(Icons.location_on, color: Colors.red, size: 20),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                topAdd.isNotEmpty ? topAdd[0].ca_detail : 'ไม่มีที่อยู่',
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 19,
+                    color: Colors.black),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                topAdd.isNotEmpty ? topAdd[0].ca_address : '',
+                style: const TextStyle(fontSize: 14, color: Colors.black),
+              ),
+            ],
+          ),
+        ],
+      ),
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(60),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            children: [
+              if (isSearching)
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    setState(() {
+                      searchQuery = "";
+                      isSearching = false;
+                      searchController.clear();
+                    });
+                  },
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  topAdd.isNotEmpty ? topAdd[0].ca_address : '',
-                  style: const TextStyle(fontSize: 14, color: Colors.black),
-                ),
-              ],
-            ),
-          ],
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Row(
-              children: [
-                if (isSearching)
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () {
-                      setState(() {
-                        searchQuery = "";
-                        isSearching = false;
-                        searchController.clear(); // เคลียร์ข้อความค้นหา
-                      });
-                    },
-                  ),
-                Expanded(
-                  child: TextField(
-                    controller: searchController,
-                    decoration: InputDecoration(
-                      hintText: 'ค้นหาร้านอาหาร...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30.0),
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[200],
+              Expanded(
+                child: TextField(
+                  controller: searchController,
+                  decoration: InputDecoration(
+                    hintText: 'ค้นหาร้านอาหาร...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30.0),
                     ),
-                    onChanged: (value) {
-                      setState(() {
-                        searchQuery = value;
-                        isSearching = value.isNotEmpty;
-                      });
-                    },
+                    filled: true,
+                    fillColor: Colors.grey[200],
                   ),
+                  onChanged: (value) {
+                    setState(() {
+                      searchQuery = value;
+                      isSearching = value.isNotEmpty;
+                    });
+                  },
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
-      body: isSearching ? buildSearchResultView() : buildMainContent(),
-      bottomNavigationBar: buildBottomNavigationBar(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
@@ -176,20 +189,21 @@ class _HomePageState extends State<CustomerHomePage> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.favorite), label: 'Favorite'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.notifications), label: 'Notis'),
+              icon: Icon(Icons.receipt_long), label: 'Order'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );
   }
 
+  Widget buildHomePage() {
+    return isSearching ? buildSearchResultView() : buildMainContent();
+  }
+
   Widget buildSearchResultView() {
     final allRestaurants = context.watch<ShareData>().restaurant_all;
     final topAdd = context.watch<ShareData>().customer_addresses;
 
-    // ถ้าพิกัดลูกค้าไม่มี ให้ใช้ค่า default หรือ 0.0
     double customerLat = 0.0;
     double customerLng = 0.0;
 
@@ -203,7 +217,6 @@ class _HomePageState extends State<CustomerHomePage> {
         .where(
             (r) => r.res_name.toLowerCase().contains(searchQuery.toLowerCase()))
         .toList();
-    //|| r.res_description.toLowerCase().contains(searchQuery.toLowerCase())) เดี๋ยวมาใส่ชื่อเมนูเพิ่ม
 
     if (filtered.isEmpty) {
       return Center(
@@ -215,10 +228,9 @@ class _HomePageState extends State<CustomerHomePage> {
       );
     }
 
-    // ฟังก์ชันคำนวณระยะทาง (km)
     double calculateDistance(
         double lat1, double lon1, double lat2, double lon2) {
-      const earthRadius = 6371.0; // กิโลเมตร
+      const earthRadius = 6371.0;
       final dLat = (lat2 - lat1) * (math.pi / 180);
       final dLon = (lon2 - lon1) * (math.pi / 180);
       final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
@@ -235,12 +247,10 @@ class _HomePageState extends State<CustomerHomePage> {
       itemBuilder: (context, index) {
         final res = filtered[index];
 
-        // แปลงพิกัดร้าน
         final coordsRes = res.res_coordinate.split(',');
         final double resLat = double.tryParse(coordsRes[0].trim()) ?? 0.0;
         final double resLng = double.tryParse(coordsRes[1].trim()) ?? 0.0;
 
-        // คำนวณระยะทางระหว่างร้านกับลูกค้า
         double distanceKm =
             calculateDistance(customerLat, customerLng, resLat, resLng);
 
@@ -607,7 +617,6 @@ class _HomePageState extends State<CustomerHomePage> {
         context.read<ShareData>().restaurant_all = list;
       }
 
-      // ดึงพิกัดลูกค้า
       if (context.read<ShareData>().customer_addresses.isNotEmpty) {
         final customerLocationStr =
             context.read<ShareData>().customer_addresses[0].ca_coordinate;
@@ -658,7 +667,7 @@ class _HomePageState extends State<CustomerHomePage> {
   }
 
   double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const earthRadius = 6371.0; // กิโลเมตร
+    const earthRadius = 6371.0;
     final dLat = _deg2rad(lat2 - lat1);
     final dLon = _deg2rad(lon2 - lon1);
     final a = math.sin(dLat / 2) * math.sin(dLat / 2) +

@@ -241,8 +241,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                   borderSide: BorderSide(width: 1),
                                 ),
                                 prefixIcon: Icon(Icons.location_on),
-
-                                // 👇 เพิ่มปุ่มแก้ไขที่ท้าย TextField
                                 suffixIcon: IconButton(
                                   icon: Icon(Icons.edit),
                                   onPressed: () {
@@ -383,7 +381,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                     );
                                   },
                                 ),
-
                                 hintText: context
                                         .read<ShareData>()
                                         .cus_selected_add
@@ -513,7 +510,6 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
           ),
-          bottomNavigationBar: buildBottomNavigationBar(),
           floatingActionButtonLocation:
               FloatingActionButtonLocation.centerDocked,
         ),
@@ -962,41 +958,6 @@ class _ProfilePageState extends State<ProfilePage> {
       Navigator.pop(context);
       loadProfileData();
     });
-  }
-
-  Widget buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(40.0)),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, -2)),
-        ],
-      ),
-      child: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: context.read<ShareData>().selected_index,
-        onTap: _onItemTapped,
-        selectedItemColor: const Color.fromARGB(255, 115, 28, 168),
-        unselectedItemColor: Colors.grey,
-        backgroundColor: Colors.white,
-        iconSize: 20,
-        selectedLabelStyle:
-            const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-        unselectedLabelStyle: const TextStyle(fontSize: 10),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.favorite), label: 'Favorite'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.notifications), label: 'Notis'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
-      ),
-    );
   }
 
   Future<void> loadProfileData() async {

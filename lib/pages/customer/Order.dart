@@ -10,16 +10,23 @@ import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/pages/customer/TopUp.dart';
+import 'package:mobile_miniproject_app/shared/firebase_message_service.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 import 'package:geocoding/geocoding.dart';
 
 class OrderPage extends StatefulWidget {
-  final List<Map<String, dynamic>> mergedMenus;
+  final List<dynamic> mergedMenus;
   final double deliveryFee;
+  final int order_id;
+  final int order_status;
 
   const OrderPage(
-      {Key? key, required this.mergedMenus, required this.deliveryFee})
+      {Key? key,
+      required this.mergedMenus,
+      required this.deliveryFee,
+      required this.order_id,
+      required this.order_status})
       : super(key: key);
 
   @override
@@ -101,7 +108,7 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
           value: _animation.value,
           minHeight: 6,
           backgroundColor: Colors.grey[300],
-          valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+          valueColor: const AlwaysStoppedAnimation<Color>(Colors.deepPurple),
         );
       },
     );
@@ -120,12 +127,29 @@ class _OrderPageState extends State<OrderPage> {
   String? _selectedCustomerAddress;
 
   @override
+  @override
   void initState() {
     super.initState();
     Configuration.getConfig().then((value) {
       url = value['apiEndpoint'];
       LoadCusAdd();
+      if (widget.order_status != -1) {
+        _currentStep = widget.order_status;
+      }
       _getAddressFromCoordinates();
+
+      final myOrderId = "order${widget.order_id}";
+      log(myOrderId +
+          "aXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxx");
+      // เรียก listener พร้อม callback เพื่ออัปเดต _currentStep
+      OrderNotificationService().listenOrderChanges(context, myOrderId,
+          (newStep) {
+        if (!mounted) return;
+        setState(() {
+          _currentStep = newStep; // อัปเดต Progress Bar และสถานะ
+        });
+      });
+
       setState(() {});
     });
 
@@ -136,10 +160,6 @@ class _OrderPageState extends State<OrderPage> {
       if (!mounted) return;
       if (_currentStep != 0) {
         timer.cancel(); // หยุด timer เมื่อสถานะเปลี่ยน
-      } else {
-        setState(() {
-          // สถานะแรก animation จะวนเองใน widget
-        });
       }
     });
   }
@@ -320,7 +340,8 @@ class _OrderPageState extends State<OrderPage> {
       children: [
         CircleAvatar(
           radius: 22,
-          backgroundColor: active ? Colors.green : Colors.grey[300],
+          backgroundColor:
+              active ? Color.fromARGB(255, 157, 9, 255) : Colors.grey[300],
           child: Icon(icon, color: Colors.white, size: 28),
         ),
         const SizedBox(height: 6),
@@ -331,7 +352,7 @@ class _OrderPageState extends State<OrderPage> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
-              color: active ? Colors.green[800] : Colors.grey,
+              color: active ? Color.fromARGB(255, 248, 191, 2) : Colors.grey,
               fontWeight: active ? FontWeight.bold : FontWeight.normal,
             ),
           ),

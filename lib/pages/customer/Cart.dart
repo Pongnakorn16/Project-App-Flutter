@@ -39,6 +39,7 @@ class _HomePageState extends State<CartPage> {
   double deliveryFee = 0.0;
   String Res_coordinate = '';
   String Cus_coordinate = '';
+  int order_id = 0;
 
   @override
   void initState() {
@@ -442,95 +443,131 @@ class _HomePageState extends State<CartPage> {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        onPressed: () {
-          if (finalPrice > context.read<ShareData>().user_info_send.balance) {
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return AlertDialog(
-                  title: const Text("จำนวน D-wallet ของคุณไม่เพียงพอ!!!"),
-                  content: const Text("คุณต้องการเติม D-wallet หรือไม่"),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => TopupPage()),
-                        );
-                      },
-                      child: const Text("ใช่"),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text("ปิด"),
-                    ),
-                  ],
+        onPressed: isLoading
+            ? null
+            : () async {
+                // ป้องกันการกดซ้ำ
+                if (finalPrice >
+                    context.read<ShareData>().user_info_send.balance) {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text("จำนวน D-wallet ของคุณไม่เพียงพอ!!!"),
+                        content: const Text("คุณต้องการเติม D-wallet หรือไม่"),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => TopupPage()),
+                              );
+                            },
+                            child: const Text("ใช่"),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text("ปิด"),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                  return;
+                }
+
+                // แสดง dialog ยืนยันก่อนจะไปหน้า OrderPage
+                showConfirmOrderDialog(
+                  context,
+                  () async {
+                    // แสดง loading เฉพาะใน button
+                    setState(() {
+                      isLoading = true;
+                    });
+
+                    final finalest_Price = finalPrice + deliveryFee;
+
+                    try {
+                      await update_cus_balance(finalest_Price);
+                      log(widget.mergedMenus.toString() +
+                          "saddddddddddddddddddPOASODAPSDPAOPDOPAOPDPAPOSDOAPDO");
+
+                      final counterRef = FirebaseFirestore.instance
+                          .collection('BP_Order_detail')
+                          .doc('OrderCounter');
+
+                      await FirebaseFirestore.instance
+                          .runTransaction((transaction) async {
+                        final snapshot = await transaction.get(counterRef);
+                        int currentCount =
+                            snapshot.exists ? snapshot['count'] : 0;
+                        int nextCount = currentCount + 1;
+                        order_id = nextCount;
+
+                        // อัปเดต counter
+                        transaction.set(counterRef, {'count': nextCount});
+
+                        // สร้าง order document
+                        final orderRef = FirebaseFirestore.instance
+                            .collection('BP_Order_detail')
+                            .doc('order$nextCount');
+                        transaction.set(orderRef, {
+                          'order_id': nextCount,
+                          'menus': widget.mergedMenus,
+                          'deliveryFee': deliveryFee,
+                          'totalPrice': finalest_Price,
+                          'Order_date': FieldValue.serverTimestamp(),
+                          'cus_id':
+                              context.read<ShareData>().user_info_send.uid,
+                          'res_id': context.read<ShareData>().res_id,
+                          'rid_id': 0,
+                          'Order_status': 0,
+                          'Cus_coordinate': Cus_coordinate,
+                          'Res_coordinate': Res_coordinate,
+                        });
+                      });
+
+                      Fluttertoast.showToast(msg: "ทำการสั่งซื้อเรียบร้อยแล้ว");
+
+                      // ไปหน้า OrderPage โดยไม่รอกลับมา
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => OrderPage(
+                              mergedMenus: widget.mergedMenus,
+                              deliveryFee: deliveryFee,
+                              order_id: order_id,
+                              order_status: -1),
+                        ),
+                      );
+                    } catch (e) {
+                      setState(() {
+                        isLoading = false;
+                      });
+                      Fluttertoast.showToast(msg: "เกิดข้อผิดพลาด: $e");
+                    }
+                  },
+                  widget.mergedMenus,
                 );
               },
-            );
-            return;
-          }
-          // แสดง dialog ยืนยันก่อนจะไปหน้า OrderPage
-          showConfirmOrderDialog(
-            context,
-            () async {
-              final finalest_Price = finalPrice + deliveryFee;
-
-              update_cus_balance(finalest_Price);
-              log(widget.mergedMenus.toString() +
-                  "saddddddddddddddddddPOASODAPSDPAOPDOPAOPDPAPOSDOAPDO");
-
-              try {
-                final counterRef = FirebaseFirestore.instance
-                    .collection('BP_Order_detail')
-                    .doc('OrderCounter');
-
-                await FirebaseFirestore.instance
-                    .runTransaction((transaction) async {
-                  final snapshot = await transaction.get(counterRef);
-                  int currentCount = snapshot.exists ? snapshot['count'] : 0;
-                  int nextCount = currentCount + 1;
-
-                  // อัปเดต counter
-                  transaction.set(counterRef, {'count': nextCount});
-
-                  // สร้าง order document
-                  final orderRef = FirebaseFirestore.instance
-                      .collection('BP_Order_detail')
-                      .doc('order$nextCount');
-                  transaction.set(orderRef, {
-                    'order_id': nextCount,
-                    'menus': widget.mergedMenus,
-                    'deliveryFee': deliveryFee,
-                    'totalPrice': finalest_Price,
-                    'Order_date': FieldValue.serverTimestamp(),
-                    'cus_id': context.read<ShareData>().user_info_send.uid,
-                    'res_id': context.read<ShareData>().res_id,
-                    'rid_id': 0,
-                    'Order_status': -1,
-                    'Cus_coordinate': Cus_coordinate,
-                    'Res_coordinate': Res_coordinate,
-                  });
-                });
-
-                Fluttertoast.showToast(msg: "ทำการสั่งซื้อเรียบร้อยแล้ว");
-
-                // ไปหน้า OrderPage
-                Get.to(() => OrderPage(
-                    mergedMenus: widget.mergedMenus, deliveryFee: deliveryFee));
-              } catch (e) {
-                Fluttertoast.showToast(msg: "เกิดข้อผิดพลาด: $e");
-              }
-            },
-            widget.mergedMenus,
-          );
-        },
-        child: const Text(
-          "สั่งซื้อ",
-          style: TextStyle(
-              fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
+        child: isLoading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : const Text(
+                "สั่งซื้อ",
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white),
+              ),
       ),
     );
   }
@@ -691,7 +728,8 @@ class _HomePageState extends State<CartPage> {
 
   void LoadCusAdd() async {
     int userId = context.read<ShareData>().user_info_send.uid;
-    setState(() => isLoading = true);
+
+    // ไม่ต้องเซ็ต isLoading = true ที่นี่ เพราะจะทำให้หน้าจอแวบ
     try {
       context.read<ShareData>().customer_addresses = [];
       final res_Add = await http.get(Uri.parse("$url/db/loadCusAdd/$userId"));
@@ -705,6 +743,7 @@ class _HomePageState extends State<CartPage> {
           calculateDeliveryFee();
         }
       }
+
       final res_balance =
           await http.get(Uri.parse("$url/db/loadCusbalance/$userId"));
       print('Status code: ${res_balance.statusCode}');
@@ -724,9 +763,12 @@ class _HomePageState extends State<CartPage> {
           backgroundColor: Colors.red,
           textColor: Colors.white);
     } finally {
-      setState(() {
-        isLoading = false; // หลังโหลดเสร็จ
-      });
+      // เซ็ต isLoading = false เฉพาะครั้งแรกที่โหลด
+      if (isLoading) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -764,13 +806,9 @@ class _HomePageState extends State<CartPage> {
   //   }
   // }
 
-  void update_cus_balance(double d_total) async {
+  Future<void> update_cus_balance(double d_total) async {
     int cus_id = context.read<ShareData>().user_info_send.uid;
-    int total = finalPrice.toInt();
-
-    setState(() {
-      isLoading = true;
-    });
+    int total = d_total.toInt(); // ใช้ d_total แทน finalPrice
 
     try {
       final res_Add = await http.put(
@@ -783,26 +821,14 @@ class _HomePageState extends State<CartPage> {
       );
 
       if (res_Add.statusCode == 200) {
-        // ทำอย่างอื่นถ้าต้องการ
+        // อัปเดต balance ใน ShareData
+        context.read<ShareData>().user_info_send.balance -= total;
       } else {
-        // handle error กรณี response ไม่ใช่ 200
-        Fluttertoast.showToast(
-          msg: "เกิดข้อผิดพลาดจาก server",
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-        );
+        throw Exception("Server error: ${res_Add.statusCode}");
       }
     } catch (e) {
-      log("LoadCusHome Error: $e");
-      Fluttertoast.showToast(
-        msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
+      log("update_cus_balance Error: $e");
+      throw e; // ส่ง error ต่อไปให้ caller จัดการ
     }
   }
 }
