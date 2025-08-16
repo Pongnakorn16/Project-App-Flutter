@@ -14,6 +14,7 @@ class ShareData with ChangeNotifier {
   int selected_address_index = 0;
   int res_id = 0;
   String cus_selected_add = "";
+  String res_selected_add = "";
   late User_Info_Send user_info_send;
   late User_Info_Receive user_info_receive;
   List<CusAddressGetResponse> customer_addresses = [];

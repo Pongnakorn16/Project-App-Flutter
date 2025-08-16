@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/material.dart';
@@ -15,21 +16,107 @@ import 'package:geocoding/geocoding.dart';
 
 class OrderPage extends StatefulWidget {
   final List<Map<String, dynamic>> mergedMenus;
+  final double deliveryFee;
 
-  const OrderPage({Key? key, required this.mergedMenus}) : super(key: key);
+  const OrderPage(
+      {Key? key, required this.mergedMenus, required this.deliveryFee})
+      : super(key: key);
 
   @override
-  State<OrderPage> createState() => _CartPageState();
+  State<OrderPage> createState() => _OrderPageState();
 }
 
-class _CartPageState extends State<OrderPage> {
+// AnimatedProgressBar
+class AnimatedProgressBar extends StatefulWidget {
+  final int currentStep; // 0,1,2
+  final bool loop; // วนเฉพาะสถานะแรก
+  const AnimatedProgressBar(
+      {Key? key, required this.currentStep, this.loop = false})
+      : super(key: key);
+
+  @override
+  State<AnimatedProgressBar> createState() => _AnimatedProgressBarState();
+}
+
+class _AnimatedProgressBarState extends State<AnimatedProgressBar>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(vsync: this, duration: const Duration(seconds: 2));
+    _setAnimation();
+    _startAnimationIfNeeded();
+  }
+
+  void _setAnimation() {
+    final endValue = (widget.currentStep + 1) / 3;
+    _animation = Tween<double>(begin: 0, end: endValue).animate(_controller);
+  }
+
+  void _startAnimationIfNeeded() {
+    if (widget.loop) {
+      _controller.addStatusListener(_loopListener);
+      _controller.forward();
+    } else {
+      _controller.removeStatusListener(_loopListener);
+      _controller.forward(from: 0);
+    }
+  }
+
+  void _loopListener(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      _controller.reset();
+      _controller.forward();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant AnimatedProgressBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentStep != widget.currentStep ||
+        oldWidget.loop != widget.loop) {
+      _setAnimation();
+      _startAnimationIfNeeded();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.removeStatusListener(_loopListener);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return LinearProgressIndicator(
+          value: _animation.value,
+          minHeight: 6,
+          backgroundColor: Colors.grey[300],
+          valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+        );
+      },
+    );
+  }
+}
+
+// Main OrderPage State
+class _OrderPageState extends State<OrderPage> {
   int _selectedIndex = 1;
+  int _currentStep = -1;
+  late Timer _timer;
   late PageController _pageController;
   String url = '';
   bool isLoading = true;
-  String? _address; // เก็บที่อยู่ที่ได้
+  String? _address; // เก็บที่อยู่ร้าน
   String? _selectedCustomerAddress;
-  var totalPrice;
 
   @override
   void initState() {
@@ -40,7 +127,20 @@ class _CartPageState extends State<OrderPage> {
       _getAddressFromCoordinates();
       setState(() {});
     });
+
     _pageController = PageController();
+
+    // Timer สำหรับ progress bar เฉพาะสถานะแรก
+    _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (!mounted) return;
+      if (_currentStep != 0) {
+        timer.cancel(); // หยุด timer เมื่อสถานะเปลี่ยน
+      } else {
+        setState(() {
+          // สถานะแรก animation จะวนเองใน widget
+        });
+      }
+    });
   }
 
   void _getAddressFromCoordinates() async {
@@ -55,8 +155,7 @@ class _CartPageState extends State<OrderPage> {
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
       if (placemarks.isNotEmpty) {
-        final Placemark place = placemarks.first;
-
+        final place = placemarks.first;
         setState(() {
           _address =
               "${(place.subLocality ?? '').trim()} ${(place.locality ?? '').trim()} ${(place.administrativeArea ?? '').trim()} ${(place.postalCode ?? '').trim()}";
@@ -110,6 +209,7 @@ class _CartPageState extends State<OrderPage> {
 
   @override
   void dispose() {
+    _timer.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -137,9 +237,7 @@ class _CartPageState extends State<OrderPage> {
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -148,14 +246,15 @@ class _CartPageState extends State<OrderPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("ติดตามสถานะการสั่งซื้อ"),
-        automaticallyImplyLeading: false, // ปิดปุ่มย้อนกลับอัตโนมัติ
-        // หรือถ้าเคยใส่ leading ให้ลบออกด้วยนะ
+        automaticallyImplyLeading: false,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            buildStatusSection(_currentStep),
+            const SizedBox(height: 20),
             buildAddressSection(customerAdd),
             const SizedBox(height: 20),
             buildOrderSummary(),
@@ -167,12 +266,75 @@ class _CartPageState extends State<OrderPage> {
     );
   }
 
+  Widget buildStatusSection(int currentStep) {
+    final steps = ["", "ร้านรับออเดอร์", "กำลังจัดส่ง", "ส่งถึงแล้ว"];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 16.0, top: 16, bottom: 12),
+          child: Text("สถานะการจัดส่ง",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ),
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned.fill(
+              top: 25,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                child: AnimatedProgressBar(
+                  currentStep: _currentStep + 1, // แปลง -1 → 0 สำหรับ progress
+                  loop: _currentStep == -1,
+                  // วนเฉพาะสถานะแรก
+                ),
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildStatusIcon(
+                    Icons.accessibility_new, steps[0], currentStep >= -1),
+                _buildStatusIcon(Icons.store, steps[1], currentStep >= 0),
+                _buildStatusIcon(
+                    Icons.delivery_dining, steps[2], currentStep >= 1),
+                _buildStatusIcon(Icons.home, steps[3], currentStep >= 2),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusIcon(IconData icon, String label, bool active) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CircleAvatar(
+          radius: 22,
+          backgroundColor: active ? Colors.green : Colors.grey[300],
+          child: Icon(icon, color: Colors.white, size: 28),
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          width: 80,
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: active ? Colors.green[800] : Colors.grey,
+              fontWeight: active ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        )
+      ],
+    );
+  }
+
   Widget buildAddressSection(List<CusAddressGetResponse> customerAdd) {
     final restaurantAddress = _address ?? "กำลังโหลดที่อยู่ร้าน...";
-    final customerAddress = customerAdd.isNotEmpty
-        ? "${customerAdd[0].ca_address}  ${customerAdd[0].ca_detail}"
-        : "กำลังโหลดที่อยู่ลูกค้า...";
-
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -189,11 +351,9 @@ class _CartPageState extends State<OrderPage> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "ตำแหน่งร้าน",
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
+                    const Text("ตำแหน่งร้าน",
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
                     Text(restaurantAddress),
                   ],
                 ),
@@ -210,20 +370,12 @@ class _CartPageState extends State<OrderPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        "ตำแหน่งลูกค้า",
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        customerAdd.length > 1 &&
-                                context
-                                        .read<ShareData>()
-                                        .selected_address_index ==
-                                    1
-                            ? "${customerAdd[1].ca_address} ${customerAdd[1].ca_detail}"
-                            : "${customerAdd[0].ca_address} ${customerAdd[0].ca_detail}",
-                      )
+                      const Text("ตำแหน่งลูกค้า",
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(customerAdd.isNotEmpty
+                          ? "${customerAdd[0].ca_address} ${customerAdd[0].ca_detail}"
+                          : "กำลังโหลดที่อยู่ลูกค้า..."),
                     ],
                   ),
                 ),
@@ -236,34 +388,28 @@ class _CartPageState extends State<OrderPage> {
   }
 
   Widget buildOrderSummary() {
-    double finalPrice = 0; // ประกาศตัวแปรเก็บผลรวมใหม่ทุกครั้ง
+    double finalPrice = 0;
 
     List<Widget> menuWidgets = widget.mergedMenus.map((menu) {
       final count = menu["count"] ?? 1;
       final menuPrice = (menu["menu_price"] ?? 0).toDouble();
-
-      final List<dynamic> options = menu["selectedOptions"] ?? [];
+      final options = menu["selectedOptions"] ?? [];
       double optionsTotalPrice = 0;
       for (var opt in options) {
         optionsTotalPrice += (opt["op_price"] ?? 0).toDouble();
       }
-
       final totalPrice = (menuPrice + optionsTotalPrice) * count;
-
-      finalPrice += totalPrice; // บวกราคานี้ลงตัวแปรผลรวม
+      finalPrice += totalPrice;
 
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(child: Text("${menu["menu_name"]} x$count")),
-                Text("${totalPrice.toStringAsFixed(0)} บาท"),
-              ],
-            ),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Expanded(child: Text("${menu["menu_name"]} x$count")),
+              Text("${totalPrice.toStringAsFixed(0)} บาท"),
+            ]),
             if (options.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(left: 16, top: 4),
@@ -293,47 +439,28 @@ class _CartPageState extends State<OrderPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "สรุปรายการอาหาร",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
+            const Text("สรุปรายการอาหาร",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
             ...menuWidgets,
             const Divider(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "รวมทั้งหมด",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  "${finalPrice.toStringAsFixed(0)} บาท",
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            )
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              const Text("ค่าส่ง",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              Text("${widget.deliveryFee.toStringAsFixed(0)} บาท",
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ]),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              const Text("รวมทั้งหมด",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                  "${(finalPrice + widget.deliveryFee).toStringAsFixed(0)} บาท",
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ])
           ],
         ),
       ),
     );
-  }
-
-  double calculateTotal() {
-    double total = 0;
-    for (var menu in widget.mergedMenus) {
-      final count = menu["count"] ?? 1;
-      final menuPrice = (menu["menu_price"] ?? 0).toDouble();
-
-      final List<dynamic> options = menu["selectedOptions"] ?? [];
-      double optionsTotalPrice = 0;
-      for (var opt in options) {
-        optionsTotalPrice += (opt["price"] ?? 0).toDouble();
-      }
-
-      total += (menuPrice + optionsTotalPrice) * count;
-    }
-    return total;
   }
 
   Widget buildBottomNavigationBar() {
@@ -345,7 +472,7 @@ class _CartPageState extends State<OrderPage> {
           BoxShadow(
               color: Colors.black.withOpacity(0.1),
               blurRadius: 8,
-              offset: const Offset(0, -2)),
+              offset: const Offset(0, -2))
         ],
       ),
       child: BottomNavigationBar(
@@ -390,7 +517,7 @@ class _CartPageState extends State<OrderPage> {
           textColor: Colors.white);
     } finally {
       setState(() {
-        isLoading = false; // หลังโหลดเสร็จ
+        isLoading = false;
       });
     }
   }

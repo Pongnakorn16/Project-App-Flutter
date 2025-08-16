@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
+import 'dart:developer' show log; // เอาเฉพาะ log
+import 'dart:math' hide log;
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
@@ -21,17 +23,19 @@ class CartPage extends StatefulWidget {
   const CartPage({Key? key, required this.mergedMenus}) : super(key: key);
 
   @override
-  State<CartPage> createState() => _CartPageState();
+  State<CartPage> createState() => _HomePageState();
 }
 
-class _CartPageState extends State<CartPage> {
+class _HomePageState extends State<CartPage> {
   int _selectedIndex = 1;
   late PageController _pageController;
   String url = '';
+  double finalPrice = 0.0;
   bool isLoading = true;
   var totalPrice;
   String? _address; // เก็บที่อยู่ที่ได้
   String? _selectedCustomerAddress;
+  double deliveryFee = 0.0;
 
   @override
   void initState() {
@@ -255,7 +259,7 @@ class _CartPageState extends State<CartPage> {
   }
 
   Widget buildOrderSummary() {
-    double finalPrice = 0; // ประกาศตัวแปรเก็บผลรวมใหม่ทุกครั้ง
+    finalPrice = 0; // ประกาศตัวแปรเก็บผลรวมใหม่ทุกครั้ง
 
     List<Widget> menuWidgets = widget.mergedMenus.map((menu) {
       final count = menu["count"] ?? 1;
@@ -323,11 +327,24 @@ class _CartPageState extends State<CartPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
+                  "ค่าส่ง",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  "${deliveryFee.toStringAsFixed(0)} บาท",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
                   "รวมทั้งหมด",
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  "${finalPrice.toStringAsFixed(0)} บาท",
+                  "${(finalPrice + deliveryFee).toStringAsFixed(0)} บาท",
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
@@ -416,8 +433,7 @@ class _CartPageState extends State<CartPage> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         onPressed: () {
-          if (calculateTotal() >
-              context.read<ShareData>().user_info_send.balance) {
+          if (finalPrice > context.read<ShareData>().user_info_send.balance) {
             showDialog(
               context: context,
               builder: (BuildContext context) {
@@ -447,10 +463,11 @@ class _CartPageState extends State<CartPage> {
           }
           // แสดง dialog ยืนยันก่อนจะไปหน้า OrderPage
           showConfirmOrderDialog(context, () {
-            final total = calculateTotal();
-            update_cus_balance(total);
+            finalPrice = finalPrice + deliveryFee;
+            update_cus_balance(finalPrice);
             Fluttertoast.showToast(msg: "ทำการสั่งซื้อเรียบร้อยแล้ว");
-            Get.to(() => OrderPage(mergedMenus: widget.mergedMenus));
+            Get.to(() => OrderPage(
+                mergedMenus: widget.mergedMenus, deliveryFee: deliveryFee));
           });
         },
         child: const Text(
@@ -532,23 +549,6 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  double calculateTotal() {
-    double total = 0;
-    for (var menu in widget.mergedMenus) {
-      final count = menu["count"] ?? 1;
-      final menuPrice = (menu["menu_price"] ?? 0).toDouble();
-
-      final List<dynamic> options = menu["selectedOptions"] ?? [];
-      double optionsTotalPrice = 0;
-      for (var opt in options) {
-        optionsTotalPrice += (opt["price"] ?? 0).toDouble();
-      }
-
-      total += (menuPrice + optionsTotalPrice) * count;
-    }
-    return total;
-  }
-
   Widget buildBottomNavigationBar() {
     return Container(
       decoration: BoxDecoration(
@@ -582,6 +582,56 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
+  double calculateDistanceKm(
+      double lat1, double lon1, double lat2, double lon2) {
+    const double earthRadius = 6371; // กิโลเมตร
+    double dLat = _degreesToRadians(lat2 - lat1);
+    double dLon = _degreesToRadians(lon2 - lon1);
+
+    double a = (sin(dLat / 2) * sin(dLat / 2)) +
+        cos(_degreesToRadians(lat1)) *
+            cos(_degreesToRadians(lat2)) *
+            (sin(dLon / 2) * sin(dLon / 2));
+    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return earthRadius * c;
+  }
+
+  double _degreesToRadians(double degree) {
+    return degree * pi / 180;
+  }
+
+  void calculateDeliveryFee() {
+    final AllRes = context.read<ShareData>().restaurant_all;
+    final matchedRestaurant = AllRes.firstWhere(
+        (res) => res.res_id == context.read<ShareData>().res_id);
+
+    final resCoords = matchedRestaurant.res_coordinate.split(',');
+    final double resLat = double.parse(resCoords[0]);
+    final double resLng = double.parse(resCoords[1]);
+
+    final customerAdd = context.read<ShareData>().customer_addresses;
+    if (customerAdd.isNotEmpty) {
+      final customerCoords =
+          customerAdd[context.read<ShareData>().selected_address_index ?? 0]
+              .ca_coordinate
+              .split(',');
+      final double cusLat = double.parse(customerCoords[0]);
+      final double cusLng = double.parse(customerCoords[1]);
+
+      double distance = calculateDistanceKm(resLat, resLng, cusLat, cusLng);
+
+      if (distance <= 5) {
+        deliveryFee = 0;
+      } else if (distance <= 10) {
+        deliveryFee = 15;
+      } else {
+        deliveryFee = 20;
+      }
+
+      setState(() {}); // เพื่อรีเฟรช UI ถ้าต้องแสดงค่าส่ง
+    }
+  }
+
   void LoadCusAdd() async {
     int userId = context.read<ShareData>().user_info_send.uid;
     try {
@@ -593,6 +643,7 @@ class _CartPageState extends State<CartPage> {
             jsonResponse.map((e) => CusAddressGetResponse.fromJson(e)).toList();
         if (res_addList.isNotEmpty) {
           context.read<ShareData>().customer_addresses = res_addList;
+          calculateDeliveryFee();
         }
       }
       final res_balance =
@@ -622,7 +673,7 @@ class _CartPageState extends State<CartPage> {
 
   void update_cus_balance(double d_total) async {
     int cus_id = context.read<ShareData>().user_info_send.uid;
-    int total = d_total.toInt();
+    int total = finalPrice.toInt();
 
     setState(() {
       isLoading = true;

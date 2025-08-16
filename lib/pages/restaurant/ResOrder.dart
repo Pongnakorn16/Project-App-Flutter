@@ -44,7 +44,10 @@ class _HomePageState extends State<ResOrderPage> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text("แก้ไขตัวเลือกเพิ่มเติม")),
+        appBar: AppBar(
+          title: const Text("ออเดอร์ที่สั่งเข้ามา"),
+          automaticallyImplyLeading: false,
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -52,7 +55,10 @@ class _HomePageState extends State<ResOrderPage> {
     // ไม่มีหมวดหมู่เลย
     if (_optionCategories.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text("แก้ไขตัวเลือกเพิ่มเติม")),
+        appBar: AppBar(
+          title: const Text("แก้ไขตัวเลือกเพิ่มเติม"),
+          automaticallyImplyLeading: false,
+        ),
         body: const Center(child: Text("ไม่มีหมวดหมู่ตัวเลือกเพิ่มเติม")),
       );
     }
@@ -63,13 +69,6 @@ class _HomePageState extends State<ResOrderPage> {
     final optionsList = groupedOptions[catId] ?? [];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("แก้ไขตัวเลือกเพิ่มเติม"),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

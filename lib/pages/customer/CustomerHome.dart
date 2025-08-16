@@ -454,7 +454,7 @@ class _HomePageState extends State<CustomerHomePage> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Image.network(
-                            'https://img.icons8.com/?size=100&id=vt3FjELxZZG0&format=png&color=000000',
+                            'https://img.icons8.com/?size=100&id=82478&format=png&color=000000',
                             width: 35,
                             height: 35,
                             errorBuilder: (_, __, ___) =>

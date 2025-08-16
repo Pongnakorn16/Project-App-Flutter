@@ -331,17 +331,17 @@ class _HomePageState extends State<RestaurantinfoPage> {
                         fontSize: 25, fontWeight: FontWeight.bold),
                   ),
                 ),
-                IconButton(
-                  icon: Icon(
-                    isFavorite ? Icons.favorite : Icons.favorite_border,
-                    color: Colors.red,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      isFavorite = !isFavorite;
-                    });
-                  },
-                ),
+                // IconButton(
+                //   icon: Icon(
+                //     isFavorite ? Icons.favorite : Icons.favorite_border,
+                //     color: Colors.red,
+                //   ),
+                //   onPressed: () {
+                //     setState(() {
+                //       isFavorite = !isFavorite;
+                //     });
+                //   },
+                // ),
               ],
             ),
             const SizedBox(height: 5),
