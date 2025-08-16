@@ -28,7 +28,7 @@ class OrderPage extends StatefulWidget {
 
 // AnimatedProgressBar
 class AnimatedProgressBar extends StatefulWidget {
-  final int currentStep; // 0,1,2
+  final int currentStep; // 0,1,2,3
   final bool loop; // วนเฉพาะสถานะแรก
   const AnimatedProgressBar(
       {Key? key, required this.currentStep, this.loop = false})
@@ -53,7 +53,8 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
   }
 
   void _setAnimation() {
-    final endValue = (widget.currentStep + 1) / 3;
+    final endValue =
+        (widget.currentStep + 1) / 4; // เปลี่ยนจาก 3 เป็น 4 เพราะมี 4 สถานะ
     _animation = Tween<double>(begin: 0, end: endValue).animate(_controller);
   }
 
@@ -110,7 +111,7 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
 // Main OrderPage State
 class _OrderPageState extends State<OrderPage> {
   int _selectedIndex = 1;
-  int _currentStep = -1;
+  int _currentStep = 0; // เปลี่ยนจาก -1 เป็น 0
   late Timer _timer;
   late PageController _pageController;
   String url = '';
@@ -267,7 +268,12 @@ class _OrderPageState extends State<OrderPage> {
   }
 
   Widget buildStatusSection(int currentStep) {
-    final steps = ["", "ร้านรับออเดอร์", "กำลังจัดส่ง", "ส่งถึงแล้ว"];
+    final steps = [
+      "รอร้านยืนยัน",
+      "ร้านรับออเดอร์",
+      "กำลังจัดส่ง",
+      "ส่งถึงแล้ว"
+    ]; // เปลี่ยนจาก "" เป็น "รอร้านยืนยัน"
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -284,21 +290,22 @@ class _OrderPageState extends State<OrderPage> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32.0),
                 child: AnimatedProgressBar(
-                  currentStep: _currentStep + 1, // แปลง -1 → 0 สำหรับ progress
-                  loop: _currentStep == -1,
-                  // วนเฉพาะสถานะแรก
+                  currentStep: _currentStep, // ไม่ต้อง +1 แล้วเพราะเริ่มที่ 0
+                  loop: _currentStep == 0, // วนเฉพาะสถานะแรก (0)
                 ),
               ),
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
+                _buildStatusIcon(Icons.access_time, steps[0],
+                    currentStep >= 0), // เปลี่ยน icon และเปลี่ยนเงื่อนไข
                 _buildStatusIcon(
-                    Icons.accessibility_new, steps[0], currentStep >= -1),
-                _buildStatusIcon(Icons.store, steps[1], currentStep >= 0),
+                    Icons.store, steps[1], currentStep >= 1), // เปลี่ยนเงื่อนไข
+                _buildStatusIcon(Icons.delivery_dining, steps[2],
+                    currentStep >= 2), // เปลี่ยนเงื่อนไข
                 _buildStatusIcon(
-                    Icons.delivery_dining, steps[2], currentStep >= 1),
-                _buildStatusIcon(Icons.home, steps[3], currentStep >= 2),
+                    Icons.home, steps[3], currentStep >= 3), // เปลี่ยนเงื่อนไข
               ],
             ),
           ],
@@ -374,7 +381,7 @@ class _OrderPageState extends State<OrderPage> {
                           style: TextStyle(
                               fontSize: 16, fontWeight: FontWeight.bold)),
                       Text(customerAdd.isNotEmpty
-                          ? "${customerAdd[0].ca_address} ${customerAdd[0].ca_detail}"
+                          ? "${customerAdd[context.read<ShareData>().selected_address_index].ca_address} ${customerAdd[context.read<ShareData>().selected_address_index].ca_detail}"
                           : "กำลังโหลดที่อยู่ลูกค้า..."),
                     ],
                   ),

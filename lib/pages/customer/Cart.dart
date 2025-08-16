@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' show log; // เอาเฉพาะ log
 import 'dart:math' hide log;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
@@ -36,14 +37,16 @@ class _HomePageState extends State<CartPage> {
   String? _address; // เก็บที่อยู่ที่ได้
   String? _selectedCustomerAddress;
   double deliveryFee = 0.0;
+  String Res_coordinate = '';
+  String Cus_coordinate = '';
 
   @override
   void initState() {
     super.initState();
     Configuration.getConfig().then((value) {
       url = value['apiEndpoint'];
-      LoadCusAdd();
       _getAddressFromCoordinates();
+      LoadCusAdd();
       setState(() {});
     });
     _pageController = PageController();
@@ -54,6 +57,7 @@ class _HomePageState extends State<CartPage> {
     final matchedRestaurant = AllRes.firstWhere(
         (res) => res.res_id == context.read<ShareData>().res_id);
 
+    Res_coordinate = matchedRestaurant.res_coordinate;
     final coords = matchedRestaurant.res_coordinate.split(',');
     final double lat = double.parse(coords[0]);
     final double lng = double.parse(coords[1]);
@@ -96,6 +100,7 @@ class _HomePageState extends State<CartPage> {
                     setState(() {
                       _selectedCustomerAddress = fullAddress;
                       context.read<ShareData>().selected_address_index = index;
+                      Cus_coordinate = addresses[index].ca_coordinate;
                     });
                     Navigator.pop(context);
                   },
@@ -400,7 +405,12 @@ class _HomePageState extends State<CartPage> {
                                   context,
                                   MaterialPageRoute(
                                       builder: (context) => TopupPage()),
-                                );
+                                ).then((_) {
+                                  // เมื่อ Pop กลับมา
+                                  setState(() {
+                                    LoadCusAdd();
+                                  });
+                                });
                               },
                               child: const Text("ใช่"),
                             ),
@@ -462,13 +472,59 @@ class _HomePageState extends State<CartPage> {
             return;
           }
           // แสดง dialog ยืนยันก่อนจะไปหน้า OrderPage
-          showConfirmOrderDialog(context, () {
-            finalPrice = finalPrice + deliveryFee;
-            update_cus_balance(finalPrice);
-            Fluttertoast.showToast(msg: "ทำการสั่งซื้อเรียบร้อยแล้ว");
-            Get.to(() => OrderPage(
-                mergedMenus: widget.mergedMenus, deliveryFee: deliveryFee));
-          });
+          showConfirmOrderDialog(
+            context,
+            () async {
+              final finalest_Price = finalPrice + deliveryFee;
+
+              update_cus_balance(finalest_Price);
+              log(widget.mergedMenus.toString() +
+                  "saddddddddddddddddddPOASODAPSDPAOPDOPAOPDPAPOSDOAPDO");
+
+              try {
+                final counterRef = FirebaseFirestore.instance
+                    .collection('BP_Order_detail')
+                    .doc('OrderCounter');
+
+                await FirebaseFirestore.instance
+                    .runTransaction((transaction) async {
+                  final snapshot = await transaction.get(counterRef);
+                  int currentCount = snapshot.exists ? snapshot['count'] : 0;
+                  int nextCount = currentCount + 1;
+
+                  // อัปเดต counter
+                  transaction.set(counterRef, {'count': nextCount});
+
+                  // สร้าง order document
+                  final orderRef = FirebaseFirestore.instance
+                      .collection('BP_Order_detail')
+                      .doc('order$nextCount');
+                  transaction.set(orderRef, {
+                    'order_id': nextCount,
+                    'menus': widget.mergedMenus,
+                    'deliveryFee': deliveryFee,
+                    'totalPrice': finalest_Price,
+                    'Order_date': FieldValue.serverTimestamp(),
+                    'cus_id': context.read<ShareData>().user_info_send.uid,
+                    'res_id': context.read<ShareData>().res_id,
+                    'rid_id': 0,
+                    'Order_status': -1,
+                    'Cus_coordinate': Cus_coordinate,
+                    'Res_coordinate': Res_coordinate,
+                  });
+                });
+
+                Fluttertoast.showToast(msg: "ทำการสั่งซื้อเรียบร้อยแล้ว");
+
+                // ไปหน้า OrderPage
+                Get.to(() => OrderPage(
+                    mergedMenus: widget.mergedMenus, deliveryFee: deliveryFee));
+              } catch (e) {
+                Fluttertoast.showToast(msg: "เกิดข้อผิดพลาด: $e");
+              }
+            },
+            widget.mergedMenus,
+          );
         },
         child: const Text(
           "สั่งซื้อ",
@@ -479,7 +535,8 @@ class _HomePageState extends State<CartPage> {
     );
   }
 
-  void showConfirmOrderDialog(BuildContext context, VoidCallback onConfirmed) {
+  void showConfirmOrderDialog(BuildContext context, VoidCallback onConfirmed,
+      List<Map<String, dynamic>> mergMenus) {
     const totalSeconds = 5;
     int secondsLeft = totalSeconds;
     Timer? timer;
@@ -634,6 +691,7 @@ class _HomePageState extends State<CartPage> {
 
   void LoadCusAdd() async {
     int userId = context.read<ShareData>().user_info_send.uid;
+    setState(() => isLoading = true);
     try {
       context.read<ShareData>().customer_addresses = [];
       final res_Add = await http.get(Uri.parse("$url/db/loadCusAdd/$userId"));
@@ -643,6 +701,7 @@ class _HomePageState extends State<CartPage> {
             jsonResponse.map((e) => CusAddressGetResponse.fromJson(e)).toList();
         if (res_addList.isNotEmpty) {
           context.read<ShareData>().customer_addresses = res_addList;
+          Cus_coordinate = res_addList[0].ca_coordinate;
           calculateDeliveryFee();
         }
       }
@@ -670,6 +729,40 @@ class _HomePageState extends State<CartPage> {
       });
     }
   }
+
+  // void insert_Order(double dev_Fee) async {
+  //   try {
+  //     final in_order = await http.post(
+  //       Uri.parse("$url/db/insert_order"),
+  //       headers: {"Content-Type": "application/json"},
+  //       body: jsonEncode({
+  //         "ord_dev_price": dev_Fee,
+  //         "ord_date": DateTime.now().toIso8601String(),
+  //         "ord_status": -1,
+  //         "cus_id": context.read<ShareData>().user_info_send.uid,
+  //         "rid_id": 0, // เดี๋ยวมาแก้ เทสก่อน
+  //       }),
+  //     );
+
+  //     if (in_order.statusCode == 200) {
+  //       // ทำอย่างอื่นถ้าต้องการ
+  //     } else {
+  //       // handle error กรณี response ไม่ใช่ 200
+  //       Fluttertoast.showToast(
+  //         msg: "เกิดข้อผิดพลาดจาก server",
+  //         backgroundColor: Colors.red,
+  //         textColor: Colors.white,
+  //       );
+  //     }
+  //   } catch (e) {
+  //     log("LoadCusHome Error: $e");
+  //     Fluttertoast.showToast(
+  //       msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
+  //       backgroundColor: Colors.red,
+  //       textColor: Colors.white,
+  //     );
+  //   }
+  // }
 
   void update_cus_balance(double d_total) async {
     int cus_id = context.read<ShareData>().user_info_send.uid;
