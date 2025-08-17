@@ -56,6 +56,7 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
     _controller =
         AnimationController(vsync: this, duration: const Duration(seconds: 2));
     _setAnimation();
+    final shareData = context.read<ShareData>();
     _startAnimationIfNeeded();
   }
 

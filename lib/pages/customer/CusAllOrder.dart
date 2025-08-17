@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
+import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/pages/customer/Order.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
@@ -19,6 +23,8 @@ class _CusallorderPageState extends State<CusallorderPage> {
   String url = '';
   bool isLoading = true;
   List<Map<String, dynamic>> ordersList = []; // เก็บ order
+  List<ResInfoResponse> _restaurantInfo = [];
+  Map<int, ResInfoResponse> _restaurantMap = {};
 
   @override
   void initState() {
@@ -43,9 +49,25 @@ class _CusallorderPageState extends State<CusallorderPage> {
                     itemCount: ordersList.length,
                     itemBuilder: (context, index) {
                       var order = ordersList[index];
+
+                      // ดึงข้อมูลร้านจาก map
+                      var resInfo = _restaurantMap[order['res_id']];
+
+                      // เรียกโหลดร้านถ้ายังไม่มีใน map
+                      if (resInfo == null) {
+                        loadRes(order['res_id']);
+                      }
+
+                      // แปลงวันเวลา
+                      var timestamp = order['Order_date'];
+                      DateTime orderDate = timestamp != null
+                          ? (timestamp as Timestamp).toDate()
+                          : DateTime.now();
+                      String formattedDate =
+                          DateFormat('dd/MM/yyyy HH:mm').format(orderDate);
+
                       return GestureDetector(
                         onTap: () {
-                          // เมื่อกด Card → ไปหน้า OrderPage
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -53,8 +75,7 @@ class _CusallorderPageState extends State<CusallorderPage> {
                                 mergedMenus: order['menus'],
                                 deliveryFee: order['deliveryFee'],
                                 order_id: order['order_id'],
-                                order_status: order[
-                                    'Order_status'], // ส่ง order id // หรือส่งข้อมูล order ทั้งหมด
+                                order_status: order['Order_status'],
                               ),
                             ),
                           );
@@ -63,19 +84,20 @@ class _CusallorderPageState extends State<CusallorderPage> {
                           margin: EdgeInsets.symmetric(vertical: 6),
                           elevation: 3,
                           child: ListTile(
-                            title: Text("Order ID: ${order['id']}"),
+                            title: Text(resInfo != null
+                                ? resInfo.res_name
+                                : "กำลังโหลด..."),
                             subtitle: Text(
-                              "สถานะ: ${order['Order_status'] ?? '-'}\nวันที่: ${order['ord_date'] ?? '-'}",
+                              "สถานะ: ${order['Order_status'] ?? '-'}\nวันที่: $formattedDate",
                             ),
                             trailing: Text(
-                              "ราคารวม: ${order['total_price'] ?? '-'} ฿",
+                              "ราคารวม: ${order['totalPrice'] ?? '-'} ฿",
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
                       );
-                    },
-                  ));
+                    }));
   }
 
   void LoadAllOrder(BuildContext context) async {
@@ -105,5 +127,23 @@ class _CusallorderPageState extends State<CusallorderPage> {
     setState(() {
       isLoading = false;
     });
+  }
+
+  void loadRes(int res_id) async {
+    if (_restaurantMap.containsKey(res_id)) return; // โหลดแล้วไม่โหลดซ้ำ
+
+    final res_ResInfo =
+        await http.get(Uri.parse("$url/db/loadResInfo/$res_id"));
+
+    if (res_ResInfo.statusCode == 200) {
+      final List<ResInfoResponse> list = (json.decode(res_ResInfo.body) as List)
+          .map((e) => ResInfoResponse.fromJson(e))
+          .toList();
+      if (list.isNotEmpty) {
+        setState(() {
+          _restaurantMap[res_id] = list.first; // เก็บตาม res_id
+        });
+      }
+    }
   }
 }
