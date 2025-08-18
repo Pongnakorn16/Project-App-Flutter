@@ -182,7 +182,6 @@ class _HomePageState extends State<CartPage> {
           ],
         ),
       ),
-      bottomNavigationBar: buildBottomNavigationBar(),
     );
   }
 
@@ -409,6 +408,7 @@ class _HomePageState extends State<CartPage> {
                                 ).then((_) {
                                   // เมื่อ Pop กลับมา
                                   setState(() {
+                                    isLoading = true;
                                     LoadCusAdd();
                                   });
                                 });
@@ -463,7 +463,12 @@ class _HomePageState extends State<CartPage> {
                                 context,
                                 MaterialPageRoute(
                                     builder: (context) => TopupPage()),
-                              );
+                              ).then((_) {
+                                setState(() {
+                                  isLoading = true;
+                                  LoadCusAdd();
+                                });
+                              });
                             },
                             child: const Text("ใช่"),
                           ),

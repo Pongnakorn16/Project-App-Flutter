@@ -511,7 +511,6 @@ class _HomePageState extends State<RestaurantinfoPage> {
   }
 
   // วิธีที่ดีกว่า: ใช้ CompleteCompleter เพื่อควบคุม async operation
-  // วิธีที่ดีกว่า: ใช้ CompleteCompleter เพื่อควบคุม async operation
   void _showEditMenuDialog(int menu_id) {
     showDialog(
       context: context,

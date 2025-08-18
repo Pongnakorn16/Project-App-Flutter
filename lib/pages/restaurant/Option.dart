@@ -260,6 +260,18 @@ class _HomePageState extends State<OptionPage> {
                         borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () {
+                    // ✅ ตรวจสอบว่าผู้ใช้เลือก Option ครบทุกหมวดหมู่หรือไม่
+                    if (!_validateAllOptionsSelected()) {
+                      Fluttertoast.showToast(
+                        msg: "กรุณาเลือกตัวเลือกเพิ่มเติมให้ครบก่อน",
+                        backgroundColor: Colors.amber,
+                        textColor: Colors.white,
+                        toastLength: Toast.LENGTH_SHORT,
+                        gravity: ToastGravity.BOTTOM,
+                      );
+                      return; // หยุดการดำเนินการ
+                    }
+
                     final selectedOptionsWithNames =
                         _selectedOptions.entries.map((entry) {
                       final opCatId = entry.key;
@@ -317,6 +329,35 @@ class _HomePageState extends State<OptionPage> {
         ),
       ),
     );
+  }
+
+  /// ✅ ฟังก์ชันตรวจสอบว่าเลือก Option ครบทุกหมวดหมู่หรือไม่
+  bool _validateAllOptionsSelected() {
+    if (_restaurantOption == null) return false;
+
+    // หาทุกหมวดหมู่ที่มี options (ไม่ใช่หมวดเปล่าๆ)
+    for (var category in _restaurantOption!.categories) {
+      final catOptions = _restaurantOption!.options
+          .where((op) => op.opCatId == category.opCatId)
+          .toList();
+
+      // ถ้าหมวดนี้มี options แต่ยังไม่ได้เลือก
+      if (catOptions.isNotEmpty) {
+        // ตรวจสอบว่าได้เลือก option ในหมวดนี้หรือยัง
+        final selectedOptionId = _selectedOptions[category.opCatId];
+        if (selectedOptionId == null) {
+          return false; // ยังไม่ได้เลือกในหมวดนี้
+        }
+
+        // ตรวจสอบว่า option ที่เลือกมีอยู่จริงในหมวดนี้หรือไม่
+        bool optionExists = catOptions.any((op) => op.opId == selectedOptionId);
+        if (!optionExists) {
+          return false; // option ที่เลือกไม่มีอยู่ในหมวดนี้
+        }
+      }
+    }
+
+    return true; // เลือกครบทุกหมวดแล้ว
   }
 
   @override

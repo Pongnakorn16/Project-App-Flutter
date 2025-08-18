@@ -608,7 +608,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          'พิกัด: ${pickedLocation!.latitude.toStringAsFixed(6)}, ${pickedLocation!.longitude.toStringAsFixed(6)}',
+                          'พิกัด: ${pickedLocation!.latitude}, ${pickedLocation!.longitude}',
                           style: TextStyle(
                               fontSize: 12, fontWeight: FontWeight.bold),
                         ),
