@@ -10,9 +10,6 @@ import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
-import 'package:mobile_miniproject_app/pages/Add_Item.dart';
-import 'package:mobile_miniproject_app/pages/Home.dart';
-import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderReceive.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderHistory.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderHome.dart';
@@ -385,8 +382,7 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                RiderHistoryPage(onClose: () {}, selectedIndex: 1),
+            builder: (context) => RiderHistoryPage(),
           ),
         );
       } else if (index == 2) {
@@ -394,8 +390,7 @@ class _RiderOrderinfoPageState extends State<RiderOrderinfoPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                RiderProfilePage(onClose: () {}, selectedIndex: 2),
+            builder: (context) => RiderProfilePage(),
           ),
         );
       }

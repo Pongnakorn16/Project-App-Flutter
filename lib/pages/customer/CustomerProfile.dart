@@ -1206,7 +1206,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
         final ref = FirebaseStorage.instance
             .ref()
-            .child('BP_profile_image')
+            .child('BP_CusProfile_image')
             .child(fileName);
 
         await ref.putFile(file);

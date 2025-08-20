@@ -435,8 +435,7 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                RiderHistoryPage(onClose: () {}, selectedIndex: 1),
+            builder: (context) => RiderHistoryPage(),
           ),
         );
       } else if (index == 2) {
@@ -444,8 +443,7 @@ class _RiderHistoryDetailState extends State<RiderHistoryDetail> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                RiderProfilePage(onClose: () {}, selectedIndex: 2),
+            builder: (context) => RiderProfilePage(),
           ),
         );
       }
