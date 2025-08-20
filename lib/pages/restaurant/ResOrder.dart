@@ -1,209 +1,142 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
-import 'package:mobile_miniproject_app/models/response/OptionGetRes.dart';
+import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
+import 'package:mobile_miniproject_app/pages/customer/CustomerHome.dart';
+import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
+import 'package:mobile_miniproject_app/pages/customer/TopUp.dart';
+import 'package:mobile_miniproject_app/shared/firebase_message_service.dart';
+import 'package:mobile_miniproject_app/shared/share_data.dart';
+import 'package:provider/provider.dart';
+import 'package:geocoding/geocoding.dart';
 
 class ResOrderPage extends StatefulWidget {
-  const ResOrderPage({super.key});
+  final List<dynamic> mergedMenus;
+  final double deliveryFee;
+  final int order_id;
+  final int order_status;
+  final String? previousPage;
+
+  const ResOrderPage(
+      {Key? key,
+      required this.mergedMenus,
+      required this.deliveryFee,
+      required this.order_id,
+      required this.order_status,
+      this.previousPage})
+      : super(key: key);
 
   @override
   State<ResOrderPage> createState() => _HomePageState();
 }
 
+// Main OrderPage State
 class _HomePageState extends State<ResOrderPage> {
+  int _currentStep = 0; // เปลี่ยนจาก -1 เป็น 0
+  late Timer _timer;
   String url = '';
-  OptionGetResponse? _menuOption;
+  bool isLoading = true;
+  String? _address; // เก็บที่อยู่ร้าน
+  String? _selectedCustomerAddress;
 
-  List<Map<String, dynamic>> _optionCategories = [];
-  Map<int, TextEditingController> _catControllers = {};
-  List<Map<String, dynamic>> _options = [];
-  Map<int, List<Map<String, dynamic>>> groupedOptions = {};
-  int _originalOptionsLength = 0;
-  bool _hasAddedOption = false;
-
-  // เก็บค่าเดิมไว้แยก
-  Map<int, String> _originalCategoryNames = {};
-  Map<int, String> _originalOptionNames = {};
-  Map<int, int> _originalOptionPrices = {};
-
-  bool _isLoading = true;
-
+  @override
   @override
   void initState() {
     super.initState();
     Configuration.getConfig().then((value) {
       url = value['apiEndpoint'];
-      loadOption(); // เรียกฟังก์ชัน async หลังได้ url
+      LoadCusAdd();
+      if (widget.order_status != -1) {
+        _currentStep = widget.order_status;
+      }
+      _getAddressFromCoordinates();
+
+      final myOrderId = "order${widget.order_id}";
+      log(myOrderId +
+          "aXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxx");
+
+      final cus_id = context.read<ShareData>().user_info_send.uid;
+      OrderNotificationService().listenOrderChanges(context, cus_id,
+          (orderId, newStep) {
+        if (!mounted) return;
+        setState(() {
+          _currentStep = newStep; // อัปเดต Progress Bar และสถานะ
+        });
+      });
+
+      setState(() {});
+    });
+
+    // Timer สำหรับ progress bar เฉพาะสถานะแรก
+    _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (!mounted) return;
+      if (_currentStep != 0) {
+        timer.cancel(); // หยุด timer เมื่อสถานะเปลี่ยน
+      }
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text("ออเดอร์ที่สั่งเข้ามา"),
-          automaticallyImplyLeading: false,
-        ),
-        body: const Center(child: CircularProgressIndicator()),
-      );
+  void _getAddressFromCoordinates() async {
+    final matchedRestaurant = context.read<ShareData>().res_info;
+
+    final coords = matchedRestaurant.res_coordinate.split(',');
+    final double lat = double.parse(coords[0]);
+    final double lng = double.parse(coords[1]);
+
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+        setState(() {
+          _address =
+              "${(place.subLocality ?? '').trim()} ${(place.locality ?? '').trim()} ${(place.administrativeArea ?? '').trim()} ${(place.postalCode ?? '').trim()}";
+        });
+      }
+    } catch (e) {
+      print("Error in geocoding: $e");
+      setState(() {
+        _address = "ไม่พบที่อยู่";
+      });
     }
-
-    // ไม่มีหมวดหมู่เลย
-    if (_optionCategories.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text("แก้ไขตัวเลือกเพิ่มเติม"),
-          automaticallyImplyLeading: false,
-        ),
-        body: const Center(child: Text("ไม่มีหมวดหมู่ตัวเลือกเพิ่มเติม")),
-      );
-    }
-
-    final cat = _optionCategories.first;
-    final catId = cat["op_cat_id"];
-    final catController = _catControllers[catId]!;
-    final optionsList = groupedOptions[catId] ?? [];
-
-    return Scaffold(
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ชื่อหมวดหมู่
-            TextFormField(
-              controller: catController,
-              decoration: const InputDecoration(
-                labelText: 'ชื่อหมวดหมู่',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // ถ้ามี option ให้แสดง list, ถ้าไม่มีให้ขึ้นข้อความ
-            if (optionsList.isEmpty)
-              const Text(
-                "ยังไม่มีตัวเลือกในหมวดหมู่นี้",
-                style: TextStyle(color: Colors.grey),
-              )
-            else
-              ...optionsList.map((opt) {
-                final nameController =
-                    opt["controller_name"] as TextEditingController;
-                final priceController =
-                    opt["controller_price"] as TextEditingController;
-                return Dismissible(
-                  key: Key("option_${opt["op_id"]}"),
-                  direction: DismissDirection.endToStart,
-                  confirmDismiss: (direction) async {
-                    return await _showDeleteConfirmDialog(opt);
-                  },
-                  onDismissed: (direction) {
-                    _deleteOption(opt);
-                  },
-                  background: Container(
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 20),
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Icon(Icons.delete, color: Colors.white, size: 28),
-                        SizedBox(width: 8),
-                        Text('ลบ',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
-                  child: Card(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        children: [
-                          TextFormField(
-                            controller: nameController,
-                            decoration: const InputDecoration(
-                              labelText: 'ชื่อตัวเลือก',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: priceController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'ราคา',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _addOption,
-              icon: const Icon(Icons.add),
-              label: const Text("เพิ่มตัวเลือก"),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _saveOptions,
-                    child: const Text("บันทึก"),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text("ยกเลิก"),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
-  Future<bool?> _showDeleteConfirmDialog(Map<String, dynamic> option) async {
-    return showDialog<bool>(
+  void _showAddressDialog(List<CusAddressGetResponse> addresses) {
+    showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('ยืนยันการลบ'),
-          content: Text('คุณต้องการลบตัวเลือก "${option["op_name"]}" หรือไม่?'),
+          title: const Text("เลือกที่อยู่"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: addresses.length,
+              itemBuilder: (context, index) {
+                final addr = addresses[index];
+                final fullAddress = "${addr.ca_address} ${addr.ca_detail}";
+                return ListTile(
+                  title: Text(fullAddress),
+                  onTap: () {
+                    setState(() {
+                      _selectedCustomerAddress = fullAddress;
+                      context.read<ShareData>().selected_address_index = index;
+                    });
+                    Navigator.pop(context);
+                  },
+                );
+              },
+            ),
+          ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('ยกเลิก'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('ลบ'),
+              child: const Text("ยกเลิก"),
+              onPressed: () => Navigator.pop(context),
             ),
           ],
         );
@@ -211,323 +144,246 @@ class _HomePageState extends State<ResOrderPage> {
     );
   }
 
-  void _deleteOption(Map<String, dynamic> option) async {
-    try {
-      final res = await http.delete(
-        Uri.parse("$url/db/delete_option/${option["op_id"]}"),
-        headers: {"Content-Type": "application/json"},
-      );
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
 
-      if (res.statusCode == 200) {
-        setState(() {
-          _options.removeWhere((opt) => opt["op_id"] == option["op_id"]);
-        });
-
-        Fluttertoast.showToast(
-          msg: "ลบตัวเลือกเรียบร้อย",
-          backgroundColor: Colors.green,
-          textColor: Colors.white,
-        );
-      } else {
-        Fluttertoast.showToast(
-          msg: "ไม่สามารถลบตัวเลือกได้",
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-        );
-        // รีโหลดข้อมูลใหม่หากลบไม่สำเร็จ
-        loadOption();
-      }
-    } catch (e) {
-      log("Error deleting option: $e");
-      Fluttertoast.showToast(
-        msg: "เกิดข้อผิดพลาด",
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
+  // เพิ่ม method สำหรับจัดการปุ่มกลับ
+  void _handleBackButton() {
+    if (widget.previousPage == 'CusAllOrderPage') {
+      // กลับไปหน้า CusAllOrderPage
+      Navigator.pop(context);
+    } else if (widget.previousPage == 'Cart') {
+      // กลับไปหน้า CustomerHomePage
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => CustomerHomePage()),
       );
-      // รีโหลดข้อมูลใหม่หากเกิดข้อผิดพลาด
-      loadOption();
+    } else {
+      // default กลับไปหน้าก่อนหน้า
+      Navigator.pop(context);
     }
   }
 
-  void _addOption() {
-    final nameController = TextEditingController();
-    final priceController = TextEditingController();
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("เพิ่มตัวเลือก"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+    final customerAdd = context.watch<ShareData>().customer_addresses;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("ติดตามสถานะการสั่งซื้อ"),
+        automaticallyImplyLeading:
+            widget.previousPage != null, // แสดงปุ่มกลับเมื่อมี previousPage
+        leading: widget.previousPage != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => _handleBackButton(),
+              )
+            : null,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextFormField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: "ชื่อตัวเลือก",
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: priceController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: "ราคา",
-                border: OutlineInputBorder(),
-              ),
-            ),
+            buildAddressSection(customerAdd),
+            const SizedBox(height: 20),
+            buildOrderSummary(),
+            const SizedBox(height: 20),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text("ยกเลิก"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final name = nameController.text.trim();
-              final price = int.tryParse(priceController.text.trim()) ?? 0;
-
-              if (name.isEmpty) {
-                Fluttertoast.showToast(
-                    msg: "กรุณากรอกชื่อ",
-                    backgroundColor: Colors.orange,
-                    textColor: Colors.white);
-                return;
-              }
-
-              // เช็คชื่อซ้ำกับตัวเลือกที่มีอยู่
-              bool isDuplicate = _options.any((opt) =>
-                  opt["op_name"].toString().trim().toLowerCase() ==
-                  name.toLowerCase());
-
-              if (isDuplicate) {
-                Fluttertoast.showToast(
-                    msg: "ชื่อตัวเลือกซ้ำ กรุณาใช้ชื่ออื่น",
-                    backgroundColor: Colors.red,
-                    textColor: Colors.white);
-                return;
-              }
-
-              // สร้าง Option ใหม่
-              final newOption = {
-                "op_name": name,
-                "op_price": price,
-              };
-
-              // ส่งไป server ก่อน
-              await _Add_more_option(newOption);
-              _hasAddedOption = true; // ✅ บอกว่ามีการเพิ่ม option ใหม่แล้ว
-              loadOption();
-              Navigator.of(context).pop();
-
-              // จากนั้นอัปเดต UI
-              setState(() {});
-            },
-            child: const Text("บันทึก"),
-          ),
-        ],
       ),
     );
   }
 
-  Future<void> _Add_more_option(Map newOption) async {
-    final res = await http.post(
-      Uri.parse("$url/db/add_more_option"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode(newOption), // ✅ แปลงเป็น JSON
+  Widget _buildStatusIcon(IconData icon, String label, bool active) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CircleAvatar(
+          radius: 22,
+          backgroundColor:
+              active ? Color.fromARGB(255, 157, 9, 255) : Colors.grey[300],
+          child: Icon(icon, color: Colors.white, size: 28),
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          width: 80,
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: active ? Color.fromARGB(255, 248, 191, 2) : Colors.grey,
+              fontWeight: active ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        )
+      ],
     );
-
-    if (res.statusCode == 200) {
-      Fluttertoast.showToast(
-        msg: "เพิ่มตัวเลือกเรียบร้อย",
-        backgroundColor: Colors.green,
-        textColor: Colors.white,
-      );
-    } else {
-      Fluttertoast.showToast(
-        msg: "ไม่สามารถเพิ่มตัวเลือกได้",
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
-    }
   }
 
-  void _saveOptions() async {
-    bool hasChanged = false;
+  Widget buildAddressSection(List<CusAddressGetResponse> customerAdd) {
+    final restaurantAddress = _address ?? "กำลังโหลดที่อยู่ร้าน...";
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.location_on_sharp, color: Colors.red),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("ตำแหน่งร้าน",
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text(restaurantAddress),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Divider(height: 20),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.location_on_sharp, color: Colors.green),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text("ตำแหน่งลูกค้า",
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(customerAdd.isNotEmpty
+                          ? "${customerAdd[context.read<ShareData>().selected_address_index].ca_address} ${customerAdd[context.read<ShareData>().selected_address_index].ca_detail}"
+                          : "กำลังโหลดที่อยู่ลูกค้า..."),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          ],
+        ),
+      ),
+    );
+  }
 
-    // เช็คการเปลี่ยนแปลงของหมวดหมู่
-    for (final cat in _optionCategories) {
-      final controller = _catControllers[cat["op_cat_id"]];
-      if (controller != null) {
-        final currentText = controller.text.trim();
-        final originalText = _originalCategoryNames[cat["op_cat_id"]] ?? "";
-        if (currentText != originalText) {
-          hasChanged = true;
-          cat["op_cat_name"] = currentText;
-          // ไม่ต้อง break
+  Widget buildOrderSummary() {
+    double finalPrice = 0;
+
+    List<Widget> menuWidgets = widget.mergedMenus.map((menu) {
+      final count = menu["count"] ?? 1;
+      final menuPrice = (menu["menu_price"] ?? 0).toDouble();
+      final options = menu["selectedOptions"] ?? [];
+      double optionsTotalPrice = 0;
+      for (var opt in options) {
+        optionsTotalPrice += (opt["op_price"] ?? 0).toDouble();
+      }
+      final totalPrice = (menuPrice + optionsTotalPrice) * count;
+      finalPrice += totalPrice;
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Expanded(child: Text("${menu["menu_name"]} x$count")),
+              Text("${totalPrice.toStringAsFixed(0)} บาท"),
+            ]),
+            if (options.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 16, top: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: options.map<Widget>((opt) {
+                    final opPrice = (opt["op_price"] ?? 0).toDouble();
+                    return Text(
+                      opPrice > 0
+                          ? "- ${opt["op_name"]} (+${opPrice.toStringAsFixed(0)} บาท)"
+                          : "- ${opt["op_name"]}",
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    );
+                  }).toList(),
+                ),
+              ),
+          ],
+        ),
+      );
+    }).toList();
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("สรุปรายการอาหาร",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            ...menuWidgets,
+            const Divider(),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              const Text("ค่าส่ง",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              Text("${widget.deliveryFee.toStringAsFixed(0)} บาท",
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ]),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              const Text("รวมทั้งหมด",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                  "${(finalPrice + widget.deliveryFee).toStringAsFixed(0)} บาท",
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ])
+          ],
+        ),
+      ),
+    );
+  }
+
+  void LoadCusAdd() async {
+    int userId = context.read<ShareData>().user_info_send.uid;
+    try {
+      context.read<ShareData>().customer_addresses = [];
+      final res_Add = await http.get(Uri.parse("$url/db/loadCusAdd/$userId"));
+      if (res_Add.statusCode == 200) {
+        final List<dynamic> jsonResponse = json.decode(res_Add.body);
+        final List<CusAddressGetResponse> res_addList =
+            jsonResponse.map((e) => CusAddressGetResponse.fromJson(e)).toList();
+        if (res_addList.isNotEmpty) {
+          context.read<ShareData>().customer_addresses = res_addList;
         }
       }
-    }
-
-// เช็คการเปลี่ยนแปลงของตัวเลือก
-    for (final opt in _options) {
-      final nameController = opt["controller_name"] as TextEditingController;
-      final priceController = opt["controller_price"] as TextEditingController;
-      final currentName = nameController.text.trim();
-      final currentPrice = int.tryParse(priceController.text.trim()) ?? 0;
-      final originalName = _originalOptionNames[opt["op_id"]] ?? "";
-      final originalPrice = _originalOptionPrices[opt["op_id"]] ?? 0;
-
-      if (currentName != originalName || currentPrice != originalPrice) {
-        hasChanged = true;
-        opt["op_name"] = currentName;
-        opt["op_price"] = currentPrice;
-        // ไม่ต้อง break
-      }
-    }
-
-    // เช็คว่ามีการเพิ่ม option ใหม่หรือไม่
-    if (!hasChanged &&
-        (_options.length > _originalOptionsLength || _hasAddedOption)) {
-      hasChanged = true;
-    }
-
-    // ถ้าไม่มีการเปลี่ยนแปลงใดๆ
-    if (!hasChanged) {
-      Fluttertoast.showToast(
-          msg: "คุณยังไม่ได้แก้ไขค่าใด",
-          backgroundColor: Colors.orange,
-          textColor: Colors.white);
-      return;
-    }
-
-    // เช็คชื่อซ้ำในตัวเลือกที่แก้ไข (เฉพาะตัวที่เปลี่ยนแปลง)
-    List<String> optionNames = [];
-    for (final opt in _options) {
-      final nameController = opt["controller_name"] as TextEditingController;
-      final currentName = nameController.text.trim().toLowerCase();
-
-      if (optionNames.contains(currentName)) {
-        Fluttertoast.showToast(
-            msg: "พบชื่อตัวเลือกซ้ำ กรุณาแก้ไขให้ไม่ซ้ำกัน",
-            backgroundColor: Colors.red,
-            textColor: Colors.white);
-        return;
-      }
-      optionNames.add(currentName);
-    }
-
-    try {
-      final res = await http.put(
-        Uri.parse("$url/db/edit_Option"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "categories": _optionCategories
-              .map((cat) => {
-                    "op_cat_id": cat["op_cat_id"],
-                    "op_cat_name": cat["op_cat_name"],
-                  })
-              .toList(),
-          "options": _options
-              .map((opt) => {
-                    "option_id": opt["op_id"],
-                    "option_name": opt["op_name"],
-                    "option_price": opt["op_price"],
-                    "op_cat_id": opt["op_cat_id"]
-                  })
-              .toList()
-        }),
-      );
-
-      if (res.statusCode == 200) {
-        Fluttertoast.showToast(
-            msg: "บันทึกเรียบร้อย",
-            backgroundColor: Colors.green,
-            textColor: Colors.white);
-        Navigator.of(context).pop(true);
-      } else {
-        Fluttertoast.showToast(
-            msg: "ไม่สามารถบันทึกข้อมูลได้",
-            backgroundColor: Colors.red,
-            textColor: Colors.white);
-      }
     } catch (e) {
-      log("Error saving options: $e");
+      log("LoadCusHome Error: $e");
       Fluttertoast.showToast(
-          msg: "เกิดข้อผิดพลาด",
+          msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
           backgroundColor: Colors.red,
           textColor: Colors.white);
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
-  }
-
-  Future<void> loadOption() async {
-    // setState(() => _isLoading = true);
-    // final option =
-    //     await http.get(Uri.parse("$url/db/loadOptionInfo/$op_cat_id"));
-
-    // if (option.statusCode == 200) {
-    //   final OptionGetResponse data =
-    //       OptionGetResponse.fromJson(json.decode(option.body));
-    //   setState(() {
-    //     _menuOption = data;
-
-    //     // แปลง categories และ options หลังโหลด
-    //     _optionCategories = _menuOption!.categories
-    //             ?.where((cat) => cat.opCatId == widget.op_cat_id)
-    //             .map((cat) => {
-    //                   "op_cat_id": cat.opCatId,
-    //                   "op_cat_name": cat.opCatName,
-    //                   "res_id": cat.resId
-    //                 })
-    //             .toList() ??
-    //         [];
-
-    //     _catControllers.clear();
-    //     _originalCategoryNames.clear(); // ✅ เคลียร์ก่อน
-
-    //     for (var cat in _optionCategories) {
-    //       _catControllers[cat["op_cat_id"]] =
-    //           TextEditingController(text: cat["op_cat_name"]);
-
-    //       // ✅ เก็บค่าเดิมไว้
-    //       _originalCategoryNames[cat["op_cat_id"]] = cat["op_cat_name"];
-    //     }
-
-    //     _options = _menuOption!.options
-    //             ?.where((opt) => opt.opCatId == widget.op_cat_id)
-    //             .map((opt) {
-    //           final nameController = TextEditingController(text: opt.opName);
-    //           final priceController =
-    //               TextEditingController(text: opt.opPrice.toString());
-
-    //           // ✅ เก็บค่าเดิมไว้
-    //           _originalOptionNames[opt.opId!] = opt.opName ?? "";
-    //           _originalOptionPrices[opt.opId!] = opt.opPrice ?? 0;
-
-    //           return {
-    //             "op_id": opt.opId,
-    //             "op_name": opt.opName,
-    //             "op_price": opt.opPrice,
-    //             "op_cat_id": opt.opCatId,
-    //             "controller_name": nameController,
-    //             "controller_price": priceController,
-    //           };
-    //         }).toList() ??
-    //         [];
-
-    //     _groupOptionsByCategory();
-    //     _originalOptionsLength = _options.length;
-
-    //     _isLoading = false; // โหลดเสร็จ
-    //   });
-    // } else {
-    //   setState(() => _isLoading = false); // โหลดเสร็จแม้ error
-    //   Fluttertoast.showToast(
-    //     msg: "โหลดข้อมูลไม่สำเร็จ",
-    //     backgroundColor: Colors.red,
-    //     textColor: Colors.white,
-    //   );
-    // }
   }
 }

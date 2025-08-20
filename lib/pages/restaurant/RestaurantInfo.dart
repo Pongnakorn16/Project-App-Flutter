@@ -17,6 +17,7 @@ import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/customer/Cart.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/Option.dart';
+import 'package:mobile_miniproject_app/shared/firebase_message_service.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 import 'package:geocoding/geocoding.dart';
@@ -56,6 +57,11 @@ class _HomePageState extends State<RestaurantinfoPage> {
       url = value['apiEndpoint'];
       context.read<ShareData>().res_id = widget.ResId;
       LoadResInfo();
+      final cus_id = context.read<ShareData>().user_info_send.uid;
+      OrderNotificationService().listenOrderChanges(context, cus_id,
+          (orderId, newStep) {
+        if (!mounted) return;
+      });
       setState(() {});
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _getAddressFromCoordinates();

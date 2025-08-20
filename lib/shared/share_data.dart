@@ -17,6 +17,7 @@ class ShareData with ChangeNotifier {
   String res_selected_add = "";
   late User_Info_Send user_info_send;
   late User_Info_Receive user_info_receive;
+  late ResInfoResponse res_info;
   List<CusAddressGetResponse> customer_addresses = [];
   List<ResTypeGetResponse> restaurant_type = [];
   List<ResInfoResponse> restaurant_near = [];

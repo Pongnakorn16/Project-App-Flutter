@@ -14,6 +14,7 @@ import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/customer/CusAllOrder.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/RestaurantInfo.dart';
+import 'package:mobile_miniproject_app/shared/firebase_message_service.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 
@@ -36,9 +37,14 @@ class _HomePageState extends State<CustomerHomePage> {
   @override
   void initState() {
     super.initState();
-    Configuration.getConfig().then((value) {
+    Configuration.getConfig().then((value) async {
       url = value['apiEndpoint'];
-      LoadCusHome();
+      await LoadCusHome();
+      final cus_id = context.read<ShareData>().user_info_send.uid;
+      OrderNotificationService().listenOrderChanges(context, cus_id,
+          (orderId, newStep) {
+        if (!mounted) return;
+      });
       setState(() {});
     });
     _pageController = PageController();
@@ -96,28 +102,31 @@ class _HomePageState extends State<CustomerHomePage> {
   AppBar buildHomeAppBar(dynamic topAdd) {
     return AppBar(
       automaticallyImplyLeading: false,
-      title: Row(
-        children: [
-          const Icon(Icons.location_on, color: Colors.red, size: 20),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                topAdd.isNotEmpty ? topAdd[0].ca_detail : 'ไม่มีที่อยู่',
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 19,
-                    color: Colors.black),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                topAdd.isNotEmpty ? topAdd[0].ca_address : '',
-                style: const TextStyle(fontSize: 14, color: Colors.black),
-              ),
-            ],
-          ),
-        ],
+      title: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            const Icon(Icons.location_on, color: Colors.red, size: 20),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  topAdd.isNotEmpty ? topAdd[0].ca_detail : 'ไม่มีที่อยู่',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 19,
+                      color: Colors.black),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  topAdd.isNotEmpty ? topAdd[0].ca_address : '',
+                  style: const TextStyle(fontSize: 14, color: Colors.black),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(60),
@@ -591,7 +600,7 @@ class _HomePageState extends State<CustomerHomePage> {
     );
   }
 
-  void LoadCusHome() async {
+  Future<void> LoadCusHome() async {
     try {
       int userId = context.read<ShareData>().user_info_send.uid;
 

@@ -23,6 +23,7 @@ import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/Home.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerHome.dart';
 import 'package:mobile_miniproject_app/pages/login/Login.dart';
+import 'package:mobile_miniproject_app/shared/firebase_message_service.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
@@ -86,6 +87,11 @@ class _ProfilePageState extends State<ProfilePage> {
     context.read<ShareData>().selected_index = widget.selectedIndex;
     loadData = loadProfileData();
     _pageController = PageController();
+    final cus_id = context.read<ShareData>().user_info_send.uid;
+    OrderNotificationService().listenOrderChanges(context, cus_id,
+        (orderId, newStep) {
+      if (!mounted) return;
+    });
   }
 
   @override

@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
+import 'package:mobile_miniproject_app/pages/customer/CustomerHome.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/pages/customer/TopUp.dart';
 import 'package:mobile_miniproject_app/shared/firebase_message_service.dart';
@@ -20,13 +21,15 @@ class OrderPage extends StatefulWidget {
   final double deliveryFee;
   final int order_id;
   final int order_status;
+  final String? previousPage;
 
   const OrderPage(
       {Key? key,
       required this.mergedMenus,
       required this.deliveryFee,
       required this.order_id,
-      required this.order_status})
+      required this.order_status,
+      this.previousPage})
       : super(key: key);
 
   @override
@@ -118,10 +121,8 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
 
 // Main OrderPage State
 class _OrderPageState extends State<OrderPage> {
-  int _selectedIndex = 1;
   int _currentStep = 0; // เปลี่ยนจาก -1 เป็น 0
   late Timer _timer;
-  late PageController _pageController;
   String url = '';
   bool isLoading = true;
   String? _address; // เก็บที่อยู่ร้าน
@@ -142,9 +143,10 @@ class _OrderPageState extends State<OrderPage> {
       final myOrderId = "order${widget.order_id}";
       log(myOrderId +
           "aXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxx");
-      // เรียก listener พร้อม callback เพื่ออัปเดต _currentStep
-      OrderNotificationService().listenOrderChanges(context, myOrderId,
-          (newStep) {
+
+      final cus_id = context.read<ShareData>().user_info_send.uid;
+      OrderNotificationService().listenOrderChanges(context, cus_id,
+          (orderId, newStep) {
         if (!mounted) return;
         setState(() {
           _currentStep = newStep; // อัปเดต Progress Bar และสถานะ
@@ -153,8 +155,6 @@ class _OrderPageState extends State<OrderPage> {
 
       setState(() {});
     });
-
-    _pageController = PageController();
 
     // Timer สำหรับ progress bar เฉพาะสถานะแรก
     _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
@@ -232,26 +232,23 @@ class _OrderPageState extends State<OrderPage> {
   @override
   void dispose() {
     _timer.cancel();
-    _pageController.dispose();
     super.dispose();
   }
 
-  void _onItemTapped(int index) {
-    if (index == 2) return;
-    setState(() => _selectedIndex = index);
-    if (index == 4) {
-      Navigator.push(
+  // เพิ่ม method สำหรับจัดการปุ่มกลับ
+  void _handleBackButton() {
+    if (widget.previousPage == 'CusAllOrderPage') {
+      // กลับไปหน้า CusAllOrderPage
+      Navigator.pop(context);
+    } else if (widget.previousPage == 'Cart') {
+      // กลับไปหน้า CustomerHomePage
+      Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-            builder: (context) =>
-                ProfilePage(onClose: () {}, selectedIndex: 1)),
+        MaterialPageRoute(builder: (context) => CustomerHomePage()),
       );
     } else {
-      _pageController.animateToPage(
-        index > 2 ? index - 1 : index,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      // default กลับไปหน้าก่อนหน้า
+      Navigator.pop(context);
     }
   }
 
@@ -268,7 +265,14 @@ class _OrderPageState extends State<OrderPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("ติดตามสถานะการสั่งซื้อ"),
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading:
+            widget.previousPage != null, // แสดงปุ่มกลับเมื่อมี previousPage
+        leading: widget.previousPage != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => _handleBackButton(),
+              )
+            : null,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -284,15 +288,14 @@ class _OrderPageState extends State<OrderPage> {
           ],
         ),
       ),
-      bottomNavigationBar: buildBottomNavigationBar(),
     );
   }
 
   Widget buildStatusSection(int currentStep) {
     final steps = [
       "รอร้านยืนยัน",
-      "ร้านรับออเดอร์",
-      "กำลังจัดส่ง",
+      "กำลังเตรียมอาหาร",
+      "กำลังส่ง",
       "ส่งถึงแล้ว"
     ]; // เปลี่ยนจาก "" เป็น "รอร้านยืนยัน"
     return Column(
@@ -488,39 +491,6 @@ class _OrderPageState extends State<OrderPage> {
             ])
           ],
         ),
-      ),
-    );
-  }
-
-  Widget buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(40.0)),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, -2))
-        ],
-      ),
-      child: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        selectedItemColor: const Color.fromARGB(255, 115, 28, 168),
-        unselectedItemColor: Colors.grey,
-        backgroundColor: Colors.white,
-        iconSize: 20,
-        selectedLabelStyle:
-            const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-        unselectedLabelStyle: const TextStyle(fontSize: 10),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.list_alt_rounded), label: 'Order'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
       ),
     );
   }

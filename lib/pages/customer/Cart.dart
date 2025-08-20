@@ -14,6 +14,7 @@ import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/pages/customer/Order.dart';
 import 'package:mobile_miniproject_app/pages/customer/TopUp.dart';
+import 'package:mobile_miniproject_app/shared/firebase_message_service.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 import 'package:geocoding/geocoding.dart';
@@ -48,6 +49,11 @@ class _HomePageState extends State<CartPage> {
       url = value['apiEndpoint'];
       _getAddressFromCoordinates();
       LoadCusAdd();
+      final cus_id = context.read<ShareData>().user_info_send.uid;
+      OrderNotificationService().listenOrderChanges(context, cus_id,
+          (orderId, newStep) {
+        if (!mounted) return;
+      });
       setState(() {});
     });
     _pageController = PageController();
@@ -541,10 +547,12 @@ class _HomePageState extends State<CartPage> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => OrderPage(
-                              mergedMenus: widget.mergedMenus,
-                              deliveryFee: deliveryFee,
-                              order_id: order_id,
-                              order_status: -1),
+                            mergedMenus: widget.mergedMenus,
+                            deliveryFee: deliveryFee,
+                            order_id: order_id,
+                            order_status: -1,
+                            previousPage: 'Cart',
+                          ),
                         ),
                       );
                     } catch (e) {

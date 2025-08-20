@@ -18,7 +18,7 @@ import 'package:mobile_miniproject_app/pages/customer/Order.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/AddMenu.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/EditMenu.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/EditOption.dart';
-import 'package:mobile_miniproject_app/pages/restaurant/ResOrder.dart';
+import 'package:mobile_miniproject_app/pages/restaurant/ResAllOrder.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/ResProfile.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
@@ -98,7 +98,7 @@ class _HomePageState extends State<RestaurantHomePage> {
         },
         children: [
           buildRestaurantHomeBody(), // หน้าหลักร้าน (ย้าย body เดิมมาใส่ในฟังก์ชันนี้)
-          ResOrderPage(), // หน้ารับออเดอร์
+          ResAllOrderPage(), // หน้ารับออเดอร์
           ResProfilePage(onClose: () {}, selectedIndex: 2), // โปรไฟล์
         ],
       ),
@@ -346,7 +346,7 @@ class _HomePageState extends State<RestaurantHomePage> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.list_alt_rounded), label: 'Order'),
+              icon: Icon(Icons.receipt_long), label: 'Order'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
@@ -971,6 +971,7 @@ class _HomePageState extends State<RestaurantHomePage> {
                 .toList();
         setState(() {
           _restaurantInfo = list;
+          context.read<ShareData>().res_info = list.first;
         });
       }
 
