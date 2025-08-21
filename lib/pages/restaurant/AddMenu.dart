@@ -174,16 +174,16 @@ class _HomePageState extends State<AddMenuPage> {
             ),
           ),
           const SizedBox(height: 16),
-          TextButton(
-            onPressed: () {
-              // TODO: ทำ logic เปิดหน้า/popup ตัวเลือกเพิ่มเติม
-              Fluttertoast.showToast(msg: "ตัวเลือกเพิ่มเติม กดแล้ว");
-            },
-            child: const Text(
-              "ตัวเลือกเพิ่มเติม",
-              style: TextStyle(decoration: TextDecoration.underline),
-            ),
-          ),
+          // TextButton(
+          //   onPressed: () {
+          //     // TODO: ทำ logic เปิดหน้า/popup ตัวเลือกเพิ่มเติม
+          //     Fluttertoast.showToast(msg: "ตัวเลือกเพิ่มเติม กดแล้ว");
+          //   },
+          //   child: const Text(
+          //     "ตัวเลือกเพิ่มเติม",
+          //     style: TextStyle(decoration: TextDecoration.underline),
+          //   ),
+          // ),
           const SizedBox(height: 24),
           // ปุ่มบันทึกและยกเลิก
           Row(

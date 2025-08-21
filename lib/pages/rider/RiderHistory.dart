@@ -61,7 +61,7 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: Text("คำสั่งซื้อที่สั่งเข้ามา"),
+          title: Text("ประวัติการรับออเดอร์"),
           automaticallyImplyLeading: false,
         ),
         body: isLoading

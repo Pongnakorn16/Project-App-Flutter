@@ -44,6 +44,10 @@ class _HomePageState extends State<RestaurantinfoPage> {
   Map<int, int> _selectedMenu_no_op = {};
   List<SelectedMenu> _selectedMenu_op = [];
   List<Map<String, dynamic>> mergedMenus = [];
+
+  // เพิ่ม Map สำหรับเก็บ GlobalKey ของแต่ละหมวดหมู่
+  Map<int, GlobalKey> _categoryKeys = {};
+
   List<MenuInfoGetResponse> get selectedMenus {
     return _restaurantMenu
         .where((menu) => _selectedMenu_no_op.containsKey(menu.menu_id))
@@ -68,6 +72,19 @@ class _HomePageState extends State<RestaurantinfoPage> {
       });
     });
     _pageController = PageController();
+  }
+
+  // ฟังก์ชันเลื่อนไปยังหมวดหมู่
+  void _scrollToCategory(int categoryId) {
+    final key = _categoryKeys[categoryId];
+    if (key != null && key.currentContext != null) {
+      Scrollable.ensureVisible(
+        key.currentContext!,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+        alignment: 0.1, // เลื่อนให้หมวดหมู่อยู่ด้านบนเล็กน้อย
+      );
+    }
   }
 
   @override
@@ -157,7 +174,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
     );
   }
 
-  Widget buildCategoryChip(String label) {
+  Widget buildCategoryChip(String label, int categoryId) {
     return Padding(
       padding: const EdgeInsets.only(left: 0, right: 12),
       child: Container(
@@ -175,8 +192,8 @@ class _HomePageState extends State<RestaurantinfoPage> {
         ),
         child: TextButton(
           onPressed: () {
-            // TODO: เขียน logic การเลือกเมนูภายในร้าน เช่น filter list
-            print("เลือกหมวด: $label");
+            // เลื่อนไปยังหมวดหมู่ที่เลือก
+            _scrollToCategory(categoryId);
           },
           style: TextButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -245,6 +262,13 @@ class _HomePageState extends State<RestaurantinfoPage> {
       deliveryTime = "35 นาทีขึ้นไป";
     }
 
+    // สร้าง GlobalKey สำหรับแต่ละหมวดหมู่
+    for (var category in _restaurantCategories) {
+      if (!_categoryKeys.containsKey(category.cat_id)) {
+        _categoryKeys[category.cat_id] = GlobalKey();
+      }
+    }
+
     List<Widget> categoryCards = _restaurantCategories
         .map((category) {
           final menusInCategory = _restaurantMenu
@@ -257,6 +281,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
           }
 
           return Card(
+            key: _categoryKeys[category.cat_id], // เพิ่ม key ให้กับ Card
             margin: const EdgeInsets.only(bottom: 20),
             elevation: 3,
             shape: RoundedRectangleBorder(
@@ -337,17 +362,6 @@ class _HomePageState extends State<RestaurantinfoPage> {
                         fontSize: 25, fontWeight: FontWeight.bold),
                   ),
                 ),
-                // IconButton(
-                //   icon: Icon(
-                //     isFavorite ? Icons.favorite : Icons.favorite_border,
-                //     color: Colors.red,
-                //   ),
-                //   onPressed: () {
-                //     setState(() {
-                //       isFavorite = !isFavorite;
-                //     });
-                //   },
-                // ),
               ],
             ),
             const SizedBox(height: 5),
@@ -402,7 +416,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: _restaurantCategories.map((category) {
-                  return buildCategoryChip(category.cat_name);
+                  return buildCategoryChip(category.cat_name, category.cat_id);
                 }).toList(),
               ),
             ),

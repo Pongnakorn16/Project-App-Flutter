@@ -317,6 +317,16 @@ class _LoginPageState extends State<LoginPage> {
             textColor: Colors.white,
           );
         }
+      } else if (response.statusCode == 400) {
+        // ถ้า status ไม่ใช่ 200 แสดงว่า login fail
+        Fluttertoast.showToast(
+            msg: "บัญชีผู้ใช้นี้โดนแบนอยู่",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Color.fromARGB(255, 255, 0, 0),
+            textColor: Colors.white,
+            fontSize: 15.0);
       } else {
         // ถ้า status ไม่ใช่ 200 แสดงว่า login fail
         Fluttertoast.showToast(

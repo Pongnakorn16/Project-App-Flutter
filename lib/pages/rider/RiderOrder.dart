@@ -179,7 +179,7 @@ class _HomePageState extends State<RiderOrderPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("ติดตามสถานะการสั่งซื้อ"),
+        title: const Text("ข้อมูลออเดอร์"),
         automaticallyImplyLeading:
             widget.previousPage != null, // แสดงปุ่มกลับเมื่อมี previousPage
         leading: widget.previousPage != null

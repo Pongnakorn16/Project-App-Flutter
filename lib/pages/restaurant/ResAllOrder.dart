@@ -11,6 +11,7 @@ import 'package:mobile_miniproject_app/models/response/OptionGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/pages/customer/Order.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/ResOrder.dart';
+import 'package:mobile_miniproject_app/shared/firebase_message_service.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 
@@ -35,6 +36,11 @@ class _HomePageState extends State<ResAllOrderPage> {
     Configuration.getConfig().then((value) {
       url = value['apiEndpoint'];
       LoadAllOrder(context);
+      final res_id = context.read<ShareData>().user_info_send.uid;
+      OrderNotificationService().listenOrderChanges(context, res_id,
+          (orderId, newStep) {
+        if (!mounted) return;
+      });
     });
     _pageController = PageController();
   }
@@ -183,7 +189,8 @@ class _HomePageState extends State<ResAllOrderPage> {
                                         ),
                                       ],
                                     )
-                                  else if ((order['Order_status'] ?? -1) == 1)
+                                  else if ((order['Order_status'] ?? -1) == 1 &&
+                                      order['rid_id'] != 0)
                                     Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -212,6 +219,22 @@ class _HomePageState extends State<ResAllOrderPage> {
                                                   color: Colors.white,
                                                   fontSize: 12),
                                             ),
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  else if ((order['Order_status'] ?? -1) == 1 &&
+                                      order['rid_id'] == 0)
+                                    Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SizedBox(height: 30),
+                                        Text(
+                                          "รอไรเดอร์กดรับออเดอร์...",
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.orange,
+                                            fontWeight: FontWeight.w500,
                                           ),
                                         ),
                                       ],
@@ -315,12 +338,12 @@ class _HomePageState extends State<ResAllOrderPage> {
       return;
     }
 
-    final res_ResInfo =
+    final res_CusInfo =
         await http.get(Uri.parse("$url/db/get_CusProfile/$cus_id"));
 
-    if (res_ResInfo.statusCode == 200) {
+    if (res_CusInfo.statusCode == 200) {
       final List<CusInfoGetResponse> list =
-          (json.decode(res_ResInfo.body) as List)
+          (json.decode(res_CusInfo.body) as List)
               .map((e) => CusInfoGetResponse.fromJson(e))
               .toList();
 

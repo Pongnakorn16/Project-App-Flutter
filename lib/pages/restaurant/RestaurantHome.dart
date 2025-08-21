@@ -231,10 +231,21 @@ class _HomePageState extends State<RestaurantHomePage> {
                           padding: EdgeInsets.symmetric(horizontal: 16.0),
                           child: Text("ไม่มีเมนูในหมวดหมู่นี้"),
                         )
-                      : SizedBox(
-                          height: 200,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
+                      : Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: GridView.builder(
+                            shrinkWrap:
+                                true, // สำคัญ: ให้ GridView ปรับขนาดตามเนื้อหา
+                            physics:
+                                const NeverScrollableScrollPhysics(), // ป้องกันการ scroll ซ้อนกัน
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2, // 2 คอลัมน์
+                              childAspectRatio:
+                                  0.8, // อัตราส่วนความกว้าง:ความสูง
+                              crossAxisSpacing: 10, // ระยะห่างระหว่างคอลัมน์
+                              mainAxisSpacing: 10, // ระยะห่างระหว่างแถว
+                            ),
                             itemCount: menusInCat.length,
                             itemBuilder: (context, index) {
                               final menu = menusInCat[index];
@@ -255,56 +266,65 @@ class _HomePageState extends State<RestaurantHomePage> {
                                     POP_UPMenu();
                                   }
                                 },
-                                child: Container(
-                                  width: 150,
-                                  margin: const EdgeInsets.only(left: 16),
-                                  child: Card(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        ClipRRect(
+                                child: Card(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        flex: 2, // ให้พื้นที่รูปภาพมากกว่า
+                                        child: ClipRRect(
                                           borderRadius:
                                               const BorderRadius.vertical(
                                                   top: Radius.circular(12)),
                                           child: Image.network(
                                             menu.menu_image ?? '',
-                                            height: 100,
                                             width: double.infinity,
                                             fit: BoxFit.cover,
                                             errorBuilder:
                                                 (context, error, stackTrace) =>
                                                     Container(
                                               color: Colors.grey[300],
-                                              height: 100,
                                               child: const Icon(Icons.fastfood,
-                                                  size: 50),
+                                                  size: 40),
                                             ),
                                           ),
                                         ),
-                                        Padding(
+                                      ),
+                                      Expanded(
+                                        flex: 1, // พื้นที่สำหรับข้อความ
+                                        child: Padding(
                                           padding: const EdgeInsets.all(8.0),
-                                          child: Text(
-                                            menu.menu_name ?? '',
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.bold),
-                                            overflow: TextOverflow.ellipsis,
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                menu.menu_name ?? '',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              Text(
+                                                "฿${menu.menu_price?.toStringAsFixed(2) ?? '0.00'}",
+                                                style: const TextStyle(
+                                                  color: Colors.green,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8.0),
-                                          child: Text(
-                                            "฿${menu.menu_price?.toStringAsFixed(2) ?? '0.00'}",
-                                            style: const TextStyle(
-                                                color: Colors.green),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               );
@@ -523,73 +543,77 @@ class _HomePageState extends State<RestaurantHomePage> {
                     const SizedBox(height: 8),
                     // ปุ่มเพิ่มหมวดหมู่
                     ElevatedButton.icon(
-                      onPressed: () {
-                        final TextEditingController _AddCatController =
-                            TextEditingController();
+                        onPressed: () {
+                          final TextEditingController _AddCatController =
+                              TextEditingController();
 
-                        showDialog(
-                          context: context,
-                          builder: (context) {
-                            return AlertDialog(
-                              title: const Text("เพิ่มหมวดหมู่เมนูอาหาร"),
-                              content: TextField(
-                                controller:
-                                    _AddCatController, // ผูก controller ที่นี่
-                                decoration: InputDecoration(
-                                  hintText: 'กรอกชื่อหมวดหมู่',
-                                  labelText: 'ชื่อหมวดหมู่',
-                                  border: OutlineInputBorder(),
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                title: const Text("เพิ่มหมวดหมู่เมนูอาหาร"),
+                                content: TextField(
+                                  controller:
+                                      _AddCatController, // ผูก controller ที่นี่
+                                  decoration: InputDecoration(
+                                    hintText: 'กรอกชื่อหมวดหมู่',
+                                    labelText: 'ชื่อหมวดหมู่',
+                                    border: OutlineInputBorder(),
+                                  ),
                                 ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context)
-                                        .pop(); // ยกเลิก ปิด dialog
-                                  },
-                                  child: const Text("ยกเลิก"),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () async {
-                                    final newName =
-                                        _AddCatController.text.trim();
-                                    if (newName.isNotEmpty) {
-                                      await AddCaterogy(
-                                          newName); // รอเพิ่มข้อมูล
-                                      await LoadResInfo(); // รอโหลดข้อมูลใหม่
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context)
+                                          .pop(); // ยกเลิก ปิด dialog
+                                    },
+                                    child: const Text("ยกเลิก"),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () async {
+                                      final newName =
+                                          _AddCatController.text.trim();
+                                      if (newName.isNotEmpty) {
+                                        await AddCaterogy(
+                                            newName); // รอเพิ่มข้อมูล
+                                        await LoadResInfo(); // รอโหลดข้อมูลใหม่
 
-                                      Fluttertoast.showToast(
-                                        msg: "เพิ่มข้อมูลแล้ว",
-                                        backgroundColor: Colors.green,
-                                        textColor: Colors.white,
-                                      );
+                                        Fluttertoast.showToast(
+                                          msg: "เพิ่มข้อมูลแล้ว",
+                                          backgroundColor: Colors.green,
+                                          textColor: Colors.white,
+                                        );
 
-                                      Navigator.of(context).pop();
-                                      Navigator.of(context).pop(); // ปิด dialog
+                                        Navigator.of(context).pop();
+                                        Navigator.of(context)
+                                            .pop(); // ปิด dialog
 
-                                      POP_UPCaterogy(); // เปิด popup ใหม่ถ้าต้องการ
-                                    } else {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                            content:
-                                                Text("กรุณากรอกชื่อหมวดหมู่")),
-                                      );
-                                    }
-                                  },
-                                  child: const Text("บันทึก"),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      },
-                      icon: const Icon(Icons.add),
-                      label: const Text("เพิ่มหมวดหมู่"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                      ),
-                    )
+                                        POP_UPCaterogy(); // เปิด popup ใหม่ถ้าต้องการ
+                                      } else {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                              content: Text(
+                                                  "กรุณากรอกชื่อหมวดหมู่")),
+                                        );
+                                      }
+                                    },
+                                    child: const Text("บันทึก"),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                        icon: const Icon(
+                          Icons.add,
+                          color: Colors.white,
+                        ),
+                        label: const Text("เพิ่มหมวดหมู่",
+                            style: TextStyle(color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                        ))
                   ],
                 ),
               ),
