@@ -49,6 +49,7 @@ class _ProfilePageState extends State<RiderProfilePage> {
   TextEditingController nameCtl = TextEditingController();
   TextEditingController passwordCtl = TextEditingController();
   TextEditingController conPassCtl = TextEditingController();
+  TextEditingController addressCtl = TextEditingController();
   TextEditingController licenseCtl = TextEditingController();
   LatLng? selectedCoordinate;
   String old_img = '';
@@ -228,6 +229,22 @@ class _ProfilePageState extends State<RiderProfilePage> {
                                 hintText: rider_Info.rid_password.isNotEmpty
                                     ? rider_Info.rid_password
                                     : 'เข้าสู่ระบบด้วย Google แก้ไขไม่ได้', // ทำให้ hintText ว่างไปเลย
+                              ),
+                            ),
+                            SizedBox(height: 15.0),
+                            TextField(
+                              controller: addressCtl,
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: Color.fromARGB(255, 228, 225, 225),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(30.0),
+                                  borderSide: BorderSide(width: 1),
+                                ),
+                                prefixIcon: Icon(Icons.home),
+                                hintText: rider_Info.rid_address.isNotEmpty
+                                    ? rider_Info.rid_address
+                                    : 'กรุณากรอกที่อยู่',
                               ),
                             ),
                             SizedBox(height: 15.0),
@@ -445,6 +462,7 @@ class _ProfilePageState extends State<RiderProfilePage> {
             nameCtl.text = rider_Info.rid_name;
             passwordCtl.text = rider_Info.rid_password;
             conPassCtl.text = rider_Info.rid_password;
+            addressCtl.text = rider_Info.rid_address;
             licenseCtl.text = rider_Info.rid_license;
             old_img = rider_Info.rid_image;
 
@@ -514,6 +532,21 @@ class _ProfilePageState extends State<RiderProfilePage> {
       conPassCtl.text = rider_Info.rid_password; // กำหนดให้ตรงกับ password
     }
 
+    if (addressCtl.text.isEmpty) {
+      if (context.read<ShareData>().customer_addresses.isEmpty) {
+        Fluttertoast.showToast(
+          msg: "กรุณากรอกที่อยู่",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Color.fromARGB(255, 255, 0, 0),
+          textColor: Colors.white,
+          fontSize: 15.0,
+        );
+        return;
+      }
+    }
+
     if (licenseCtl.text.isEmpty) {
       if (context.read<ShareData>().customer_addresses.isEmpty) {
         Fluttertoast.showToast(
@@ -525,9 +558,7 @@ class _ProfilePageState extends State<RiderProfilePage> {
           textColor: Colors.white,
           fontSize: 15.0,
         );
-      } else {
-        licenseCtl.text =
-            context.read<ShareData>().customer_addresses.toString();
+        return;
       }
     }
 
@@ -555,6 +586,9 @@ class _ProfilePageState extends State<RiderProfilePage> {
       rid_password: passwordCtl.text == rider_Info.rid_password
           ? rider_Info.rid_password
           : passwordCtl.text,
+      rid_address: addressCtl.text == rider_Info.rid_address
+          ? rider_Info.rid_address
+          : addressCtl.text,
       rid_license: licenseCtl.text == rider_Info.rid_license
           ? rider_Info.rid_license
           : licenseCtl.text,

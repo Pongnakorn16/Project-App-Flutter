@@ -8,7 +8,10 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
+import 'package:mobile_miniproject_app/models/response/OpCatGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResCatGetRes.dart';
+import 'package:mobile_miniproject_app/shared/share_data.dart';
+import 'package:provider/provider.dart';
 
 class AddMenuPage extends StatefulWidget {
   final List<ResCatGetResponse> restaurantCategories;
@@ -20,8 +23,10 @@ class AddMenuPage extends StatefulWidget {
 
 class _HomePageState extends State<AddMenuPage> {
   String url = '';
+  int ResId = 0;
 
   List<ResCatGetResponse> _restaurantCategories = [];
+  List<OpCatGetResponse> _AllOpcat = [];
 
   int? _selectedCatId;
   final TextEditingController _categoryController = TextEditingController();
@@ -35,6 +40,7 @@ class _HomePageState extends State<AddMenuPage> {
   @override
   void initState() {
     super.initState();
+    ResId = context.read<ShareData>().user_info_send.uid;
     _restaurantCategories = widget.restaurantCategories;
     Configuration.getConfig().then((value) async {
       url = value['apiEndpoint'];
@@ -175,9 +181,19 @@ class _HomePageState extends State<AddMenuPage> {
           ),
           const SizedBox(height: 16),
           // TextButton(
-          //   onPressed: () {
-          //     // TODO: ทำ logic เปิดหน้า/popup ตัวเลือกเพิ่มเติม
-          //     Fluttertoast.showToast(msg: "ตัวเลือกเพิ่มเติม กดแล้ว");
+          //   onPressed: () async {
+          //     // แสดง loading dialog
+          //     showDialog(
+          //       context: context,
+          //       barrierDismissible: false,
+          //       builder: (_) =>
+          //           const Center(child: CircularProgressIndicator()),
+          //     );
+          //     // ปิด loading
+          //     Navigator.of(context).pop();
+
+          //     await loadAllOpCat();
+          //     POP_UPallOpcat();
           //   },
           //   child: const Text(
           //     "ตัวเลือกเพิ่มเติม",
@@ -219,6 +235,75 @@ class _HomePageState extends State<AddMenuPage> {
       ),
     );
   }
+
+  // void POP_UPallOpcat() {
+  //   bool hasAllOpCat = _AllOpcat.isNotEmpty;
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) {
+  //       return AlertDialog(
+  //         title: const Text("รายการหมวดหมู่ตัวเลือกเพิ่มเติมทั้งหมดของร้าน"),
+  //         content: SizedBox(
+  //           width: double.maxFinite,
+  //           child: ConstrainedBox(
+  //             constraints: BoxConstraints(
+  //               maxHeight: MediaQuery.of(context).size.height * 0.6,
+  //             ),
+  //             child: SingleChildScrollView(
+  //               child: Column(
+  //                 mainAxisSize: MainAxisSize.min,
+  //                 children: [
+  //                   if (!hasAllOpCat)
+  //                     const Padding(
+  //                       padding: EdgeInsets.all(8.0),
+  //                       child: Text(
+  //                         "เมนูนี้ยังไม่ได้เลือกหมวดหมู่เพิ่มเติม",
+  //                         style: TextStyle(color: Colors.orange),
+  //                       ),
+  //                     ),
+  //                   if (hasAllOpCat)
+  //                     ..._AllOpcat!.map((opt) {
+  //                       return Card(
+  //                         shape: RoundedRectangleBorder(
+  //                           borderRadius: BorderRadius.circular(8),
+  //                         ),
+  //                         elevation: 2,
+  //                         margin: const EdgeInsets.symmetric(vertical: 4),
+  //                         child: ListTile(
+  //                           title: Text(opt.opCatName ?? ''),
+  //                         ),
+  //                       );
+  //                     }).toList(),
+  //                   const SizedBox(height: 8),
+  //                 ],
+  //               ),
+  //             ),
+  //           ),
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () => Navigator.of(context).pop(),
+  //             child: const Text("ปิด"),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
+
+  // Future<void> loadAllOpCat() async {
+  //   final res_id = context.read<ShareData>().user_info_send.uid;
+  //   final res_Cat = await http.get(Uri.parse("$url/db/loadAllOpCat/${ResId}"));
+
+  //   if (res_Cat.statusCode == 200) {
+  //     final List<OpCatGetResponse> list = (json.decode(res_Cat.body) as List)
+  //         .map((e) => OpCatGetResponse.fromJson(e))
+  //         .toList();
+  //     setState(() {
+  //       _AllOpcat = list;
+  //     });
+  //   }
+  // }
 
   void InsertMenu() async {
     if (_selectedCatId == null ||

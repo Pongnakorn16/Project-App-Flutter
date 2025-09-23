@@ -15,6 +15,7 @@ class RiderProEditPostRequest {
   String rid_phone;
   String rid_name;
   String rid_password;
+  String rid_address;
   String rid_license;
   String rid_image;
 
@@ -23,6 +24,7 @@ class RiderProEditPostRequest {
     required this.rid_phone,
     required this.rid_name,
     required this.rid_password,
+    required this.rid_address,
     required this.rid_license,
     required this.rid_image,
   });
@@ -30,11 +32,12 @@ class RiderProEditPostRequest {
   factory RiderProEditPostRequest.fromJson(Map<String, dynamic> json) =>
       RiderProEditPostRequest(
         rid_id: json['rid_id'],
-        rid_phone: json['cus_phone'],
-        rid_name: json['cus_name'],
-        rid_password: json['cus_password'],
-        rid_license: json['cus_license'],
-        rid_image: json['cus_image'],
+        rid_phone: json['rid_phone'],
+        rid_name: json['rid_name'],
+        rid_password: json['rid_password'],
+        rid_address: json['rid_address'],
+        rid_license: json['rid_license'],
+        rid_image: json['rid_image'],
       );
 
   Map<String, dynamic> toJson() => {
@@ -42,6 +45,7 @@ class RiderProEditPostRequest {
         'rid_phone': rid_phone,
         'rid_name': rid_name,
         'rid_password': rid_password,
+        'rid_address': rid_address,
         'rid_license': rid_license,
         'rid_image': rid_image,
       };

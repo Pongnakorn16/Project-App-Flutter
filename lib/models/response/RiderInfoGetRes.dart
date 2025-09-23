@@ -19,6 +19,7 @@ class RiderInfoGetResponse {
   String rid_phone;
   String rid_image;
   int rid_balance;
+  String rid_address;
   String rid_license;
   int rid_rating;
   int rid_active_status;
@@ -31,6 +32,7 @@ class RiderInfoGetResponse {
     this.rid_phone = '',
     this.rid_image = '',
     this.rid_balance = 0,
+    this.rid_address = '',
     this.rid_license = '',
     this.rid_rating = 0,
     this.rid_active_status = 0,
@@ -45,6 +47,7 @@ class RiderInfoGetResponse {
       rid_phone: json['rid_phone'] ?? '',
       rid_image: json['rid_image'] ?? '',
       rid_balance: json['rid_balance'] ?? 0,
+      rid_address: json['rid_address'] ?? '',
       rid_license: json['rid_license'] ?? '',
       rid_rating: json['rid_rating'] ?? 0,
       rid_active_status: json['rid_active_status'] ?? 0,
@@ -59,6 +62,7 @@ class RiderInfoGetResponse {
         'rid_phone': rid_phone,
         'rid_image': rid_image,
         'rid_balance': rid_balance,
+        'rid_address': rid_address,
         'rid_license': rid_license,
         'rid_rating': rid_rating,
         'rid_active_status': rid_active_status,

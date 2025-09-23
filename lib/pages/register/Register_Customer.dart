@@ -297,34 +297,62 @@ class _RegisterCustomerState extends State<RegisterCustomer> {
 
   void register() async {
     gs.remove('Phone');
+
     if (EmailCtl.text.isEmpty ||
         phoneCtl.text.isEmpty ||
         nameCtl.text.isEmpty ||
         passwordCtl.text.isEmpty ||
-        conPassCtl.text.isEmpty ||
-        passwordCtl.text != conPassCtl.text) {
+        conPassCtl.text.isEmpty) {
       Fluttertoast.showToast(
-          msg: "ข้อมูลไม่ถูกต้องโปรดตรวจสอบความถูกต้อง แล้วลองอีกครั้ง",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.CENTER,
-          timeInSecForIosWeb: 1,
-          // backgroundColor: Color.fromARGB(120, 0, 0, 0),
-          backgroundColor: Color.fromARGB(255, 255, 0, 0),
-          textColor: Colors.white,
-          fontSize: 15.0);
+        msg: "กรุณากรอกข้อมูลให้ครบถ้วน",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Color.fromARGB(255, 255, 0, 0),
+        textColor: Colors.white,
+        fontSize: 15.0,
+      );
       return;
     }
 
-    // LatLng coor = await getCoordinatesFromAddress(addressCtl);
+    if (!EmailCtl.text.contains('@')) {
+      Fluttertoast.showToast(
+        msg: "ใน Email ต้องมี @ กรอกแล้วลองใหม่อีกครั้ง",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Color.fromARGB(255, 255, 0, 0),
+        textColor: Colors.white,
+        fontSize: 15.0,
+      );
+      return;
+    }
 
-    // try {
-    //   List<Location> locations = await locationFromAddress(addressCtl.text);
-    //   coor = LatLng(locations.first.latitude, locations.first.longitude);
-    //   log("${coor.latitude},${coor.longitude}");
-    // } catch (e) {
-    //   print('Error occurred while fetching coordinates: $e');
-    //   coor = LatLng(0, 0); // ค่าพื้นฐานเมื่อเกิดข้อผิดพลาด
-    // }
+    if (!RegExp(r'^[0-9]+$').hasMatch(phoneCtl.text)) {
+      Fluttertoast.showToast(
+        msg: "เบอร์โทรศัพท์ต้องเป็นตัวเลขเท่านั้น",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Color.fromARGB(255, 255, 0, 0),
+        textColor: Colors.white,
+        fontSize: 15.0,
+      );
+      return;
+    }
+
+    if (passwordCtl.text != conPassCtl.text) {
+      Fluttertoast.showToast(
+        msg: "รหัสผ่านทั้งสองช่องไม่ตรงกัน",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Color.fromARGB(255, 255, 0, 0),
+        textColor: Colors.white,
+        fontSize: 15.0,
+      );
+      return;
+    }
 
     var model = CustomerPostRequest(
       cus_phone: phoneCtl.text,
@@ -424,205 +452,4 @@ class _RegisterCustomerState extends State<RegisterCustomer> {
       );
     }
   }
-
-  // void showMapDialog() async {
-  //   await _getCurrentLocation();
-  //   showDialog(
-  //     context: context,
-  //     builder: (BuildContext context) {
-  //       return Dialog(
-  //         child: Column(
-  //           mainAxisSize: MainAxisSize.min,
-  //           children: [
-  //             Container(
-  //               height: 400,
-  //               width: double.infinity,
-  //               child: Stack(
-  //                 children: [
-  //                   FlutterMap(
-  //                     mapController: mapController,
-  //                     options: MapOptions(
-  //                       // ใช้ตำแหน่งปัจจุบันถ้ามี ถ้าไม่มีใช้ค่าเริ่มต้น
-  //                       initialCenter:
-  //                           currentLocation ?? LatLng(13.7563, 100.5018),
-  //                       initialZoom: 15.0,
-  //                       onTap: (tapPosition, latLng) async {
-  //                         setState(() {
-  //                           selectedLocation = latLng;
-  //                           coor = latLng;
-  //                         });
-
-  //                         try {
-  //                           List<Placemark> placemarks =
-  //                               await placemarkFromCoordinates(
-  //                             latLng.latitude,
-  //                             latLng.longitude,
-  //                           );
-  //                           if (placemarks.isNotEmpty) {
-  //                             Placemark place = placemarks[0];
-  //                             String address =
-  //                                 "${place.street ?? ''} ${place.subLocality ?? ''} ";
-  //                             setState(() {
-  //                               addressCtl.text = address.trim();
-  //                             });
-  //                           }
-  //                         } catch (e) {
-  //                           print('Error getting address: $e');
-  //                         }
-
-  //                         Navigator.of(context).pop();
-  //                       },
-  //                     ),
-  //                     children: [
-  //                       TileLayer(
-  //                         urlTemplate:
-  //                             'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  //                         userAgentPackageName: 'com.example.app',
-  //                         maxNativeZoom: 19,
-  //                       ),
-  //                       MarkerLayer(
-  //                         markers: [
-  //                           if (selectedLocation != null)
-  //                             Marker(
-  //                               point: selectedLocation!,
-  //                               width: 40,
-  //                               height: 40,
-  //                               child: Icon(
-  //                                 Icons.location_on,
-  //                                 color: Colors.red,
-  //                                 size: 40,
-  //                               ),
-  //                             ),
-  //                         ],
-  //                       ),
-  //                     ],
-  //                   ),
-  //                   Positioned(
-  //                     top: 10,
-  //                     left: 10,
-  //                     right: 10,
-  //                     child: Container(
-  //                       padding: EdgeInsets.all(8),
-  //                       decoration: BoxDecoration(
-  //                         color: Colors.white.withOpacity(0.9),
-  //                         borderRadius: BorderRadius.circular(8),
-  //                       ),
-  //                       child: Text(
-  //                         'แตะที่แผนที่เพื่อเลือกตำแหน่ง',
-  //                         style: TextStyle(fontSize: 16),
-  //                         textAlign: TextAlign.center,
-  //                       ),
-  //                     ),
-  //                   ),
-  //                   // เพิ่มปุ่มกลับไปยังตำแหน่งปัจจุบัน
-  //                   Positioned(
-  //                     bottom: 16,
-  //                     right: 16,
-  //                     child: FloatingActionButton(
-  //                       mini: true,
-  //                       onPressed: () async {
-  //                         // เรียกดึงตำแหน่งปัจจุบันใหม่
-  //                         await _getCurrentLocation();
-  //                         if (currentLocation != null) {
-  //                           mapController.move(currentLocation!, 15.0);
-  //                           // บังคับให้ rebuild widget เพื่ออัพเดท marker
-  //                           setState(() {});
-  //                         }
-  //                       },
-  //                       child: Icon(Icons.my_location),
-  //                     ),
-  //                   )
-  //                 ],
-  //               ),
-  //             ),
-  //             Padding(
-  //               padding: EdgeInsets.all(8),
-  //               child: Row(
-  //                 mainAxisAlignment: MainAxisAlignment.end,
-  //                 children: [
-  //                   TextButton(
-  //                     onPressed: () => Navigator.of(context).pop(),
-  //                     child: Text('ยกเลิก'),
-  //                   ),
-  //                 ],
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       );
-  //     },
-  //   );
-  // }
-
-  // void change_image() {
-  //   imageCtl.clear();
-  //   showDialog(
-  //     context: context,
-  //     barrierDismissible: false, // กำหนดให้ dialog ไม่หายเมื่อแตะบริเวณรอบนอก
-  //     builder: (context) => AlertDialog(
-  //       title: Row(
-  //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //         children: [
-  //           const Text('เปลี่ยนรูป'),
-  //           FilledButton(
-  //             onPressed: () {
-  //               Navigator.pop(context);
-  //             },
-  //             child: const Icon(
-  //               Icons.close,
-  //               size: 25,
-  //             ),
-  //             style: ButtonStyle(
-  //               backgroundColor: WidgetStateProperty.all(Colors.red),
-  //               foregroundColor: WidgetStateProperty.all(Colors.white),
-  //               padding: WidgetStateProperty.all<EdgeInsets>(EdgeInsets.zero),
-  //               minimumSize: WidgetStateProperty.all<Size>(const Size(30, 30)),
-  //               shape: WidgetStateProperty.all<RoundedRectangleBorder>(
-  //                 RoundedRectangleBorder(
-  //                   borderRadius: BorderRadius.circular(30),
-  //                 ),
-  //               ),
-  //             ),
-  //           ),
-  //         ],
-  //       ),
-  //       content: Column(
-  //         mainAxisSize: MainAxisSize.min,
-  //         children: [
-  //           const Text('กรอก URL ของรูปที่ต้องการจะเปลี่ยน'),
-  //           const SizedBox(height: 10),
-  //           TextField(
-  //             controller: imageCtl,
-  //             decoration: InputDecoration(
-  //               filled: true,
-  //               fillColor: const Color.fromARGB(255, 228, 225, 225),
-  //               border: OutlineInputBorder(
-  //                 borderRadius: BorderRadius.circular(30.0),
-  //                 borderSide: const BorderSide(width: 1),
-  //               ),
-  //             ),
-  //           ),
-  //         ],
-  //       ),
-  //       actions: [
-  //         Row(
-  //           mainAxisAlignment:
-  //               MainAxisAlignment.center, // ปรับตำแหน่งปุ่มให้ตรงกลาง
-  //           children: [
-  //             FilledButton(
-  //               onPressed: () {
-  //                 setState(() {});
-  //                 Navigator.pop(context);
-  //               },
-  //               child: const Text('ยืนยัน'),
-  //               style: ButtonStyle(
-  //                 backgroundColor: WidgetStateProperty.all(Colors.blue),
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
 }

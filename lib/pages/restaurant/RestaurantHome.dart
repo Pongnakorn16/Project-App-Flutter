@@ -192,7 +192,7 @@ class _HomePageState extends State<RestaurantHomePage> {
                       ),
                       ElevatedButton.icon(
                         onPressed: () {
-                          loadAllCat();
+                          loadAllOpCat();
                           POP_UPallOpcat();
                         },
                         icon: const Icon(Icons.playlist_add),
@@ -831,7 +831,7 @@ class _HomePageState extends State<RestaurantHomePage> {
                                       );
 
                                       if (result == true) {
-                                        await loadAllCat();
+                                        await loadAllOpCat();
                                         Navigator.of(context).pop();
                                         POP_UPallOpcat();
                                       }
@@ -858,7 +858,7 @@ class _HomePageState extends State<RestaurantHomePage> {
                                               onPressed: () async {
                                                 await DeleteInAllOpCat(
                                                     opt.opCatId);
-                                                await loadAllCat();
+                                                await loadAllOpCat();
 
                                                 Navigator.of(context)
                                                     .pop(); // ปิด confirm
@@ -955,7 +955,7 @@ class _HomePageState extends State<RestaurantHomePage> {
                 try {
                   await AddNewOpCat(newName); // รอแก้ไขเสร็จ
                   Navigator.of(context).pop();
-                  await loadAllCat(); // โหลดข้อมูลใหม่
+                  await loadAllOpCat(); // โหลดข้อมูลใหม่
 
                   Fluttertoast.showToast(
                     msg: "เพิ่มข้อมูลแล้ว",
@@ -1045,7 +1045,7 @@ class _HomePageState extends State<RestaurantHomePage> {
     }
   }
 
-  Future<void> loadAllCat() async {
+  Future<void> loadAllOpCat() async {
     final res_id = context.read<ShareData>().user_info_send.uid;
     final res_Cat = await http.get(Uri.parse("$url/db/loadAllOpCat/${ResId}"));
 
