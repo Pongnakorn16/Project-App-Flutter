@@ -45,6 +45,8 @@ class _HomePageState extends State<CartPage> {
   @override
   void initState() {
     super.initState();
+    log(widget.mergedMenus.toString() +
+        "TESTMERGEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
     Configuration.getConfig().then((value) {
       url = value['apiEndpoint'];
       _getAddressFromCoordinates();
@@ -526,14 +528,14 @@ class _HomePageState extends State<CartPage> {
                             .doc('order$nextCount');
                         transaction.set(orderRef, {
                           'order_id': nextCount,
-                          'menus': widget.mergedMenus,
-                          'deliveryFee': deliveryFee,
-                          'totalPrice': finalest_Price,
-                          'Order_date': FieldValue.serverTimestamp(),
-                          'cus_id':
-                              context.read<ShareData>().user_info_send.uid,
-                          'res_id': context.read<ShareData>().res_id,
-                          'rid_id': 0,
+                          // 'menus': widget.mergedMenus,
+                          // 'deliveryFee': deliveryFee,
+                          // 'totalPrice': finalest_Price,
+                          // 'Order_date': FieldValue.serverTimestamp(),
+                          // 'cus_id':
+                          //     context.read<ShareData>().user_info_send.uid,
+                          // 'res_id': context.read<ShareData>().res_id,
+                          // 'rid_id': 0,
                           'Order_status': 0,
                           'Cus_coordinate': Cus_coordinate,
                           'Res_coordinate': Res_coordinate,

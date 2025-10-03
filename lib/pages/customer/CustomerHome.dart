@@ -8,9 +8,11 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
+import 'package:mobile_miniproject_app/models/response/CusCartGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
+import 'package:mobile_miniproject_app/pages/customer/Cart.dart';
 import 'package:mobile_miniproject_app/pages/customer/CusAllOrder.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/RestaurantInfo.dart';
@@ -32,6 +34,7 @@ class _HomePageState extends State<CustomerHomePage> {
   bool isLoading = true;
   bool isSearching = false;
   String searchQuery = "";
+  List<CusCartGetResponse> _Cus_CartInfo = [];
   TextEditingController searchController = TextEditingController();
 
   @override
@@ -77,27 +80,125 @@ class _HomePageState extends State<CustomerHomePage> {
       );
     }
 
-    return Scaffold(
-      appBar: _selectedIndex == 0 ? buildHomeAppBar(topAdd) : null,
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        children: [
-          // Home Page
-          buildHomePage(),
-          // Order Page
-          CusallorderPage(),
-          // Profile Page
-          ProfilePage(onClose: () {}, selectedIndex: 2),
-        ],
-      ),
-      bottomNavigationBar: buildBottomNavigationBar(),
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: _selectedIndex == 0 ? buildHomeAppBar(topAdd) : null,
+          body: PageView(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+            children: [
+              buildHomePage(),
+              CusallorderPage(),
+              ProfilePage(onClose: () {}, selectedIndex: 2),
+            ],
+          ),
+          bottomNavigationBar: buildBottomNavigationBar(),
+        ),
+
+        // ปุ่มลอยแบบอิสระ
+        Positioned(
+          bottom: 80,
+          right: 20,
+          child: SizedBox(
+            width: 65,
+            height: 65,
+            child: FloatingActionButton(
+              shape: const CircleBorder(),
+              backgroundColor: Colors.deepPurple,
+              child: const Icon(
+                Icons.shopping_bag,
+                color: Colors.white,
+                size: 35,
+              ),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    // ตรวจสอบว่าตะกร้ามีข้อมูลหรือไม่
+                    if (_Cus_CartInfo.isEmpty) {
+                      return AlertDialog(
+                        title: const Text("ตะกร้าว่าง"),
+                        content: const Text("คุณยังไม่ได้เพิ่มเมนูใด ๆ"),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text("ปิด"),
+                          ),
+                        ],
+                      );
+                    }
+
+                    return AlertDialog(
+                      title: const Text("รายการตะกร้า"),
+                      content: SizedBox(
+                        width: double.maxFinite,
+                        height: 300,
+                        child: ListView.builder(
+                          itemCount: _Cus_CartInfo.length,
+                          itemBuilder: (context, index) {
+                            final item = _Cus_CartInfo[index].orlOrderDetail;
+
+                            return ListTile(
+                              leading: Image.network(
+                                item['menu_image'] ?? '',
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    const Icon(Icons.fastfood),
+                              ),
+                              title: Text(item['menu_name'] ?? ''),
+                              subtitle: Text(
+                                  "ราคา: ${item['menu_price'] ?? 0} x ${item['count'] ?? 1}"),
+                              onTap: () {
+                                // ดึง orl_id ของรายการที่กด
+                                final selectedOrlId =
+                                    _Cus_CartInfo[index].orlId;
+
+                                // กรองเฉพาะรายการที่ตรงกับ orl_id
+                                final selectedItem = _Cus_CartInfo.where(
+                                        (e) => e.orlId == selectedOrlId)
+                                    .map((e) => e.orlOrderDetail)
+                                    .toList();
+
+                                // ส่งไป CartPage
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CartPage(
+                                      mergedMenus: selectedItem,
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
+  // Navigator.push(
+  //   context,
+  //   MaterialPageRoute(
+  //     builder: (context) => CartPage(
+  //       mergedMenus: _Cus_CartInfo.map(
+  //           (e) => e.orlOrderDetail).toList(),
+  //     ),
+  //   ),
+  // );
 
   AppBar buildHomeAppBar(dynamic topAdd) {
     return AppBar(
@@ -605,13 +706,13 @@ class _HomePageState extends State<CustomerHomePage> {
       int userId = context.read<ShareData>().user_info_send.uid;
 
       context.read<ShareData>().customer_addresses = [];
-      final res_Add = await http.get(Uri.parse("$url/db/loadCusAdd/$userId"));
-      if (res_Add.statusCode == 200) {
-        final List<dynamic> jsonResponse = json.decode(res_Add.body);
-        final List<CusAddressGetResponse> res_addList =
+      final cus_Add = await http.get(Uri.parse("$url/db/loadCusAdd/$userId"));
+      if (cus_Add.statusCode == 200) {
+        final List<dynamic> jsonResponse = json.decode(cus_Add.body);
+        final List<CusAddressGetResponse> cus_AddList =
             jsonResponse.map((e) => CusAddressGetResponse.fromJson(e)).toList();
-        if (res_addList.isNotEmpty) {
-          context.read<ShareData>().customer_addresses = res_addList;
+        if (cus_AddList.isNotEmpty) {
+          context.read<ShareData>().customer_addresses = cus_AddList;
         }
       }
 
@@ -624,6 +725,19 @@ class _HomePageState extends State<CustomerHomePage> {
           log("ร้าน: ${res.res_name}, พิกัด: ${res.res_coordinate}");
         }
         context.read<ShareData>().restaurant_all = list;
+      }
+
+      final cus_Cart =
+          await http.get(Uri.parse("$url/db/loadAllCusCart/$userId"));
+      if (cus_Cart.statusCode == 200) {
+        final List<dynamic> jsonResponse = json.decode(cus_Cart.body);
+        final List<CusCartGetResponse> cus_CartList =
+            jsonResponse.map((e) => CusCartGetResponse.fromJson(e)).toList();
+        _Cus_CartInfo = cus_CartList;
+
+        for (var item in cus_CartList) {
+          print(item.orlOrderDetail['menu_name']); // ตัวอย่าง: ตำกุ้งสด
+        }
       }
 
       if (context.read<ShareData>().customer_addresses.isNotEmpty) {

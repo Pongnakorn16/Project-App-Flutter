@@ -6,6 +6,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_miniproject_app/config/config.dart';
+import 'package:mobile_miniproject_app/models/request/Add_Cart_post_req.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/MenuInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/OpCatLinkGetRes.dart';
@@ -530,6 +531,177 @@ class _HomePageState extends State<RestaurantinfoPage> {
     return total;
   }
 
+  Widget buildMenuItem(MenuInfoGetResponse menu) {
+    final cal_count = getTotalCountForMenu(menu.menu_id);
+    final count = _selectedMenu_no_op[menu.menu_id] ?? 0;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
+            children: [
+              // รูปภาพเมนู (สามารถกดได้)
+              InkWell(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    menu.menu_image,
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.fastfood),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // ข้อมูลเมนู (ชื่อ + ราคา) กดได้เช่นกัน
+              Expanded(
+                child: InkWell(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        menu.menu_name,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        "${menu.menu_price} บาท",
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // ปุ่ม + / -
+              Row(
+                children: [
+                  if (_Menu_check.any((item) => item.menu_id == menu.menu_id))
+                    cal_count > 0
+                        ? GestureDetector(
+                            onTap: () {
+                              _showEditMenuDialog(menu.menu_id);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.deepPurple,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '$cal_count',
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 16),
+                              ),
+                            ),
+                          )
+                        : IconButton(
+                            icon: const Icon(Icons.add_circle_outline),
+                            onPressed: () async {
+                              // ปุ่ม + เปิด OptionPage ปกติ
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      OptionPage(menu_id: menu.menu_id),
+                                ),
+                              );
+
+                              if (result != null && result is Map) {
+                                final int returnedMenuId = result['menu_id'];
+                                final String returnedMenuName =
+                                    result['menu_name'];
+                                final String returnedMenuImage =
+                                    result['menu_image'];
+                                final int returnedCount = result['count'];
+                                final int returnedPrice = result['price'];
+                                final List<Map<String, dynamic>>
+                                    returnedOptions =
+                                    List<Map<String, dynamic>>.from(
+                                        result['selectedOptions']);
+
+                                setState(() {
+                                  var model = AddCartPostRequest(
+                                    menuId: returnedMenuId,
+                                    menuName: returnedMenuName,
+                                    menuImage: returnedMenuImage,
+                                    count: returnedCount,
+                                    menuPrice: returnedPrice,
+                                    selectedOptions: returnedOptions,
+                                  );
+
+                                  log("Add to Cart: ${AddCartPostRequestToJson(model)}");
+                                  AddToCart(model);
+
+                                  _selectedMenu_op.add(
+                                    SelectedMenu(
+                                      menuId: returnedMenuId,
+                                      menuName: returnedMenuName,
+                                      menuImage: returnedMenuImage,
+                                      count: returnedCount,
+                                      menuPrice: returnedPrice,
+                                      selectedOptions: returnedOptions,
+                                    ),
+                                  );
+                                });
+                              }
+                            },
+                          )
+                  else
+                    // เมนูไม่มี option
+                    Row(
+                      children: [
+                        if (count > 0)
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle_outline),
+                            onPressed: () {
+                              setState(() {
+                                if (_selectedMenu_no_op[menu.menu_id]! > 1) {
+                                  _selectedMenu_no_op[menu.menu_id] =
+                                      _selectedMenu_no_op[menu.menu_id]! - 1;
+                                } else {
+                                  _selectedMenu_no_op.remove(menu.menu_id);
+                                }
+                              });
+                            },
+                          ),
+                        if (count > 0)
+                          Text(
+                            '$count',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        IconButton(
+                          icon: const Icon(Icons.add_circle_outline),
+                          onPressed: () {
+                            setState(() {
+                              _selectedMenu_no_op[menu.menu_id] =
+                                  (_selectedMenu_no_op[menu.menu_id] ?? 0) + 1;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                ],
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // วิธีที่ดีกว่า: ใช้ CompleteCompleter เพื่อควบคุม async operation
   void _showEditMenuDialog(int menu_id) {
     showDialog(
@@ -864,165 +1036,6 @@ class _HomePageState extends State<RestaurantinfoPage> {
     );
   }
 
-  Widget buildMenuItem(MenuInfoGetResponse menu) {
-    final cal_count = getTotalCountForMenu(menu.menu_id);
-    final count = _selectedMenu_no_op[menu.menu_id] ?? 0;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Row(
-            children: [
-              // รูปภาพเมนู (สามารถกดได้)
-              InkWell(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    menu.menu_image,
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(Icons.fastfood),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-
-              // ข้อมูลเมนู (ชื่อ + ราคา) กดได้เช่นกัน
-              Expanded(
-                child: InkWell(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        menu.menu_name,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        "${menu.menu_price} บาท",
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // ปุ่ม + / -
-              Row(
-                children: [
-                  if (_Menu_check.any((item) => item.menu_id == menu.menu_id))
-                    cal_count > 0
-                        ? GestureDetector(
-                            onTap: () {
-                              _showEditMenuDialog(menu.menu_id);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.deepPurple,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                '$cal_count',
-                                style: const TextStyle(
-                                    color: Colors.white, fontSize: 16),
-                              ),
-                            ),
-                          )
-                        : IconButton(
-                            icon: const Icon(Icons.add_circle_outline),
-                            onPressed: () async {
-                              // ปุ่ม + เปิด OptionPage ปกติ
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      OptionPage(menu_id: menu.menu_id),
-                                ),
-                              );
-
-                              if (result != null && result is Map) {
-                                final int returnedMenuId = result['menu_id'];
-                                final String returnedMenuName =
-                                    result['menu_name'];
-                                final String returnedMenuImage =
-                                    result['menu_image'];
-                                final int returnedCount = result['count'];
-                                final int returnedPrice = result['price'];
-                                final List<Map<String, dynamic>>
-                                    returnedOptions =
-                                    List<Map<String, dynamic>>.from(
-                                        result['selectedOptions']);
-
-                                setState(() {
-                                  _selectedMenu_op.add(
-                                    SelectedMenu(
-                                      menuId: returnedMenuId,
-                                      menuName: returnedMenuName,
-                                      menuImage: returnedMenuImage,
-                                      count: returnedCount,
-                                      menuPrice: returnedPrice,
-                                      selectedOptions: returnedOptions,
-                                    ),
-                                  );
-                                });
-                              }
-                            },
-                          )
-                  else
-                    // เมนูไม่มี option
-                    Row(
-                      children: [
-                        if (count > 0)
-                          IconButton(
-                            icon: const Icon(Icons.remove_circle_outline),
-                            onPressed: () {
-                              setState(() {
-                                if (_selectedMenu_no_op[menu.menu_id]! > 1) {
-                                  _selectedMenu_no_op[menu.menu_id] =
-                                      _selectedMenu_no_op[menu.menu_id]! - 1;
-                                } else {
-                                  _selectedMenu_no_op.remove(menu.menu_id);
-                                }
-                              });
-                            },
-                          ),
-                        if (count > 0)
-                          Text(
-                            '$count',
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        IconButton(
-                          icon: const Icon(Icons.add_circle_outline),
-                          onPressed: () {
-                            setState(() {
-                              _selectedMenu_no_op[menu.menu_id] =
-                                  (_selectedMenu_no_op[menu.menu_id] ?? 0) + 1;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                ],
-              )
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   void updateOrMergeMenu(int indexToUpdate, SelectedMenu updatedMenu) {
     // หา index ที่มี menu_id + selectedOptions เหมือนกัน (ยกเว้น indexToUpdate)
     final foundIndex = _selectedMenu_op.indexWhere((menu) =>
@@ -1133,6 +1146,32 @@ class _HomePageState extends State<RestaurantinfoPage> {
           msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
           backgroundColor: Colors.red,
           textColor: Colors.white);
+    }
+  }
+
+  void AddToCart(AddCartPostRequest model) async {
+    final cus_id = context.read<ShareData>().user_info_send.uid;
+    var Value = await http.post(Uri.parse("$url/db/AddToCart/${cus_id}"),
+        headers: {"Content-Type": "application/json; charset=utf-8"},
+        body: AddCartPostRequestToJson(model));
+
+    if (Value.statusCode == 200) {
+      log('AddToCart is successful');
+    } else {
+      // ถ้า status code ไม่ใช่ 200 ให้ดึงข้อความจาก response body
+      var responseBody = jsonDecode(Value.body);
+      setState(() {
+        Fluttertoast.showToast(
+            msg: "เพิ่มเมนูใส่ตะกร้าไม่สำเร็จ!!!",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+            backgroundColor: Color.fromARGB(255, 255, 0, 0),
+            textColor: Colors.white,
+            fontSize: 15.0);
+      });
+      log(responseBody['error']);
     }
   }
 }
