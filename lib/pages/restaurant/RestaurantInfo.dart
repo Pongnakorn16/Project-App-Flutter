@@ -835,6 +835,22 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                             if (result != null &&
                                                 result
                                                     is Map<String, dynamic>) {
+                                              var model = AddCartPostRequest(
+                                                  menuId: result['menu_id'],
+                                                  menuName:
+                                                      result['menu_name'] + "X",
+                                                  menuImage:
+                                                      result['menu_image'],
+                                                  count: result['count'],
+                                                  menuPrice: result['price'],
+                                                  selectedOptions: List<
+                                                      Map<String,
+                                                          dynamic>>.from(result[
+                                                      'selectedOptions']));
+
+                                              log("Add to Cart: ${AddCartPostRequestToJson(model)}");
+                                              AddToCart(model);
+
                                               final updatedMenu = SelectedMenu(
                                                 menuId: result['menu_id'],
                                                 menuName: result['menu_name'],
@@ -958,6 +974,18 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                   result['selectedOptions']);
 
                           setState(() {
+                            var model = AddCartPostRequest(
+                              menuId: returnedMenuId,
+                              menuName: returnedMenuName,
+                              menuImage: returnedMenuImage,
+                              count: returnedCount,
+                              menuPrice: returnedPrice,
+                              selectedOptions: returnedOptions,
+                            );
+
+                            log("Add to Cart: ${AddCartPostRequestToJson(model)}");
+                            AddToCart(model);
+
                             bool found = false;
 
                             for (int i = 0; i < _selectedMenu_op.length; i++) {
