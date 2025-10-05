@@ -101,92 +101,85 @@ class _HomePageState extends State<CustomerHomePage> {
         ),
 
         // ปุ่มลอยแบบอิสระ
-        Positioned(
-          bottom: 80,
-          right: 20,
-          child: SizedBox(
-            width: 65,
-            height: 65,
-            child: FloatingActionButton(
-              shape: const CircleBorder(),
-              backgroundColor: Colors.deepPurple,
-              child: const Icon(
-                Icons.shopping_bag,
-                color: Colors.white,
-                size: 35,
-              ),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) {
-                    // ตรวจสอบว่าตะกร้ามีข้อมูลหรือไม่
-                    if (_Cus_CartInfo.isEmpty) {
-                      return AlertDialog(
-                        title: const Text("ตะกร้าว่าง"),
-                        content: const Text("คุณยังไม่ได้เพิ่มเมนูใด ๆ"),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text("ปิด"),
-                          ),
-                        ],
-                      );
-                    }
+        if (_Cus_CartInfo.isNotEmpty)
+          Positioned(
+            bottom: 80,
+            right: 20,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                SizedBox(
+                  width: 65,
+                  height: 65,
+                  child: FloatingActionButton(
+                    shape: const CircleBorder(),
+                    backgroundColor: Colors.deepPurple,
+                    child: const Icon(
+                      Icons.shopping_bag,
+                      color: Colors.white,
+                      size: 35,
+                    ),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: const Text("รายการตะกร้า"),
+                            content: SizedBox(
+                              width: double.maxFinite,
+                              height: 300,
+                              child: ListView.builder(
+                                itemCount: _Cus_CartInfo.length,
+                                itemBuilder: (context, index) {
+                                  final order = _Cus_CartInfo[index];
 
-                    return AlertDialog(
-                      title: const Text("รายการตะกร้า"),
-                      content: SizedBox(
-                        width: double.maxFinite,
-                        height: 300,
-                        child: ListView.builder(
-                          itemCount: _Cus_CartInfo.length,
-                          itemBuilder: (context, index) {
-                            final item = _Cus_CartInfo[index].orlOrderDetail;
+                                  // คำนวณรวมจำนวนเมนูทั้งหมดใน order
+                                  int totalCount =
+                                      order.orlOrderDetail.fold<int>(
+                                    0,
+                                    (sum, menu) =>
+                                        sum + (menu['count'] ?? 1) as int,
+                                  );
 
-                            return ListTile(
-                              leading: Image.network(
-                                item['menu_image'] ?? '',
-                                width: 50,
-                                height: 50,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) =>
-                                    const Icon(Icons.fastfood),
-                              ),
-                              title: Text(item['menu_name'] ?? ''),
-                              subtitle: Text(
-                                  "ราคา: ${item['menu_price'] ?? 0} x ${item['count'] ?? 1}"),
-                              onTap: () {
-                                // ดึง orl_id ของรายการที่กด
-                                final selectedOrlId =
-                                    _Cus_CartInfo[index].orlId;
-
-                                // กรองเฉพาะรายการที่ตรงกับ orl_id
-                                final selectedItem = _Cus_CartInfo.where(
-                                        (e) => e.orlId == selectedOrlId)
-                                    .map((e) => e.orlOrderDetail)
-                                    .toList();
-
-                                // ส่งไป CartPage
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => CartPage(
-                                      mergedMenus: selectedItem,
+                                  return ListTile(
+                                    leading: Image.network(
+                                      order.resImage, // ใช้ order level
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) =>
+                                          const Icon(Icons.fastfood),
                                     ),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
+                                    title:
+                                        Text(order.resName), // ใช้ order level
+                                    subtitle: Text("รวม $totalCount รายการ"),
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => CartPage(
+                                            mergedMenus: order.orlOrderDetail
+                                                .map((e) =>
+                                                    Map<String, dynamic>.from(
+                                                        e))
+                                                .toList(),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
       ],
     );
   }
@@ -736,7 +729,12 @@ class _HomePageState extends State<CustomerHomePage> {
         _Cus_CartInfo = cus_CartList;
 
         for (var item in cus_CartList) {
-          print(item.orlOrderDetail['menu_name']); // ตัวอย่าง: ตำกุ้งสด
+          print("Restaurant: ${item.resName}");
+          print("Restaurant Image: ${item.resImage}");
+          for (var menu in item.orlOrderDetail) {
+            print(menu['menu_name']); // เช่น "ตำกุ้งสด"
+            print(menu['count']); // เช่น 1
+          }
         }
       }
 

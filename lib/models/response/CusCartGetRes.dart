@@ -6,13 +6,16 @@ CusCartGetResponse CusCartGetResponseFromJson(String str) =>
 class CusCartGetResponse {
   int orlId;
   int cusId;
-  Map<String, dynamic> orlOrderDetail; // JSON object ของเมนู
-  // ถ้าอยากแปลงเป็น List<SelectedMenu> ก็ทำเพิ่มได้
+  List<dynamic> orlOrderDetail;
+  String resName;
+  String resImage;
 
   CusCartGetResponse({
     required this.orlId,
     required this.cusId,
     required this.orlOrderDetail,
+    required this.resName,
+    required this.resImage,
   });
 
   factory CusCartGetResponse.fromJson(Map<String, dynamic> json) {
@@ -20,8 +23,10 @@ class CusCartGetResponse {
       orlId: json['orl_id'] ?? 0,
       cusId: json['cus_id'] ?? 0,
       orlOrderDetail: json['orl_order_detail'] != null
-          ? jsonDecode(json['orl_order_detail'])
-          : {},
+          ? List<dynamic>.from(jsonDecode(json['orl_order_detail']))
+          : [],
+      resName: json['res_name'] ?? '',
+      resImage: json['res_image'] ?? '',
     );
   }
 
@@ -29,5 +34,7 @@ class CusCartGetResponse {
         "orl_id": orlId,
         "cus_id": cusId,
         "orl_order_detail": jsonEncode(orlOrderDetail),
+        "res_name": resName,
+        "res_image": resImage,
       };
 }
