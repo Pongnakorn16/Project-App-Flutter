@@ -668,7 +668,6 @@ class _HomePageState extends State<RestaurantinfoPage> {
                           IconButton(
                             icon: const Icon(Icons.remove_circle_outline),
                             onPressed: () {
-                              // 1. อัปเดต UI ก่อน
                               setState(() {
                                 if (_selectedMenu_no_op[menu.menu_id]! > 1) {
                                   _selectedMenu_no_op[menu.menu_id] =
@@ -678,7 +677,6 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                 }
                               });
 
-                              // 2. รอ 300ms แล้วค่อยส่ง API (ส่งค่าล่าสุด)
                               EasyDebounce.debounce(
                                 'remove-from-cart-${menu.menu_id}',
                                 const Duration(milliseconds: 500),
@@ -686,14 +684,12 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                   final currentCount =
                                       _selectedMenu_no_op[menu.menu_id] ?? 0;
 
-                                  if (currentCount > 0) {
-                                    // ยังมีของอยู่ → ส่งค่าใหม่ไป
-                                    RemoveFromCart(
-                                      menu.menu_id,
-                                      currentCount, // ส่งค่าที่เหลือ (ไม่ใช่ -1)
-                                      [],
-                                    );
-                                  }
+                                  // ส่ง API ทุกกรณี (ไม่เช็ค > 0)
+                                  RemoveFromCart(
+                                    menu.menu_id,
+                                    currentCount, // 0 หรือมากกว่า
+                                    [],
+                                  );
                                 },
                               );
                             },
