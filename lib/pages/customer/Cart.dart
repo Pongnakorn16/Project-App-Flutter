@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
+import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/pages/customer/Order.dart';
 import 'package:mobile_miniproject_app/pages/customer/TopUp.dart';
@@ -194,6 +195,7 @@ class _HomePageState extends State<CartPage> {
   }
 
   Widget buildAddressSection(List<CusAddressGetResponse> customerAdd) {
+    log(_address.toString() + "TEST ResAddresssssss");
     final restaurantAddress = _address ?? "กำลังโหลดที่อยู่ร้าน...";
     final customerAddress = customerAdd.isNotEmpty
         ? "${customerAdd[0].ca_address}  ${customerAdd[0].ca_detail}"
@@ -712,50 +714,80 @@ class _HomePageState extends State<CartPage> {
 
   void calculateDeliveryFee() {
     final AllRes = context.read<ShareData>().restaurant_all;
-    final matchedRestaurant = AllRes.firstWhere(
-        (res) => res.res_id == context.read<ShareData>().res_id);
+
+    if (AllRes.isEmpty) {
+      log("❌ restaurant_all ว่างอยู่");
+      return;
+    }
+
+    ResInfoResponse? matchedRestaurant;
+    try {
+      matchedRestaurant = AllRes.firstWhere(
+        (res) => res.res_id == context.read<ShareData>().res_id,
+      );
+    } catch (e) {
+      matchedRestaurant = null; // ถ้าไม่เจอ
+    }
+
+    if (matchedRestaurant == null) {
+      log("❌ ไม่เจอร้านที่ res_id ตรงกับ ShareData.res_id");
+      return;
+    }
 
     final resCoords = matchedRestaurant.res_coordinate.split(',');
-    final double resLat = double.parse(resCoords[0]);
-    final double resLng = double.parse(resCoords[1]);
+    if (resCoords.length < 2) {
+      log("❌ ข้อมูลพิกัดร้านไม่ถูกต้อง: ${matchedRestaurant.res_coordinate}");
+      return;
+    }
+    final double resLat = double.tryParse(resCoords[0]) ?? 0;
+    final double resLng = double.tryParse(resCoords[1]) ?? 0;
 
     final customerAdd = context.read<ShareData>().customer_addresses;
-    if (customerAdd.isNotEmpty) {
-      final customerCoords =
-          customerAdd[context.read<ShareData>().selected_address_index ?? 0]
-              .ca_coordinate
-              .split(',');
-      final double cusLat = double.parse(customerCoords[0]);
-      final double cusLng = double.parse(customerCoords[1]);
-
-      double distance = calculateDistanceKm(resLat, resLng, cusLat, cusLng);
-
-      if (distance <= 5) {
-        deliveryFee = 0;
-      } else if (distance <= 10) {
-        deliveryFee = 15;
-      } else {
-        deliveryFee = 20;
-      }
-
-      setState(() {}); // เพื่อรีเฟรช UI ถ้าต้องแสดงค่าส่ง
+    if (customerAdd.isEmpty) {
+      log("❌ ยังไม่มีที่อยู่ลูกค้า");
+      return;
     }
+
+    final selectedIndex = context.read<ShareData>().selected_address_index ?? 0;
+    if (selectedIndex >= customerAdd.length) {
+      log("❌ selected_address_index เกินขอบเขต list");
+      return;
+    }
+
+    final customerCoords = customerAdd[selectedIndex].ca_coordinate.split(',');
+    if (customerCoords.length < 2) {
+      log("❌ ข้อมูลพิกัดลูกค้าไม่ถูกต้อง: ${customerAdd[selectedIndex].ca_coordinate}");
+      return;
+    }
+    final double cusLat = double.tryParse(customerCoords[0]) ?? 0;
+    final double cusLng = double.tryParse(customerCoords[1]) ?? 0;
+
+    double distance = calculateDistanceKm(resLat, resLng, cusLat, cusLng);
+
+    if (distance <= 5) {
+      deliveryFee = 0;
+    } else if (distance <= 10) {
+      deliveryFee = 15;
+    } else {
+      deliveryFee = 20;
+    }
+
+    setState(() {}); // เพื่อรีเฟรช UI ถ้าต้องแสดงค่าส่ง
   }
 
   void LoadCusAdd() async {
     int userId = context.read<ShareData>().user_info_send.uid;
 
-    // ไม่ต้องเซ็ต isLoading = true ที่นี่ เพราะจะทำให้หน้าจอแวบ
     try {
       context.read<ShareData>().customer_addresses = [];
-      final res_Add = await http.get(Uri.parse("$url/db/loadCusAdd/$userId"));
-      if (res_Add.statusCode == 200) {
-        final List<dynamic> jsonResponse = json.decode(res_Add.body);
-        final List<CusAddressGetResponse> res_addList =
+      final cus_Add = await http.get(Uri.parse("$url/db/loadCusAdd/$userId"));
+      if (cus_Add.statusCode == 200) {
+        final List<dynamic> jsonResponse = json.decode(cus_Add.body);
+        final List<CusAddressGetResponse> cus_addList =
             jsonResponse.map((e) => CusAddressGetResponse.fromJson(e)).toList();
-        if (res_addList.isNotEmpty) {
-          context.read<ShareData>().customer_addresses = res_addList;
-          Cus_coordinate = res_addList[0].ca_coordinate;
+        if (cus_addList.isNotEmpty) {
+          context.read<ShareData>().customer_addresses = cus_addList;
+          Cus_coordinate = cus_addList.first.ca_coordinate;
           calculateDeliveryFee();
         }
       }
@@ -772,8 +804,9 @@ class _HomePageState extends State<CartPage> {
       } else {
         Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
       }
-    } catch (e) {
+    } catch (e, stack) {
       log("LoadCusHome Error: $e");
+      log("STACKTRACE: $stack");
       Fluttertoast.showToast(
           msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
           backgroundColor: Colors.red,
@@ -787,40 +820,6 @@ class _HomePageState extends State<CartPage> {
       }
     }
   }
-
-  // void insert_Order(double dev_Fee) async {
-  //   try {
-  //     final in_order = await http.post(
-  //       Uri.parse("$url/db/insert_order"),
-  //       headers: {"Content-Type": "application/json"},
-  //       body: jsonEncode({
-  //         "ord_dev_price": dev_Fee,
-  //         "ord_date": DateTime.now().toIso8601String(),
-  //         "ord_status": -1,
-  //         "cus_id": context.read<ShareData>().user_info_send.uid,
-  //         "rid_id": 0, // เดี๋ยวมาแก้ เทสก่อน
-  //       }),
-  //     );
-
-  //     if (in_order.statusCode == 200) {
-  //       // ทำอย่างอื่นถ้าต้องการ
-  //     } else {
-  //       // handle error กรณี response ไม่ใช่ 200
-  //       Fluttertoast.showToast(
-  //         msg: "เกิดข้อผิดพลาดจาก server",
-  //         backgroundColor: Colors.red,
-  //         textColor: Colors.white,
-  //       );
-  //     }
-  //   } catch (e) {
-  //     log("LoadCusHome Error: $e");
-  //     Fluttertoast.showToast(
-  //       msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
-  //       backgroundColor: Colors.red,
-  //       textColor: Colors.white,
-  //     );
-  //   }
-  // }
 
   Future<void> update_cus_balance(double d_total) async {
     int cus_id = context.read<ShareData>().user_info_send.uid;

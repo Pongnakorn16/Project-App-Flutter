@@ -154,6 +154,8 @@ class _HomePageState extends State<CustomerHomePage> {
                                         Text(order.resName), // ใช้ order level
                                     subtitle: Text("รวม $totalCount รายการ"),
                                     onTap: () {
+                                      context.read<ShareData>().res_id =
+                                          order.resId;
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(

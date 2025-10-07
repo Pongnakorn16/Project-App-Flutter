@@ -667,6 +667,12 @@ class _HomePageState extends State<RestaurantinfoPage> {
                           IconButton(
                             icon: const Icon(Icons.remove_circle_outline),
                             onPressed: () {
+                              var model = (
+                                menuId: menu.menu_id,
+                                count: 1,
+                                selectedOptions: [],
+                              );
+                              RemoveFromCart(model);
                               setState(() {
                                 if (_selectedMenu_no_op[menu.menu_id]! > 1) {
                                   _selectedMenu_no_op[menu.menu_id] =
@@ -688,6 +694,18 @@ class _HomePageState extends State<RestaurantinfoPage> {
                             setState(() {
                               _selectedMenu_no_op[menu.menu_id] =
                                   (_selectedMenu_no_op[menu.menu_id] ?? 0) + 1;
+
+                              var model = AddCartPostRequest(
+                                menuId: menu.menu_id,
+                                menuName: menu.menu_name,
+                                menuImage: menu.menu_image,
+                                count: 1,
+                                menuPrice: menu.menu_price,
+                                selectedOptions: [],
+                              );
+
+                              log("Add to Cart: ${AddCartPostRequestToJson(model)}");
+                              AddToCart(model);
                             });
                           },
                         ),
@@ -1200,6 +1218,33 @@ class _HomePageState extends State<RestaurantinfoPage> {
             fontSize: 15.0);
       });
       log(responseBody['error']);
+    }
+  }
+
+  void RemoveFromCart(
+      ({int count, int menuId, List<dynamic> selectedOptions}) model) async {
+    final cus_id = context.read<ShareData>().user_info_send.uid;
+
+    final Value = await http.put(
+      Uri.parse("$url/db/RemoveFromCart/$cus_id"),
+      headers: {"Content-Type": "application/json; charset=utf-8"},
+      body: model,
+    );
+
+    if (Value.statusCode == 200) {
+      log('✅ RemoveFromCart is successful');
+    } else {
+      var responseBody = jsonDecode(Value.body);
+      Fluttertoast.showToast(
+        msg: "ลบเมนูออกจากตะกร้าไม่สำเร็จ!!!",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Color.fromARGB(255, 255, 0, 0),
+        textColor: Colors.white,
+        fontSize: 15.0,
+      );
+      log("❌ ${responseBody['error']}");
     }
   }
 }
