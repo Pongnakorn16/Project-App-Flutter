@@ -881,8 +881,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                                     is Map<String, dynamic>) {
                                               var model = AddCartPostRequest(
                                                   menuId: result['menu_id'],
-                                                  menuName:
-                                                      result['menu_name'] + "X",
+                                                  menuName: result['menu_name'],
                                                   menuImage:
                                                       result['menu_image'],
                                                   count: result['count'],
@@ -893,7 +892,19 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                                       'selectedOptions']));
 
                                               log("Add to Cart: ${AddCartPostRequestToJson(model)}");
-                                              AddToCart(model);
+
+                                              if (menu.menuId ==
+                                                      result[
+                                                          'original_menu_id'] &&
+                                                  !_isSameOption(
+                                                      result['selectedOptions'],
+                                                      result[
+                                                          'originalOptions'])) {
+                                                await ReplaceMenu(
+                                                    result['original_menu_id'],
+                                                    result['originalOptions']);
+                                                await AddToCart(model);
+                                              }
 
                                               final updatedMenu = SelectedMenu(
                                                 menuId: result['menu_id'],
@@ -908,6 +919,11 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                               );
 
                                               setState(() {
+                                                log("menuId: ${menu.menuId}, original: ${result['original_menu_id']}");
+                                                log("selectedOptions: ${jsonEncode(menu.selectedOptions)}");
+                                                log("originalOptions: ${jsonEncode(result['originalOptions'])}");
+                                                log("isSameOption: ${_isSameOption(menu.selectedOptions, result['originalOptions'])}");
+
                                                 final indexToRemove =
                                                     _selectedMenu_op.indexWhere((m) =>
                                                         m.menuId ==
@@ -1020,7 +1036,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
                           setState(() {
                             var model = AddCartPostRequest(
                               menuId: returnedMenuId,
-                              menuName: returnedMenuName,
+                              menuName: returnedMenuName + "EX",
                               menuImage: returnedMenuImage,
                               count: returnedCount,
                               menuPrice: returnedPrice,
@@ -1221,7 +1237,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
     }
   }
 
-  void AddToCart(AddCartPostRequest model) async {
+  Future<void> AddToCart(AddCartPostRequest model) async {
     final cus_id = context.read<ShareData>().user_info_send.uid;
     var Value = await http.post(Uri.parse("$url/db/AddToCart/${cus_id}"),
         headers: {"Content-Type": "application/json; charset=utf-8"},
@@ -1267,6 +1283,37 @@ class _HomePageState extends State<RestaurantinfoPage> {
       var responseBody = jsonDecode(Value.body);
       Fluttertoast.showToast(msg: "ลบเมนูออกจากตะกร้าไม่สำเร็จ!!!");
       log("❌ ${responseBody['error']}");
+    }
+  }
+
+  Future<void> ReplaceMenu(int menuId, List<dynamic> selectedOptions) async {
+    final cus_id = context.read<ShareData>().user_info_send.uid;
+    var Value = await http.put(
+      Uri.parse("$url/db/ReplaceToCart/${cus_id}"),
+      headers: {"Content-Type": "application/json; charset=utf-8"},
+      body: jsonEncode({
+        "menu_id": menuId,
+        "selectedOptions": selectedOptions,
+      }),
+    );
+
+    if (Value.statusCode == 200) {
+      log('AddToCart is successful');
+    } else {
+      // ถ้า status code ไม่ใช่ 200 ให้ดึงข้อความจาก response body
+      var responseBody = jsonDecode(Value.body);
+      setState(() {
+        Fluttertoast.showToast(
+            msg: "เปลี่ยนแปลงเมนูใส่ตะกร้าไม่สำเร็จ!!!",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.CENTER,
+            timeInSecForIosWeb: 1,
+            // backgroundColor: Color.fromARGB(120, 0, 0, 0),
+            backgroundColor: Color.fromARGB(255, 255, 0, 0),
+            textColor: Colors.white,
+            fontSize: 15.0);
+      });
+      log(responseBody['error']);
     }
   }
 }
