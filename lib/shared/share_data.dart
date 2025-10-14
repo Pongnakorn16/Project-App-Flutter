@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
+import 'package:mobile_miniproject_app/models/response/CusCartGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/MenuInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
@@ -13,6 +14,8 @@ class ShareData with ChangeNotifier {
   int selected_ca_id = 0;
   int selected_address_index = 0;
   int res_id = 0;
+  int orl_id = 0;
+  int Cart_count = 0;
   String cus_selected_add = "";
   String res_selected_add = "";
   late User_Info_Send user_info_send;
@@ -30,6 +33,7 @@ class ShareData with ChangeNotifier {
   List<GetSendOrder> rider_order_share = [];
 
   StreamSubscription? listener;
+  List<CusCartGetResponse> cus_all_cart = [];
 }
 
 class User_Info_Send {

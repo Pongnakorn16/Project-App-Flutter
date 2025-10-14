@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
+import 'package:mobile_miniproject_app/main.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/CusCartGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
@@ -27,7 +28,7 @@ class CustomerHomePage extends StatefulWidget {
   State<CustomerHomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<CustomerHomePage> {
+class _HomePageState extends State<CustomerHomePage> with RouteAware {
   int _selectedIndex = 0;
   late PageController _pageController;
   String url = '';
@@ -51,6 +52,19 @@ class _HomePageState extends State<CustomerHomePage> {
       setState(() {});
     });
     _pageController = PageController();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // สมัคร RouteObserver
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  // เรียกเมื่อกลับมาที่หน้า Home หลังจาก pop หน้าหนึ่ง
+  @override
+  void didPopNext() {
+    LoadCusHome(); // โหลดข้อมูลใหม่ทุกครั้งที่กลับมา
   }
 
   @override
@@ -729,6 +743,7 @@ class _HomePageState extends State<CustomerHomePage> {
         final List<CusCartGetResponse> cus_CartList =
             jsonResponse.map((e) => CusCartGetResponse.fromJson(e)).toList();
         _Cus_CartInfo = cus_CartList;
+        context.read<ShareData>().cus_all_cart = _Cus_CartInfo;
 
         for (var item in cus_CartList) {
           print("Restaurant: ${item.resName}");

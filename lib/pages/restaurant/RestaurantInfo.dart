@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/Add_Cart_post_req.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
+import 'package:mobile_miniproject_app/models/response/CusCartGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/MenuInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/OpCatLinkGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/OptionGetRes.dart';
@@ -46,6 +47,8 @@ class _HomePageState extends State<RestaurantinfoPage> {
   Map<int, int> _selectedMenu_no_op = {};
   List<SelectedMenu> _selectedMenu_op = [];
   List<Map<String, dynamic>> mergedMenus = [];
+  List<CusCartGetResponse> _Cus_CartInfo_Check = [];
+  List<CusCartGetResponse> _Cus_CartInfo_thisRes = [];
 
   // เพิ่ม Map สำหรับเก็บ GlobalKey ของแต่ละหมวดหมู่
   Map<int, GlobalKey> _categoryKeys = {};
@@ -61,7 +64,18 @@ class _HomePageState extends State<RestaurantinfoPage> {
     super.initState();
     Configuration.getConfig().then((value) {
       url = value['apiEndpoint'];
+
       context.read<ShareData>().res_id = widget.ResId;
+      final allCart = context.read<ShareData>().cus_all_cart;
+
+      log(jsonEncode(allCart) + " TEST CART");
+      _Cus_CartInfo_Check =
+          allCart.where((cart) => cart.resId == widget.ResId).toList();
+      log("🛒 Found ${_Cus_CartInfo_Check.length} carts for ResID: ${widget.ResId}  Info:${jsonEncode(_Cus_CartInfo_Check)}");
+      if (_Cus_CartInfo_Check.isNotEmpty) {
+        context.read<ShareData>().orl_id = _Cus_CartInfo_Check[0].orlId;
+      }
+      LoadCartRes();
       LoadResInfo();
       final cus_id = context.read<ShareData>().user_info_send.uid;
       OrderNotificationService().listenOrderChanges(context, cus_id,
@@ -92,9 +106,38 @@ class _HomePageState extends State<RestaurantinfoPage> {
   @override
   Widget build(BuildContext context) {
     final topAdd = context.watch<ShareData>().customer_addresses;
-    int totalCount =
-        _selectedMenu_no_op.values.fold(0, (sum, item) => sum + item) +
-            _selectedMenu_op.fold(0, (sum, item) => sum + item.count);
+    int Cart_count = 0;
+
+    for (var order in _Cus_CartInfo_thisRes) {
+      final List<dynamic> details = order.orlOrderDetail;
+      _selectedMenu_op = details
+          .map((item) => SelectedMenu(
+                menuId: item['menu_id'],
+                menuName: item['menu_name'],
+                menuImage: item['menu_image'],
+                count: item['count'],
+                menuPrice: item['menu_price'],
+                selectedOptions: List<Map<String, dynamic>>.from(
+                    item['selectedOptions'] ?? []),
+              ))
+          .toList();
+      for (var item in details) {
+        final menuId = item['menu_id'] as int;
+        final count = item['count'] as int;
+        _selectedMenu_no_op[menuId] = count;
+      }
+      log(_selectedMenu_no_op.toString() + "CHECK_SELECT_NO_OPPPPPPPP");
+
+      int orderCount =
+          details.fold<int>(0, (sum, item) => sum + (item['count'] as int));
+
+      Cart_count += orderCount;
+    }
+
+// นำไปบวกกับเมนูอื่น ๆ ที่เลือกในหน้า
+    int totalCount = Cart_count;
+    // _selectedMenu_no_op.values.fold<int>(0, (sum, item) => sum + item) +
+    //     _selectedMenu_op.fold<int>(0, (sum, item) => sum + item.count);
 
     return Scaffold(
       appBar: AppBar(
@@ -107,7 +150,9 @@ class _HomePageState extends State<RestaurantinfoPage> {
         ),
       ),
       body: buildMainContent(),
-      bottomSheet: _selectedMenu_no_op.isNotEmpty || _selectedMenu_op.isNotEmpty
+      bottomSheet: _selectedMenu_no_op.isNotEmpty ||
+              _selectedMenu_op.isNotEmpty ||
+              _Cus_CartInfo_thisRes.isNotEmpty
           ? Container(
               height: 60,
               width: double.infinity,
@@ -524,11 +569,18 @@ class _HomePageState extends State<RestaurantinfoPage> {
 
   int getTotalCountForMenu(int menuId) {
     int total = 0;
-    for (var item in _selectedMenu_op) {
-      if (item.menuId == menuId) {
-        total += item.count;
+
+    for (var order in _Cus_CartInfo_thisRes) {
+      // แปลง String → List<dynamic>
+      final List<dynamic> details = order.orlOrderDetail;
+
+      for (var menu in details) {
+        if (menu['menu_id'] == menuId) {
+          total += menu['count'] as int;
+        }
       }
     }
+
     return total;
   }
 
@@ -633,7 +685,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                     List<Map<String, dynamic>>.from(
                                         result['selectedOptions']);
 
-                                setState(() {
+                                setState(() async {
                                   var model = AddCartPostRequest(
                                     menuId: returnedMenuId,
                                     menuName: returnedMenuName,
@@ -644,7 +696,9 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                   );
 
                                   log("Add to Cart: ${AddCartPostRequestToJson(model)}");
-                                  AddToCart(model);
+                                  await AddToCart(model);
+                                  await LoadOrl_id();
+                                  LoadCartRes();
 
                                   _selectedMenu_op.add(
                                     SelectedMenu(
@@ -680,16 +734,27 @@ class _HomePageState extends State<RestaurantinfoPage> {
                               EasyDebounce.debounce(
                                 'remove-from-cart-${menu.menu_id}',
                                 const Duration(milliseconds: 500),
-                                () {
+                                () async {
                                   final currentCount =
                                       _selectedMenu_no_op[menu.menu_id] ?? 0;
+                                  int Last_count;
+                                  if (currentCount > 1) {
+                                    _selectedMenu_no_op[menu.menu_id] =
+                                        currentCount - 1;
+                                    Last_count = 1; // ลด count ทีละ 1
+                                  } else {
+                                    _selectedMenu_no_op.remove(
+                                        menu.menu_id); // ลบออกเมื่อเหลือ 1
+                                    Last_count =
+                                        -1; // ส่งค่า -1 ให้ backend ลบเมนู
+                                  }
 
-                                  // ส่ง API ทุกกรณี (ไม่เช็ค > 0)
-                                  RemoveFromCart(
+                                  await RemoveFromCart(
                                     menu.menu_id,
-                                    currentCount, // 0 หรือมากกว่า
+                                    Last_count,
                                     [],
                                   );
+                                  LoadCartRes();
                                 },
                               );
                             },
@@ -702,29 +767,29 @@ class _HomePageState extends State<RestaurantinfoPage> {
                         IconButton(
                           icon: const Icon(Icons.add_circle_outline),
                           onPressed: () {
-                            // 1. อัปเดต UI ทันที (ไม่มี delay)
                             setState(() {
                               _selectedMenu_no_op[menu.menu_id] =
                                   (_selectedMenu_no_op[menu.menu_id] ?? 0) + 1;
+                              print(
+                                  "เพิ่มเมนู ${menu.menu_id}: ${_selectedMenu_no_op[menu.menu_id]}");
                             });
 
-                            // 2. รอ 500ms แล้วค่อยส่ง API (ส่งค่าล่าสุด)
                             EasyDebounce.debounce(
                               'add-to-cart-${menu.menu_id}',
                               const Duration(milliseconds: 500),
-                              () {
+                              () async {
                                 var model = AddCartPostRequest(
                                   menuId: menu.menu_id,
                                   menuName: menu.menu_name,
                                   menuImage: menu.menu_image,
-                                  count: _selectedMenu_no_op[menu.menu_id] ??
-                                      1, // ส่งค่าล่าสุด
+                                  count: 1,
                                   menuPrice: menu.menu_price,
                                   selectedOptions: [],
                                 );
 
                                 log("Add to Cart: ${AddCartPostRequestToJson(model)}");
-                                AddToCart(model);
+                                await AddToCart(model);
+                                LoadCartRes();
                               },
                             );
                           },
@@ -790,11 +855,12 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                           _isDeleting = true;
                                         });
 
-                                        RemoveFromCart(
+                                        await RemoveFromCart(
                                           menu.menuId,
                                           -2,
                                           menu.selectedOptions,
                                         );
+                                        LoadCartRes();
 
                                         // รอสักครู่ (simulate processing)
                                         await Future.delayed(
@@ -881,7 +947,9 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                                     is Map<String, dynamic>) {
                                               var model = AddCartPostRequest(
                                                   menuId: result['menu_id'],
-                                                  menuName: result['menu_name'],
+                                                  menuName:
+                                                      result['menu_name'] +
+                                                          "TT",
                                                   menuImage:
                                                       result['menu_image'],
                                                   count: result['count'],
@@ -904,6 +972,10 @@ class _HomePageState extends State<RestaurantinfoPage> {
                                                     result['original_menu_id'],
                                                     result['originalOptions']);
                                                 await AddToCart(model);
+                                                LoadCartRes();
+                                              } else {
+                                                await AddToCart(model);
+                                                LoadCartRes();
                                               }
 
                                               final updatedMenu = SelectedMenu(
@@ -1033,7 +1105,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
                               List<Map<String, dynamic>>.from(
                                   result['selectedOptions']);
 
-                          setState(() {
+                          setState(() async {
                             var model = AddCartPostRequest(
                               menuId: returnedMenuId,
                               menuName: returnedMenuName + "EX",
@@ -1044,7 +1116,8 @@ class _HomePageState extends State<RestaurantinfoPage> {
                             );
 
                             log("Add to Cart: ${AddCartPostRequestToJson(model)}");
-                            AddToCart(model);
+                            await AddToCart(model);
+                            LoadCartRes();
 
                             bool found = false;
 
@@ -1237,6 +1310,24 @@ class _HomePageState extends State<RestaurantinfoPage> {
     }
   }
 
+  void LoadCartRes() async {
+    int orl_id = context.read<ShareData>().orl_id;
+    final Cart_res =
+        await http.get(Uri.parse("$url/db/loadCusCartRes/$orl_id"));
+    log("Raw JSON from API: ${Cart_res.body}");
+
+    if (Cart_res.statusCode == 200) {
+      final List<CusCartGetResponse> list = (json.decode(Cart_res.body) as List)
+          .map((e) => CusCartGetResponse.fromJson(e))
+          .toList();
+
+      setState(() {
+        _Cus_CartInfo_thisRes = list;
+        log("Cart Check: $_Cus_CartInfo_thisRes");
+      });
+    }
+  }
+
   Future<void> AddToCart(AddCartPostRequest model) async {
     final cus_id = context.read<ShareData>().user_info_send.uid;
     var Value = await http.post(Uri.parse("$url/db/AddToCart/${cus_id}"),
@@ -1263,7 +1354,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
     }
   }
 
-  void RemoveFromCart(
+  Future<void> RemoveFromCart(
       int menuId, int count, List<dynamic> selectedOptions) async {
     final cus_id = context.read<ShareData>().user_info_send.uid;
 
@@ -1314,6 +1405,19 @@ class _HomePageState extends State<RestaurantinfoPage> {
             fontSize: 15.0);
       });
       log(responseBody['error']);
+    }
+  }
+
+  Future<void> LoadOrl_id() async {
+    final cus_id = context.read<ShareData>().user_info_send.uid;
+    final orl_res = await http.get(Uri.parse("$url/db/loadOrl_id/$cus_id"));
+    log("Raw JSON from API: ${orl_res.body}");
+
+    if (orl_res.statusCode == 200) {
+      final data = jsonDecode(orl_res.body) as List<dynamic>;
+      setState(() {
+        context.read<ShareData>().orl_id = data[0]['orl_id'];
+      });
     }
   }
 }
