@@ -224,7 +224,9 @@ class _HomePageState extends State<RestaurantinfoPage> {
                           }));
 
                       // ส่งรายการไปหน้าตะกร้า
-                      Get.to(() => CartPage(mergedMenus: mergedMenus));
+                      Get.to(() => CartPage(
+                          mergedMenus: mergedMenus,
+                          orl_id: context.read<ShareData>().orl_id));
                     },
                     child: const Text(
                       "ดูตะกร้า",

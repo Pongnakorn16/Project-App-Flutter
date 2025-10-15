@@ -10,7 +10,9 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
+import 'package:mobile_miniproject_app/models/request/Order_post_req.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
+import 'package:mobile_miniproject_app/models/response/OrderGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/pages/customer/Order.dart';
@@ -22,8 +24,10 @@ import 'package:geocoding/geocoding.dart';
 
 class CartPage extends StatefulWidget {
   final List<Map<String, dynamic>> mergedMenus;
+  final int orl_id;
 
-  const CartPage({Key? key, required this.mergedMenus}) : super(key: key);
+  const CartPage({Key? key, required this.mergedMenus, required this.orl_id})
+      : super(key: key);
 
   @override
   State<CartPage> createState() => _HomePageState();
@@ -505,6 +509,19 @@ class _HomePageState extends State<CartPage> {
                     final finalest_Price = finalPrice + deliveryFee;
 
                     try {
+                      var model = OrderPostRequest(
+                        cus_id: context.read<ShareData>().user_info_send.uid,
+                        res_id: context.read<ShareData>().res_id,
+                        ord_date: DateTime.now().toString(),
+                        ord_dev_price: deliveryFee.toInt(),
+                        total_order_price: finalest_Price.toInt(),
+                        ord_status: 0,
+                      );
+
+                      int current_ord_id = await InsertOrderInfo(model);
+
+                      await update_Ord_id(current_ord_id);
+
                       await update_cus_balance(finalest_Price);
                       log(widget.mergedMenus.toString() +
                           "saddddddddddddddddddPOASODAPSDPAOPDOPAOPDPAPOSDOAPDO");
@@ -530,14 +547,6 @@ class _HomePageState extends State<CartPage> {
                             .doc('order$nextCount');
                         transaction.set(orderRef, {
                           'order_id': nextCount,
-                          // 'menus': widget.mergedMenus,
-                          // 'deliveryFee': deliveryFee,
-                          // 'totalPrice': finalest_Price,
-                          // 'Order_date': FieldValue.serverTimestamp(),
-                          // 'cus_id':
-                          //     context.read<ShareData>().user_info_send.uid,
-                          // 'res_id': context.read<ShareData>().res_id,
-                          // 'rid_id': 0,
                           'Order_status': 0,
                           'Cus_coordinate': Cus_coordinate,
                           'Res_coordinate': Res_coordinate,
@@ -818,6 +827,37 @@ class _HomePageState extends State<CartPage> {
           isLoading = false;
         });
       }
+    }
+  }
+
+  Future<int> InsertOrderInfo(OrderPostRequest model) async {
+    try {
+      final res_ordIn = await http.post(
+        Uri.parse("$url/db/InsertOrderInfo"),
+        headers: {"Content-Type": "application/json"},
+        body: OrderPostRequestToJson(model),
+      );
+
+      if (res_ordIn.statusCode == 200) {
+        final data = json.decode(res_ordIn.body);
+        // data['ord_id'] คือค่า ord_id ที่ backend ส่งกลับมา
+        return data['ord_id'];
+      } else {
+        throw Exception("Server error: ${res_ordIn.statusCode}");
+      }
+    } catch (e) {
+      log("Insert: $e");
+      throw e; // ส่ง error ต่อไปให้ caller จัดการ
+    }
+  }
+
+  Future<void> update_Ord_id(int ord_id) async {
+    final order_info = await http.put(
+      Uri.parse("$url/db/updateOrder/${widget.orl_id}/$ord_id"),
+    );
+
+    if (order_info.statusCode == 200) {
+      log("HELLO");
     }
   }
 
