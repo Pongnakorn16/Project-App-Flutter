@@ -173,13 +173,9 @@ class _HomePageState extends State<CustomerHomePage> with RouteAware {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => CartPage(
-                                            mergedMenus: order.orlOrderDetail
-                                                .map((e) =>
-                                                    Map<String, dynamic>.from(
-                                                        e))
-                                                .toList(),
-                                          ),
+                                          builder: (context) =>
+                                              RestaurantinfoPage(
+                                                  ResId: order.resId),
                                         ),
                                       );
                                     },
@@ -199,15 +195,6 @@ class _HomePageState extends State<CustomerHomePage> with RouteAware {
       ],
     );
   }
-  // Navigator.push(
-  //   context,
-  //   MaterialPageRoute(
-  //     builder: (context) => CartPage(
-  //       mergedMenus: _Cus_CartInfo.map(
-  //           (e) => e.orlOrderDetail).toList(),
-  //     ),
-  //   ),
-  // );
 
   AppBar buildHomeAppBar(dynamic topAdd) {
     return AppBar(
@@ -753,6 +740,8 @@ class _HomePageState extends State<CustomerHomePage> with RouteAware {
             print(menu['count']); // เช่น 1
           }
         }
+      } else {
+        _Cus_CartInfo = [];
       }
 
       if (context.read<ShareData>().customer_addresses.isNotEmpty) {
