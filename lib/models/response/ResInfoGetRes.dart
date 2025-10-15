@@ -22,6 +22,7 @@ class ResInfoResponse {
   double res_rating;
   int res_balance;
   int res_active_status;
+  int res_open_status;
   double? distanceFromCustomer;
 
   ResInfoResponse({
@@ -39,6 +40,7 @@ class ResInfoResponse {
     required this.res_rating,
     required this.res_balance,
     required this.res_active_status,
+    required this.res_open_status,
     this.distanceFromCustomer,
   });
 
@@ -58,6 +60,7 @@ class ResInfoResponse {
       res_rating: (json['res_rating'] as num?)?.toDouble() ?? 0.0,
       res_balance: json['res_balance'] ?? 0,
       res_active_status: json['res_active_status'] ?? 0,
+      res_open_status: json['res_open_status'] ?? 0,
     );
   }
 }

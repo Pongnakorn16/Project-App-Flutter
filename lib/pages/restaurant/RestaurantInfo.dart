@@ -163,9 +163,6 @@ class _HomePageState extends State<RestaurantinfoPage> {
 
     int totalCount = Cart_count;
 
-    // _selectedMenu_no_op.values.fold<int>(0, (sum, item) => sum + item) +
-    //     _selectedMenu_op.fold<int>(0, (sum, item) => sum + item.count);
-
     final CurrentRes =
         _Cus_CartInfo_thisRes.where((menu) => menu.resId == widget.ResId)
             .toList();
@@ -607,233 +604,251 @@ class _HomePageState extends State<RestaurantinfoPage> {
   Widget buildMenuItem(MenuInfoGetResponse menu) {
     var cal_count = getTotalCountForMenu(menu.menu_id);
     var count = _selectedMenu_no_op[menu.menu_id] ?? 0;
-    log(_selectedMenu_op.toString() +
-        "MMMMMMMMMMMMMMMMMMMMMMMTTTTTTTTTTTTTTTTTTTTTTTTTTTTT");
-    log(_selectedMenu_no_op.toString() +
-        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMNSRRRRRRRRRRRRRRRRRRR");
+
+    // ✅ เช็คสถานะเมนู
+    bool isDisabled = menu.menu_status == 0;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Row(
-            children: [
-              // รูปภาพเมนู (สามารถกดได้)
-              InkWell(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    menu.menu_image,
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(Icons.fastfood),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-
-              // ข้อมูลเมนู (ชื่อ + ราคา) กดได้เช่นกัน
-              Expanded(
-                child: InkWell(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        menu.menu_name,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        "${menu.menu_price} บาท",
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // ปุ่ม + / -
-              Row(
+      child: Opacity(
+        // ✅ ถ้าเมนูถูกปิด (status == 0) จะทำให้จางลง
+        opacity: isDisabled ? 0.4 : 1.0,
+        child: IgnorePointer(
+          // ✅ ถ้าเมนูปิด จะไม่สามารถกดได้เลย
+          ignoring: isDisabled,
+          child: Card(
+            elevation: 2,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
                 children: [
-                  if (_Menu_check.any((item) => item.menu_id == menu.menu_id))
-                    cal_count > 0
-                        ? GestureDetector(
-                            onTap: () {
-                              _showEditMenuDialog(menu.menu_id);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.deepPurple,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                '$cal_count',
-                                style: const TextStyle(
-                                    color: Colors.white, fontSize: 16),
-                              ),
+                  // รูปภาพเมนู (สามารถกดได้)
+                  InkWell(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        menu.menu_image,
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            const Icon(Icons.fastfood),
+                        // ✅ แปลงภาพเป็นขาวดำถ้าเมนูถูกปิด
+                        color: isDisabled ? Colors.grey : null,
+                        colorBlendMode:
+                            isDisabled ? BlendMode.saturation : BlendMode.srcIn,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // ข้อมูลเมนู (ชื่อ + ราคา)
+                  Expanded(
+                    child: InkWell(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            menu.menu_name,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
                             ),
-                          )
-                        : IconButton(
-                            icon: const Icon(Icons.add_circle_outline),
-                            onPressed: () async {
-                              // ปุ่ม + เปิด OptionPage ปกติ
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      OptionPage(menu_id: menu.menu_id),
-                                ),
-                              );
+                          ),
+                          Text(
+                            "${menu.menu_price} บาท",
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
 
-                              if (result != null && result is Map) {
-                                final int returnedMenuId = result['menu_id'];
-                                final String returnedMenuName =
-                                    result['menu_name'];
-                                final String returnedMenuImage =
-                                    result['menu_image'];
-                                final int returnedCount = result['count'];
-                                final int returnedPrice = result['price'];
-                                final List<Map<String, dynamic>>
-                                    returnedOptions =
-                                    List<Map<String, dynamic>>.from(
-                                        result['selectedOptions']);
-
-                                setState(() async {
-                                  var model = AddCartPostRequest(
-                                    menuId: returnedMenuId,
-                                    menuName: returnedMenuName,
-                                    menuImage: returnedMenuImage,
-                                    count: returnedCount,
-                                    menuPrice: returnedPrice,
-                                    selectedOptions: returnedOptions,
-                                  );
-
-                                  log("Add to Cart: ${AddCartPostRequestToJson(model)}");
-                                  await AddToCart(model);
-                                  await LoadOrl_id();
-                                  LoadCartRes();
-
-                                  _selectedMenu_op.add(
-                                    SelectedMenu(
-                                      menuId: returnedMenuId,
-                                      menuName: returnedMenuName,
-                                      menuImage: returnedMenuImage,
-                                      count: returnedCount,
-                                      menuPrice: returnedPrice,
-                                      selectedOptions: returnedOptions,
-                                    ),
-                                  );
-                                });
-                              }
-                            },
-                          )
-                  else
-                    // เมนูไม่มี option
+                  // ปุ่ม + / -
+                  if (!isDisabled)
                     Row(
                       children: [
-                        if (count > 0)
-                          IconButton(
-                            icon: const Icon(Icons.remove_circle_outline),
-                            onPressed: () {
-                              setState(() {
-                                if (_selectedMenu_no_op[menu.menu_id]! > 1) {
-                                  _selectedMenu_no_op[menu.menu_id] =
-                                      _selectedMenu_no_op[menu.menu_id]! - 1;
-                                } else {
-                                  _selectedMenu_no_op[menu.menu_id] = 0;
-                                }
-                              });
+                        if (_Menu_check.any(
+                            (item) => item.menu_id == menu.menu_id))
+                          cal_count > 0
+                              ? GestureDetector(
+                                  onTap: () {
+                                    _showEditMenuDialog(menu.menu_id);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.deepPurple,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      '$cal_count',
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 16),
+                                    ),
+                                  ),
+                                )
+                              : IconButton(
+                                  icon: const Icon(Icons.add_circle_outline),
+                                  onPressed: () async {
+                                    final result = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            OptionPage(menu_id: menu.menu_id),
+                                      ),
+                                    );
 
-                              EasyDebounce.debounce(
-                                'remove-from-cart-${menu.menu_id}',
-                                const Duration(milliseconds: 500),
-                                () async {
-                                  final currentCount =
-                                      _selectedMenu_no_op[menu.menu_id] ?? 0;
-                                  int Last_count = currentCount > 1 ? 1 : -1;
+                                    if (result != null && result is Map) {
+                                      final int returnedMenuId =
+                                          result['menu_id'];
+                                      final String returnedMenuName =
+                                          result['menu_name'];
+                                      final String returnedMenuImage =
+                                          result['menu_image'];
+                                      final int returnedCount = result['count'];
+                                      final int returnedPrice = result['price'];
+                                      final List<Map<String, dynamic>>
+                                          returnedOptions =
+                                          List<Map<String, dynamic>>.from(
+                                              result['selectedOptions']);
 
-                                  await RemoveFromCart(
-                                    menu.menu_id,
-                                    Last_count,
-                                    [],
-                                  );
+                                      setState(() async {
+                                        var model = AddCartPostRequest(
+                                          menuId: returnedMenuId,
+                                          menuName: returnedMenuName,
+                                          menuImage: returnedMenuImage,
+                                          count: returnedCount,
+                                          menuPrice: returnedPrice,
+                                          selectedOptions: returnedOptions,
+                                        );
 
-                                  // ✅ เพิ่ม await ให้รอข้อมูลโหลดเสร็จก่อน
-                                  await LoadCartRes();
+                                        log("Add to Cart: ${AddCartPostRequestToJson(model)}");
+                                        await AddToCart(model);
+                                        await LoadOrl_id();
+                                        LoadCartRes();
 
-                                  if (mounted) {
+                                        _selectedMenu_op.add(
+                                          SelectedMenu(
+                                            menuId: returnedMenuId,
+                                            menuName: returnedMenuName,
+                                            menuImage: returnedMenuImage,
+                                            count: returnedCount,
+                                            menuPrice: returnedPrice,
+                                            selectedOptions: returnedOptions,
+                                          ),
+                                        );
+                                      });
+                                    }
+                                  },
+                                )
+                        else
+                        // เมนูไม่มี option
+                        if (!isDisabled)
+                          Row(
+                            children: [
+                              if (count > 0)
+                                IconButton(
+                                  icon: const Icon(Icons.remove_circle_outline),
+                                  onPressed: () {
                                     setState(() {
-                                      // ลบออกจาก Map ถ้าจำเป็น
-                                      if (_selectedMenu_no_op[menu.menu_id] ==
-                                          0) {
-                                        _selectedMenu_no_op
-                                            .remove(menu.menu_id);
+                                      if (_selectedMenu_no_op[menu.menu_id]! >
+                                          1) {
+                                        _selectedMenu_no_op[menu.menu_id] =
+                                            _selectedMenu_no_op[menu.menu_id]! -
+                                                1;
+                                      } else {
+                                        _selectedMenu_no_op[menu.menu_id] = 0;
                                       }
                                     });
-                                  }
+
+                                    EasyDebounce.debounce(
+                                      'remove-from-cart-${menu.menu_id}',
+                                      const Duration(milliseconds: 500),
+                                      () async {
+                                        final currentCount =
+                                            _selectedMenu_no_op[menu.menu_id] ??
+                                                0;
+                                        int Last_count =
+                                            currentCount > 1 ? 1 : -1;
+
+                                        await RemoveFromCart(
+                                          menu.menu_id,
+                                          Last_count,
+                                          [],
+                                        );
+
+                                        await LoadCartRes();
+
+                                        if (mounted) {
+                                          setState(() {
+                                            if (_selectedMenu_no_op[
+                                                    menu.menu_id] ==
+                                                0) {
+                                              _selectedMenu_no_op
+                                                  .remove(menu.menu_id);
+                                            }
+                                          });
+                                        }
+                                      },
+                                    );
+                                  },
+                                ),
+                              if (count > 0)
+                                Text(
+                                  '$count',
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              IconButton(
+                                icon: const Icon(Icons.add_circle_outline),
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedMenu_no_op[menu.menu_id] =
+                                        (_selectedMenu_no_op[menu.menu_id] ??
+                                                0) +
+                                            1;
+                                  });
+
+                                  EasyDebounce.debounce(
+                                    'add-to-cart-${menu.menu_id}',
+                                    const Duration(milliseconds: 500),
+                                    () async {
+                                      var model = AddCartPostRequest(
+                                        menuId: menu.menu_id,
+                                        menuName: menu.menu_name,
+                                        menuImage: menu.menu_image,
+                                        count: 1,
+                                        menuPrice: menu.menu_price,
+                                        selectedOptions: [],
+                                      );
+
+                                      log("Add to Cart: ${AddCartPostRequestToJson(model)}");
+                                      await AddToCart(model);
+                                      await LoadOrl_id();
+                                      LoadCartRes();
+                                    },
+                                  );
                                 },
-                              );
-                            },
+                              ),
+                            ],
                           ),
-                        if (count > 0)
-                          Text(
-                            '$count',
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        IconButton(
-                          icon: const Icon(Icons.add_circle_outline),
-                          onPressed: () {
-                            setState(() {
-                              _selectedMenu_no_op[menu.menu_id] =
-                                  (_selectedMenu_no_op[menu.menu_id] ?? 0) + 1;
-                              print(
-                                  "เพิ่มเมนู ${menu.menu_id}: ${_selectedMenu_no_op[menu.menu_id]}");
-                            });
-
-                            EasyDebounce.debounce(
-                              'add-to-cart-${menu.menu_id}',
-                              const Duration(milliseconds: 500),
-                              () async {
-                                var model = AddCartPostRequest(
-                                  menuId: menu.menu_id,
-                                  menuName: menu.menu_name,
-                                  menuImage: menu.menu_image,
-                                  count: 1,
-                                  menuPrice: menu.menu_price,
-                                  selectedOptions: [],
-                                );
-
-                                log("Add to Cart: ${AddCartPostRequestToJson(model)}");
-                                await AddToCart(model);
-                                await LoadOrl_id();
-                                LoadCartRes();
-                              },
-                            );
-                          },
-                        ),
                       ],
-                    ),
+                    )
                 ],
-              )
-            ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  // วิธีที่ดีกว่า: ใช้ CompleteCompleter เพื่อควบคุม async operation
   void _showEditMenuDialog(int menu_id) {
     showDialog(
       context: context,

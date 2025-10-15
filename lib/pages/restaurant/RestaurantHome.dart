@@ -147,8 +147,37 @@ class _HomePageState extends State<RestaurantHomePage> {
                       "Rating : ${_restaurantInfo[0].res_rating ?? 0.0}",
                       style: const TextStyle(color: Colors.black),
                     ),
+                    const SizedBox(width: 10), // เว้นระยะ
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _restaurantInfo[0].res_open_status == 1
+                            ? Colors.green.withOpacity(0.1)
+                            : Colors.red
+                                .withOpacity(0.1), // สี background จาง ๆ
+                        border: Border.all(
+                          color: _restaurantInfo[0].res_open_status == 1
+                              ? Colors.green
+                              : Colors.red, // สีขอบ
+                        ),
+                        borderRadius: BorderRadius.circular(12), // มุมโค้ง
+                      ),
+                      child: Text(
+                        _restaurantInfo[0].res_open_status == 1
+                            ? "ร้านเปิด"
+                            : "ร้านปิด",
+                        style: TextStyle(
+                          color: _restaurantInfo[0].res_open_status == 1
+                              ? Colors.green
+                              : Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
+
                 const SizedBox(height: 8),
                 // Description
                 Row(
@@ -199,6 +228,26 @@ class _HomePageState extends State<RestaurantHomePage> {
                         label: const Text("จัดการหมวดหมู่ตัวเลือกเพิ่มเติม"),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          // เปลี่ยนสถานะร้าน
+                          await ChangeOpen();
+
+                          // โหลดข้อมูลร้านใหม่
+                          await LoadResInfo();
+
+                          // รีเฟรช UI หลังโหลดเสร็จ
+                          if (mounted) {
+                            setState(() {});
+                          }
+                        },
+                        icon: const Icon(Icons.restaurant_menu),
+                        label: const Text("เปิด/ปิด ร้าน"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              const Color.fromARGB(255, 238, 146, 238),
                         ),
                       ),
                     ],
@@ -304,14 +353,51 @@ class _HomePageState extends State<RestaurantHomePage> {
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
                                             children: [
-                                              Text(
-                                                menu.menu_name ?? '',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
-                                                ),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  Text(
+                                                    menu.menu_name ?? '',
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 14,
+                                                    ),
+                                                    maxLines: 2,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                  GestureDetector(
+                                                    onTap: () {
+                                                      ChangMenuActivate(
+                                                          menu.menu_id);
+                                                      setState(() {
+                                                        LoadResInfo();
+                                                      });
+                                                    },
+                                                    child: Container(
+                                                      width: 25,
+                                                      height: 25,
+                                                      decoration: BoxDecoration(
+                                                        shape: BoxShape.circle,
+                                                        color:
+                                                            menu.menu_status ==
+                                                                    1
+                                                                ? Colors.green
+                                                                : Colors.red,
+                                                      ),
+                                                      child: Icon(
+                                                        menu.menu_status == 1
+                                                            ? Icons.check
+                                                            : Icons.close,
+                                                        color: Colors.white,
+                                                        size: 18,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                               Text(
                                                 "฿${menu.menu_price?.toStringAsFixed(2) ?? '0.00'}",
@@ -1056,6 +1142,44 @@ class _HomePageState extends State<RestaurantHomePage> {
       setState(() {
         _AllOpcat = list;
       });
+    }
+  }
+
+  Future<void> ChangeOpen() async {
+    final res_Change =
+        await http.put(Uri.parse("$url/db/ChangOpenStatus/${ResId}"));
+
+    if (res_Change.statusCode == 200) {
+      Fluttertoast.showToast(
+        msg: "เปลี่ยนสถานะสำเร็จ",
+        backgroundColor: Color.fromARGB(255, 69, 220, 39),
+        textColor: Colors.white,
+      );
+    } else {
+      Fluttertoast.showToast(
+        msg: "เปลี่ยนสถานะผิดพลาด",
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    }
+  }
+
+  Future<void> ChangMenuActivate(int menu_id) async {
+    final men_Change =
+        await http.put(Uri.parse("$url/db/ChangMenuStatus/${menu_id}"));
+
+    if (men_Change.statusCode == 200) {
+      Fluttertoast.showToast(
+        msg: "เปลี่ยนสถานะสำเร็จ",
+        backgroundColor: Color.fromARGB(255, 69, 220, 39),
+        textColor: Colors.white,
+      );
+    } else {
+      Fluttertoast.showToast(
+        msg: "เปลี่ยนสถานะผิดพลาด",
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
     }
   }
 

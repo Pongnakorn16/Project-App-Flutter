@@ -624,71 +624,107 @@ class _HomePageState extends State<CustomerHomePage> with RouteAware {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: data.map((near) {
+            // เช็คสถานะร้าน
+            bool isDisabled = near.res_open_status == 0;
+
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      Get.to(() => RestaurantinfoPage(ResId: near.res_id));
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 3,
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        near.res_image,
-                        width: 155,
-                        height: 80,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.fastfood, size: 40),
-                        loadingBuilder: (_, child, loading) {
-                          if (loading == null) return child;
-                          return const SizedBox(
-                              width: 40,
-                              height: 40,
-                              child: CircularProgressIndicator(strokeWidth: 2));
+              child: Opacity(
+                opacity: isDisabled ? 0.5 : 1.0, // จางลงถ้าปิด
+                child: IgnorePointer(
+                  ignoring: isDisabled, // กดไม่ได้ถ้าปิด
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          Get.to(() => RestaurantinfoPage(ResId: near.res_id));
                         },
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: SizedBox(
-                      width: 155,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (menuLabel != null)
-                            Text(menuLabel,
-                                style: const TextStyle(
-                                    fontSize: 13, fontWeight: FontWeight.bold),
-                                overflow: TextOverflow.ellipsis),
-                          Text(near.res_name,
-                              style: const TextStyle(
-                                  fontSize: 13, fontWeight: FontWeight.bold),
-                              overflow: TextOverflow.ellipsis),
-                          if (near.distanceFromCustomer != null &&
-                              menuLabel == null)
-                            Text(
-                              "${near.distanceFromCustomer!.toStringAsFixed(2)} กม.",
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: const Color.fromARGB(255, 18, 18, 18)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          padding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 3,
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                near.res_image,
+                                width: 155,
+                                height: 80,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    const Icon(Icons.fastfood, size: 40),
+                                loadingBuilder: (_, child, loading) {
+                                  if (loading == null) return child;
+                                  return const SizedBox(
+                                      width: 40,
+                                      height: 40,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2));
+                                },
+                              ),
                             ),
-                        ],
+                            // แสดงข้อความร้านปิดตรงกลาง
+                            if (isDisabled)
+                              Container(
+                                width: 155,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.4),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                alignment: Alignment.center,
+                                child: const Text(
+                                  "ร้านปิดอยู่",
+                                  style: TextStyle(
+                                    color: Color.fromARGB(255, 255, 255, 255),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 20,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: SizedBox(
+                          width: 155,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (menuLabel != null)
+                                Text(menuLabel,
+                                    style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis),
+                              Text(near.res_name,
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold),
+                                  overflow: TextOverflow.ellipsis),
+                              if (near.distanceFromCustomer != null &&
+                                  menuLabel == null)
+                                Text(
+                                  "${near.distanceFromCustomer!.toStringAsFixed(2)} กม.",
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color.fromARGB(255, 18, 18, 18)),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             );
           }).toList(),
