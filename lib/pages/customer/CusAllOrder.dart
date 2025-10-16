@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
+import 'package:mobile_miniproject_app/models/response/CusOrderGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/pages/customer/Order.dart';
 import 'package:mobile_miniproject_app/shared/firebase_message_service.dart';
@@ -24,7 +25,7 @@ class _CusallorderPageState extends State<CusallorderPage> {
   late PageController _pageController;
   String url = '';
   bool isLoading = true;
-  List<Map<String, dynamic>> ordersList = []; // เก็บ order
+  List<CusOrderGetResponse> ordersList = []; // เก็บ order
   List<ResInfoResponse> _restaurantInfo = [];
   Map<int, ResInfoResponse> _restaurantMap = {};
 
@@ -63,20 +64,19 @@ class _CusallorderPageState extends State<CusallorderPage> {
                       var order = ordersList[index];
 
                       // ดึงข้อมูลร้านจาก map
-                      var resInfo = _restaurantMap[order['res_id']];
+                      var resInfo = _restaurantMap[order.resId];
 
                       // เรียกโหลดร้านถ้ายังไม่มีใน map
                       if (resInfo == null) {
-                        loadRes(order['res_id']);
+                        loadRes(order.resId);
                       }
 
                       // แปลงวันเวลา
-                      var timestamp = order['Order_date'];
-                      DateTime orderDate = timestamp != null
-                          ? (timestamp as Timestamp).toDate()
-                          : DateTime.now();
+
+                      DateTime orderDate = order.ordDate;
                       String formattedDate =
-                          DateFormat('dd/MM/yyyy HH:mm').format(orderDate);
+                          DateFormat('dd/MM/yyyy เวลา HH:mm น.')
+                              .format(orderDate.toLocal());
 
                       return GestureDetector(
                         onTap: () {
@@ -84,10 +84,10 @@ class _CusallorderPageState extends State<CusallorderPage> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => OrderPage(
-                                mergedMenus: order['menus'],
-                                deliveryFee: order['deliveryFee'],
-                                order_id: order['order_id'],
-                                order_status: order['Order_status'],
+                                mergedMenus: order.orlOrderDetail,
+                                deliveryFee: order.ordDevPrice,
+                                order_id: order.ordId,
+                                order_status: order.ordStatus,
                                 previousPage: 'CusAllOrderPage',
                               ),
                             ),
@@ -103,13 +103,13 @@ class _CusallorderPageState extends State<CusallorderPage> {
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                buildStatusBox(order['Order_status'] ?? -1),
+                                buildStatusBox(order.ordStatus ?? -1),
                                 SizedBox(height: 4),
                                 Text("วันที่: $formattedDate"),
                               ],
                             ),
                             trailing: Text(
-                              "ราคารวม: ${(order['totalPrice'] as num?)?.toInt() ?? '-'} ฿",
+                              "ราคารวม: ${(order.totalOrderPrice as num?)?.toInt() ?? '-'} ฿",
                               style: TextStyle(
                                   fontWeight: FontWeight.bold, fontSize: 13),
                             ),
@@ -169,18 +169,16 @@ class _CusallorderPageState extends State<CusallorderPage> {
 
     try {
       int cus_id = context.read<ShareData>().user_info_send.uid;
-      CollectionReference ordersCollection =
-          FirebaseFirestore.instance.collection('BP_Order_detail');
+      final res_ResInfo =
+          await http.get(Uri.parse("$url/db/loadCusOrder/$cus_id"));
+      final List<CusOrderGetResponse> list =
+          (json.decode(res_ResInfo.body) as List)
+              .map((e) => CusOrderGetResponse.fromJson(e))
+              .toList();
 
-      QuerySnapshot snapshot =
-          await ordersCollection.where('cus_id', isEqualTo: cus_id).get();
-
-      ordersList.clear();
-
-      for (var doc in snapshot.docs) {
-        var data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id; // เพิ่ม order id ลงไปใน map
-        ordersList.add(data);
+      if (res_ResInfo.statusCode == 200) {
+        ordersList.clear();
+        ordersList = list;
       }
     } catch (e) {
       print('เกิดข้อผิดพลาดในการโหลดคำสั่งซื้อ: $e');

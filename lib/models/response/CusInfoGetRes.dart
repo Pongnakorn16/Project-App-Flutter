@@ -7,9 +7,6 @@ import 'dart:convert';
 CusInfoGetResponse cusInfoGetResponseFromJson(String str) =>
     CusInfoGetResponse.fromJson(json.decode(str));
 
-String cusInfoGetResponseToJson(CusInfoGetResponse data) =>
-    json.encode(data.toJson());
-
 class CusInfoGetResponse {
   int cus_id;
   String cus_name;
@@ -43,15 +40,4 @@ class CusInfoGetResponse {
       cus_active_status: json['cus_active_status'] ?? 0,
     );
   }
-
-  Map<String, dynamic> toJson() => {
-        'cus_id': cus_id,
-        'cus_name': cus_name,
-        'cus_email': cus_email,
-        'cus_password': cus_password,
-        'cus_phone': cus_phone,
-        'cus_image': cus_image,
-        'cus_balance': cus_balance,
-        'cus_active_status': cus_active_status,
-      };
 }

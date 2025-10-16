@@ -110,6 +110,8 @@ class _HomePageState extends State<RestaurantinfoPage> {
   Widget build(BuildContext context) {
     final topAdd = context.watch<ShareData>().customer_addresses;
     int Cart_count = 0;
+    log(context.read<ShareData>().orl_id.toString() + "TEST ORD_ID",
+        stackTrace: StackTrace.current);
 
     // ✅ ย้ายการเช็ค orl_id มาไว้ด้านบนก่อน
     if (context.read<ShareData>().orl_id == 0) {
@@ -1400,6 +1402,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
       headers: {"Content-Type": "application/json; charset=utf-8"},
       body: jsonEncode({
         "menu_id": menuId,
+        "orl_id": context.read<ShareData>().orl_id,
         "count": count,
         "selectedOptions": selectedOptions,
       }),
@@ -1447,8 +1450,9 @@ class _HomePageState extends State<RestaurantinfoPage> {
 
   Future<void> LoadOrl_id() async {
     final cus_id = context.read<ShareData>().user_info_send.uid;
-    final orl_res = await http.get(Uri.parse("$url/db/loadOrl_id/$cus_id"));
-    log("Raw JSON from API: ${orl_res.body}");
+    final orl_res =
+        await http.get(Uri.parse("$url/db/loadOrl_id/$cus_id/${widget.ResId}"));
+    log("FROM LoadOrl_id API: ${orl_res.body}");
 
     if (orl_res.statusCode == 200) {
       final data = jsonDecode(orl_res.body) as List<dynamic>;

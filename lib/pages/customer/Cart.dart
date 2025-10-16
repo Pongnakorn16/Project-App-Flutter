@@ -532,21 +532,13 @@ class _HomePageState extends State<CartPage> {
 
                       await FirebaseFirestore.instance
                           .runTransaction((transaction) async {
-                        final snapshot = await transaction.get(counterRef);
-                        int currentCount =
-                            snapshot.exists ? snapshot['count'] : 0;
-                        int nextCount = currentCount + 1;
-                        order_id = nextCount;
-
-                        // อัปเดต counter
-                        transaction.set(counterRef, {'count': nextCount});
-
-                        // สร้าง order document
+                        // สร้าง order document โดยตรง
                         final orderRef = FirebaseFirestore.instance
                             .collection('BP_Order_detail')
-                            .doc('order$nextCount');
+                            .doc('order$current_ord_id');
+
                         transaction.set(orderRef, {
-                          'order_id': nextCount,
+                          'order_id': current_ord_id,
                           'Order_status': 0,
                           'Cus_coordinate': Cus_coordinate,
                           'Res_coordinate': Res_coordinate,
@@ -562,7 +554,7 @@ class _HomePageState extends State<CartPage> {
                         MaterialPageRoute(
                           builder: (context) => OrderPage(
                             mergedMenus: widget.mergedMenus,
-                            deliveryFee: deliveryFee,
+                            deliveryFee: deliveryFee.toInt(),
                             order_id: order_id,
                             order_status: -1,
                             previousPage: 'Cart',
@@ -864,6 +856,7 @@ class _HomePageState extends State<CartPage> {
   Future<void> update_cus_balance(double d_total) async {
     int cus_id = context.read<ShareData>().user_info_send.uid;
     int total = d_total.toInt(); // ใช้ d_total แทน finalPrice
+    context.read<ShareData>().Refund_balance = total;
 
     try {
       final res_Add = await http.put(

@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusInfoGetRes.dart';
+import 'package:mobile_miniproject_app/models/response/CusOrderGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/OptionGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/pages/customer/Order.dart';
@@ -27,7 +28,7 @@ class _HomePageState extends State<ResAllOrderPage> {
   late PageController _pageController;
   String url = '';
   bool isLoading = true;
-  List<Map<String, dynamic>> ordersList = []; // เก็บ order
+  List<CusOrderGetResponse> ordersList = []; // เก็บ order
   Map<int, CusInfoGetResponse> _customerMap = {};
 
   @override
@@ -63,20 +64,18 @@ class _HomePageState extends State<ResAllOrderPage> {
                       var order = ordersList[index];
 
                       // ดึงข้อมูลร้านจาก map
-                      var cusInfo = _customerMap[order['cus_id']];
+                      var cusInfo = _customerMap[order.cusId];
 
                       // เรียกโหลดร้านถ้ายังไม่มีใน map
                       if (cusInfo == null) {
-                        loadCus(order['cus_id']);
+                        loadCus(order.cusId);
                       }
 
                       // แปลงวันเวลา
-                      var timestamp = order['Order_date'];
-                      DateTime orderDate = timestamp != null
-                          ? (timestamp as Timestamp).toDate()
-                          : DateTime.now();
+                      DateTime orderDate = order.ordDate;
                       String formattedDate =
-                          DateFormat('dd/MM/yyyy HH:mm').format(orderDate);
+                          DateFormat('dd/MM/yyyy เวลา HH:mm น.')
+                              .format(orderDate.toLocal());
 
                       return GestureDetector(
                           onTap: () {
@@ -84,10 +83,10 @@ class _HomePageState extends State<ResAllOrderPage> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => ResOrderPage(
-                                  mergedMenus: order['menus'],
-                                  deliveryFee: order['deliveryFee'],
-                                  order_id: order['order_id'],
-                                  order_status: order['Order_status'],
+                                  mergedMenus: order.orlOrderDetail,
+                                  deliveryFee: order.ordDevPrice,
+                                  order_id: order.ordId,
+                                  order_status: order.ordStatus,
                                   previousPage: 'ResOrderPage',
                                 ),
                               ),
@@ -108,7 +107,7 @@ class _HomePageState extends State<ResAllOrderPage> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          "หมายเลขออเดอร์ : ${order['order_id'] ?? '-'}",
+                                          "หมายเลขออเดอร์ : ${order.ordId ?? '-'}",
                                           style: TextStyle(
                                               fontSize: 12,
                                               color: Colors.grey[700]),
@@ -123,8 +122,7 @@ class _HomePageState extends State<ResAllOrderPage> {
                                               fontWeight: FontWeight.bold),
                                         ),
                                         SizedBox(height: 4),
-                                        buildStatusBox(
-                                            order['Order_status'] ?? -1),
+                                        buildStatusBox(order.ordStatus ?? -1),
                                         SizedBox(height: 4),
                                         Text("วันที่: $formattedDate"),
                                       ],
@@ -132,7 +130,7 @@ class _HomePageState extends State<ResAllOrderPage> {
                                   ),
 
                                   // ปุ่มทางขวา
-                                  if ((order['Order_status'] ?? -1) == 0)
+                                  if ((order.ordStatus ?? -1) == 0)
                                     Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -141,7 +139,7 @@ class _HomePageState extends State<ResAllOrderPage> {
                                           child: ElevatedButton(
                                             onPressed: () {
                                               updateOrderStatus(
-                                                  order['order_id'].toString(),
+                                                  order.ordId.toString(),
                                                   1); // กำลังเตรียมอาหาร → 1
                                             },
                                             style: ElevatedButton.styleFrom(
@@ -165,10 +163,11 @@ class _HomePageState extends State<ResAllOrderPage> {
                                         SizedBox(
                                           width: 100,
                                           child: ElevatedButton(
-                                            onPressed: () {
-                                              updateOrderStatus(
-                                                  order['order_id'].toString(),
+                                            onPressed: () async {
+                                              await updateOrderStatus(
+                                                  order.ordId.toString(),
                                                   -2); // ปฏิเสธ → -2
+                                              RefundCus(order.cusId);
                                             },
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: Colors.red,
@@ -189,8 +188,8 @@ class _HomePageState extends State<ResAllOrderPage> {
                                         ),
                                       ],
                                     )
-                                  else if ((order['Order_status'] ?? -1) == 1 &&
-                                      order['rid_id'] != 0)
+                                  else if ((order.ordStatus ?? -1) == 1 &&
+                                      order.ridId != 0)
                                     Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -200,7 +199,7 @@ class _HomePageState extends State<ResAllOrderPage> {
                                           child: ElevatedButton(
                                             onPressed: () {
                                               updateOrderStatus(
-                                                  order['order_id'].toString(),
+                                                  order.ordId.toString(),
                                                   2); // กำลังส่ง → 2
                                             },
                                             style: ElevatedButton.styleFrom(
@@ -223,8 +222,8 @@ class _HomePageState extends State<ResAllOrderPage> {
                                         ),
                                       ],
                                     )
-                                  else if ((order['Order_status'] ?? -1) == 1 &&
-                                      order['rid_id'] == 0)
+                                  else if ((order.ordStatus ?? -1) == 1 &&
+                                      order.ridId == 0)
                                     Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -252,8 +251,17 @@ class _HomePageState extends State<ResAllOrderPage> {
           .collection('BP_Order_detail')
           .doc('order' + docId)
           .update({'Order_status': newStatus});
-      LoadAllOrder(context);
-      setState(() {});
+      final change_status = await http
+          .put(Uri.parse("$url/db/ChangeOrderStatus/$docId/$newStatus"));
+
+      if (change_status.statusCode == 200) {
+        // รีโหลดรายการคำสั่งซื้อ
+        LoadAllOrder(context);
+        setState(() {});
+      } else {
+        print('MySQL update failed: ${change_status.body}');
+        Fluttertoast.showToast(msg: 'อัปเดตสถานะใน MySQL ล้มเหลว');
+      }
     } catch (e) {
       print('อัปเดตสถานะล้มเหลว: $e');
       Fluttertoast.showToast(msg: 'ไม่สามารถอัปเดตสถานะได้');
@@ -310,18 +318,16 @@ class _HomePageState extends State<ResAllOrderPage> {
 
     try {
       int res_id = context.read<ShareData>().user_info_send.uid;
-      CollectionReference ordersCollection =
-          FirebaseFirestore.instance.collection('BP_Order_detail');
+      final res_ResInfo =
+          await http.get(Uri.parse("$url/db/loadResOrder/$res_id"));
+      final List<CusOrderGetResponse> list =
+          (json.decode(res_ResInfo.body) as List)
+              .map((e) => CusOrderGetResponse.fromJson(e))
+              .toList();
 
-      QuerySnapshot snapshot =
-          await ordersCollection.where('res_id', isEqualTo: res_id).get();
-
-      ordersList.clear();
-
-      for (var doc in snapshot.docs) {
-        var data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id; // เพิ่ม order id ลงไปใน map
-        ordersList.add(data);
+      if (res_ResInfo.statusCode == 200) {
+        ordersList.clear();
+        ordersList = list;
       }
     } catch (e) {
       print('เกิดข้อผิดพลาดในการโหลดคำสั่งซื้อ: $e');
@@ -354,6 +360,31 @@ class _HomePageState extends State<ResAllOrderPage> {
           log("สถานะปัจจุบันของ _customerMap: $_customerMap");
         });
       }
+    }
+  }
+
+  Future<void> RefundCus(int cus_id) async {
+    int total = context.read<ShareData>().Refund_balance;
+
+    try {
+      final res_Add = await http.put(
+        Uri.parse("$url/db/updateRefundCus_balance"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "total": total,
+          "cus_id": cus_id,
+        }),
+      );
+
+      if (res_Add.statusCode == 200) {
+        log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+        context.read<ShareData>().Refund_balance = 0;
+      } else {
+        throw Exception("Server error: ${res_Add.statusCode}");
+      }
+    } catch (e) {
+      log("update_cus_balance Error: $e");
+      throw e; // ส่ง error ต่อไปให้ caller จัดการ
     }
   }
 }

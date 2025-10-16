@@ -16,6 +16,7 @@ class ShareData with ChangeNotifier {
   int res_id = 0;
   int orl_id = 0;
   int Cart_count = 0;
+  int Refund_balance = 0;
   String cus_selected_add = "";
   String res_selected_add = "";
   late User_Info_Send user_info_send;
