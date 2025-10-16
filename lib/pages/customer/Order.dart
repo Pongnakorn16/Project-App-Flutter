@@ -129,7 +129,6 @@ class _OrderPageState extends State<OrderPage> {
   String? _selectedCustomerAddress;
 
   @override
-  @override
   void initState() {
     super.initState();
     Configuration.getConfig().then((value) {
@@ -145,7 +144,7 @@ class _OrderPageState extends State<OrderPage> {
           "aXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxx");
 
       final cus_id = context.read<ShareData>().user_info_send.uid;
-      OrderNotificationService().listenOrderChanges(context, cus_id,
+      OrderNotificationService().listenOrderChanges(context, widget.order_id,
           (orderId, newStep) {
         if (!mounted) return;
         setState(() {

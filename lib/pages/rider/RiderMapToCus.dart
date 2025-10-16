@@ -8,67 +8,36 @@ import 'package:latlong2/latlong.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:http/http.dart' as http;
-import 'package:mobile_miniproject_app/pages/rider/RiderMapToCus.dart';
 
-class RiderMapToResPage extends StatefulWidget {
+class RiderMapToCusPage extends StatefulWidget {
   final int ord_id;
-  const RiderMapToResPage({super.key, required this.ord_id});
+  const RiderMapToCusPage({super.key, required this.ord_id});
 
   @override
-  State<RiderMapToResPage> createState() => _RiderMapToResPageState();
+  State<RiderMapToCusPage> createState() => _RiderMapToCusPageState();
 }
 
-class _RiderMapToResPageState extends State<RiderMapToResPage> {
-  StreamSubscription<DocumentSnapshot>? _orderStream;
+class _RiderMapToCusPageState extends State<RiderMapToCusPage> {
   LatLng? riderPosition;
-  LatLng? resPosition;
+  LatLng? cusPosition;
   bool isLoading = true;
   final MapController mapController = MapController();
   List<LatLng> routePoints = [];
   StreamSubscription<Position>? _positionStream;
+  bool isNearCustomer = false;
+  LatLng? _lastRiderPos; // เก็บตำแหน่งก่อนหน้าเพื่อตรวจระยะทาง
+  final double routeUpdateThreshold = 50; // เมตร
+
   @override
   void initState() {
     super.initState();
     _initMap();
-    _listenOrderStatus(); // เริ่มฟังสถานะออเดอร์
-  }
-
-  void _listenOrderStatus() {
-    _orderStream = FirebaseFirestore.instance
-        .collection('BP_Order_detail')
-        .doc('order${widget.ord_id}')
-        .snapshots()
-        .listen((snapshot) {
-      if (snapshot.exists) {
-        var data = snapshot.data()!;
-        int ordStatus = data['Order_status'] ?? 0;
-
-        if (ordStatus == 2) {
-          // ✅ แสดง Snackbar แทน Toast
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content:
-                  const Text("ไรเดอร์รับอาหารจากร้านแล้ว! ไปส่งลูกค้าได้เลย"),
-              duration: const Duration(seconds: 6),
-            ),
-          );
-
-          // ✅ ไปหน้า RiderMapToCusPage
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => RiderMapToCusPage(ord_id: widget.ord_id),
-            ),
-          );
-        }
-      }
-    });
   }
 
   void _startTracking() {
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 5, // อัปเดตทุก 5 เมตร
+      distanceFilter: 5,
     );
 
     _positionStream =
@@ -78,33 +47,74 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
 
       setState(() {
         riderPosition = newPosition;
+
+        if (cusPosition != null) {
+          double distanceInMeters = Geolocator.distanceBetween(
+            newPosition.latitude,
+            newPosition.longitude,
+            cusPosition!.latitude,
+            cusPosition!.longitude,
+          );
+          isNearCustomer = distanceInMeters <= 50;
+        }
       });
 
-      // เคลื่อนกล้องตามตำแหน่งใหม่
-      mapController.move(riderPosition!, mapController.camera.zoom);
+      mapController.move(newPosition, 13);
 
-      // 🔄 อัปเดตตำแหน่งไปยัง Firestore
+      // อัปเดต Firebase
       await FirebaseFirestore.instance
           .collection('BP_Order_detail')
           .doc('order${widget.ord_id}')
           .update({
-        'Rider_coordinate':
-            '${position.latitude},${position.longitude}', // เก็บเป็น string เช่น "16.4332,102.8231"
+        'Rider_coordinate': '${position.latitude},${position.longitude}',
       });
 
-      // ถ้ามี resPosition ให้รีเฟรชเส้นทาง
-      if (resPosition != null) {
-        final newRoute = await _getRouteFromORS(riderPosition!, resPosition!);
-        setState(() {
-          routePoints = newRoute;
-        });
+      // เช็คว่าต้องอัปเดต route หรือใช้ cache
+      if (cusPosition != null) {
+        bool shouldUpdateRoute = true;
+        if (_lastRiderPos != null) {
+          double movedDistance = Geolocator.distanceBetween(
+            _lastRiderPos!.latitude,
+            _lastRiderPos!.longitude,
+            newPosition.latitude,
+            newPosition.longitude,
+          );
+          if (movedDistance < routeUpdateThreshold) {
+            shouldUpdateRoute = false; // ขยับน้อย ใช้ route เดิม
+          }
+        }
+
+        if (shouldUpdateRoute) {
+          try {
+            final newRoute = await _getRouteFromORS(newPosition, cusPosition!);
+            if (mounted) {
+              setState(() {
+                routePoints = newRoute;
+              });
+            }
+          } catch (e) {
+            print('❌ Routing update failed: $e');
+          }
+
+          _lastRiderPos = newPosition; // อัปเดตตำแหน่งล่าสุด
+        }
       }
     });
   }
 
+  bool checkIsNearCustomer(LatLng rider, LatLng customer,
+      {double threshold = 50}) {
+    double distance = Geolocator.distanceBetween(
+      rider.latitude,
+      rider.longitude,
+      customer.latitude,
+      customer.longitude,
+    );
+    return distance <= threshold;
+  }
+
   @override
   void dispose() {
-    _orderStream?.cancel();
     _positionStream?.cancel();
     super.dispose();
   }
@@ -121,8 +131,8 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
 
       if (snapshot.exists) {
         var data = snapshot.data()!;
-        String resCoordinate = data['Res_coordinate'] ?? '';
-        resPosition = _parseCoordinates(resCoordinate);
+        String cusCoordinate = data['Cus_coordinate'] ?? '';
+        cusPosition = _parseCoordinates(cusCoordinate);
 
         // ✅ ถ้ามี Rider_coordinate เก็บไว้ ให้ใช้
         String riderCoordinate = data['Rider_coordinate'] ?? '';
@@ -148,9 +158,9 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
 
       riderPosition = initialRiderPos;
 
-      // 3️⃣ สร้าง route ถ้ามี resPosition
-      if (riderPosition != null && resPosition != null) {
-        routePoints = await _getRouteFromORS(riderPosition!, resPosition!);
+      // 3️⃣ สร้าง route ถ้ามี cusPosition
+      if (riderPosition != null && cusPosition != null) {
+        routePoints = await _getRouteFromORS(riderPosition!, cusPosition!);
         mapController.move(riderPosition!, 13);
       }
 
@@ -210,32 +220,81 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
     return null;
   }
 
+  Stream<LatLng?> riderPositionStream() {
+    return FirebaseFirestore.instance
+        .collection('BP_Order_detail')
+        .doc('order${widget.ord_id}')
+        .snapshots()
+        .map((snapshot) {
+      if (snapshot.exists) {
+        final data = snapshot.data()!;
+        final coordStr = data['Rider_coordinate'] ?? '';
+        return _parseCoordinates(coordStr);
+      }
+      return null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Scaffold(
       appBar: AppBar(
-          title: const Text("แผนที่นำทางไปยังร้าน"),
-          automaticallyImplyLeading: false),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : (riderPosition == null || resPosition == null)
-              ? const Center(child: Text("ไม่พบข้อมูลพิกัด"))
-              : FlutterMap(
-                  mapController: mapController,
-                  options: MapOptions(
-                    initialCenter: riderPosition!,
-                    initialZoom: 13,
+        title: const Text("แผนที่นำทางไปยังลูกค้า"),
+        automaticallyImplyLeading: false,
+      ),
+      body: StreamBuilder<LatLng?>(
+        stream: riderPositionStream(),
+        builder: (context, snapshot) {
+          // ✅ ตรงนี้คือจุดที่ใส่
+          final displayRiderPos = snapshot.data ?? riderPosition;
+          final nearCustomer = (displayRiderPos != null && cusPosition != null)
+              ? checkIsNearCustomer(displayRiderPos, cusPosition!)
+              : false;
+
+          // อัปเดต route ถ้าตำแหน่งเปลี่ยน
+          if (displayRiderPos != null &&
+              cusPosition != null &&
+              (routePoints.isEmpty ||
+                  _lastRiderPos == null ||
+                  Geolocator.distanceBetween(
+                        _lastRiderPos!.latitude,
+                        _lastRiderPos!.longitude,
+                        displayRiderPos.latitude,
+                        displayRiderPos.longitude,
+                      ) >
+                      routeUpdateThreshold)) {
+            _getRouteFromORS(displayRiderPos, cusPosition!).then((newRoute) {
+              if (mounted) {
+                setState(() {
+                  routePoints = newRoute;
+                  _lastRiderPos = displayRiderPos;
+                });
+              }
+            });
+          }
+
+          return Stack(
+            children: [
+              FlutterMap(
+                mapController: mapController,
+                options: MapOptions(
+                  initialCenter: displayRiderPos ?? LatLng(0, 0),
+                  initialZoom: 13,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   ),
-                  children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    ),
-                    MarkerLayer(
-                      markers: [
-                        // ✅ Marker: Rider
+                  MarkerLayer(
+                    markers: [
+                      if (displayRiderPos != null)
                         Marker(
-                          point: riderPosition!,
+                          point: displayRiderPos,
                           width: 60,
                           height: 60,
                           child: const Icon(
@@ -244,9 +303,9 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
                             size: 40,
                           ),
                         ),
-                        // ✅ Marker: ร้าน
+                      if (cusPosition != null)
                         Marker(
-                          point: resPosition!,
+                          point: cusPosition!,
                           width: 60,
                           height: 60,
                           child: const Icon(
@@ -255,22 +314,41 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
                             size: 40,
                           ),
                         ),
-                      ],
-                    ),
-                    // ✅ เส้นเชื่อมระหว่าง Rider กับ ร้าน
+                    ],
+                  ),
+                  if (displayRiderPos != null && cusPosition != null)
                     PolylineLayer(
                       polylines: [
                         Polyline(
-                          points: routePoints.isNotEmpty
-                              ? routePoints
-                              : [riderPosition!, resPosition!],
+                          points: [
+                            displayRiderPos,
+                            ...routePoints,
+                            cusPosition!
+                          ],
                           color: Colors.green,
-                          strokeWidth: 4.0,
+                          strokeWidth: 4,
                         ),
                       ],
                     ),
-                  ],
+                ],
+              ),
+              // ✅ ใช้ nearCustomer แทน isNearCustomer
+              if (nearCustomer)
+                Positioned(
+                  bottom: 20,
+                  left: 20,
+                  right: 20,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // ทำสิ่งที่ต้องการ
+                    },
+                    child: const Text("ส่งอาหารให้ลูกค้า"),
+                  ),
                 ),
+            ],
+          );
+        },
+      ),
     );
   }
 
