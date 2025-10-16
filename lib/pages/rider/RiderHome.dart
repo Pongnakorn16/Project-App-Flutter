@@ -12,11 +12,13 @@ import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/CusInfoGetRes.dart';
+import 'package:mobile_miniproject_app/models/response/CusOrderGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/OptionGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/pages/customer/Order.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/ResOrder.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderHistory.dart';
+import 'package:mobile_miniproject_app/pages/rider/RiderMapToRes.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderOrder.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderProfile.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
@@ -35,10 +37,12 @@ class _RiderHomePageState extends State<RiderHomePage>
   late PageController _pageController;
   String url = '';
   bool isLoading = true;
-  List<Map<String, dynamic>> ordersList = []; // เก็บ order
+  List<CusOrderGetResponse> ordersList = []; // เก็บ order
   Map<int, CusInfoGetResponse> _customerMap = {};
   Map<int, ResInfoResponse> _restaurantMap = {}; // เพิ่ม map สำหรับร้านอาหาร
   Map<int, CusAddressGetResponse> _cusAddMap = {};
+  List<CusOrderGetResponse> sqlOrders = [];
+  List<Map<String, String>> firebaseOrders = [];
   Position? _currentPosition; // ตำแหน่งปัจจุบัน
 
   @override
@@ -303,40 +307,43 @@ class _RiderHomePageState extends State<RiderHomePage>
                           var order = ordersList[index];
 
                           // ดึงข้อมูลลูกค้าจาก map
-                          var cusInfo = _customerMap[order['cus_id']];
-                          var cusAdd = _cusAddMap[order['cus_id']];
-                          var resInfo = _restaurantMap[order['res_id']];
+                          var cusInfo = _customerMap[order.cusId];
+                          var cusAdd = _cusAddMap[order.cusId];
+                          var resInfo = _restaurantMap[order.resId];
 
                           // เรียกโหลดลูกค้าถ้ายังไม่มีใน map
                           if (cusInfo == null) {
-                            loadCus(order['cus_id']);
+                            loadCus(order.cusId);
                           }
 
                           // เรียกโหลดร้านถ้ายังไม่มีใน map
                           if (resInfo == null) {
-                            loadRestaurant(order['res_id']);
+                            loadRestaurant(order.resId);
                           }
 
                           // แปลงวันเวลา
-                          var timestamp = order['Order_date'];
-                          DateTime orderDate = timestamp != null
-                              ? (timestamp as Timestamp).toDate()
-                              : DateTime.now();
+                          DateTime orderDate = order.ordDate;
                           String formattedDate =
-                              DateFormat('dd/MM/yyyy HH:mm').format(orderDate);
+                              DateFormat('dd/MM/yyyy เวลา HH:mm น.')
+                                  .format(orderDate.toLocal());
 
                           // คำนวณระยะทาง
                           double distance = 0.0;
                           String distanceText = "คำนวณระยะทาง...";
 
-                          if (resInfo != null &&
-                              resInfo.res_coordinate.isNotEmpty &&
-                              cusAdd != null &&
-                              cusAdd.ca_coordinate.isNotEmpty) {
-                            var resCoord =
-                                parseCoordinates(resInfo.res_coordinate);
-                            var cusCoord =
-                                parseCoordinates(cusAdd.ca_coordinate);
+// ใช้พิกัดจาก Firebase
+
+                          var firebaseOrder = firebaseOrders.firstWhere(
+                            (e) => e['order_id'] == order.ordId.toString(),
+                            orElse: () =>
+                                {'cusCoordinate': '', 'resCoordinate': ''},
+                          );
+                          {
+                            var cusCoord = parseCoordinates(
+                                firebaseOrder['cusCoordinate'] ?? '');
+                            var resCoord = parseCoordinates(
+                                firebaseOrder['resCoordinate'] ?? '');
+
                             distance = calculateDistance(
                               cusCoord['lat']!,
                               cusCoord['lng']!,
@@ -353,10 +360,10 @@ class _RiderHomePageState extends State<RiderHomePage>
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => RiderOrderPage(
-                                      mergedMenus: order['menus'],
-                                      deliveryFee: order['deliveryFee'],
-                                      order_id: order['order_id'],
-                                      order_status: order['Order_status'],
+                                      mergedMenus: order.orlOrderDetail,
+                                      deliveryFee: order.ordDevPrice,
+                                      order_id: order.ordId,
+                                      order_status: order.ordStatus,
                                       previousPage: 'RiderOrderPage',
                                     ),
                                   ),
@@ -380,7 +387,7 @@ class _RiderHomePageState extends State<RiderHomePage>
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              "หมายเลขออเดอร์ : ${order['order_id'] ?? '-'}",
+                                              "หมายเลขออเดอร์ : ${order.ordId ?? '-'}",
                                               style: TextStyle(
                                                   fontSize: 12,
                                                   color: Colors.grey[700]),
@@ -420,13 +427,22 @@ class _RiderHomePageState extends State<RiderHomePage>
                                       ),
 
                                       // ฝั่งขวา (ปุ่มรับออเดอร์)
-                                      if ((order['Order_status'] ?? -1) == 1)
+                                      if ((order.ordStatus ?? -1) == 1)
                                         SizedBox(
                                           width: 100,
                                           child: ElevatedButton(
-                                            onPressed: () {
-                                              acceptOrder(
-                                                  order['order_id'].toString());
+                                            onPressed: () async {
+                                              await acceptOrder(
+                                                  order.ordId.toString());
+                                              Navigator.pushReplacement(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      RiderMapToResPage(
+                                                    ord_id: order.ordId,
+                                                  ),
+                                                ),
+                                              );
                                             },
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: Colors.green,
@@ -462,10 +478,21 @@ class _RiderHomePageState extends State<RiderHomePage>
           .collection('BP_Order_detail')
           .doc('order' + orderId)
           .update({
-        'rid_id': riderId,
         'Rider_coordinate':
             "${_currentPosition!.latitude.toString()},${_currentPosition!.longitude.toString()}",
       });
+
+      final Add_rider =
+          await http.put(Uri.parse("$url/db/AddRider/$riderId/$orderId"));
+
+      if (Add_rider.statusCode == 200) {
+        // รีโหลดรายการคำสั่งซื้อ
+        LoadAllOrder(context);
+        setState(() {});
+      } else {
+        print('MySQL update failed: ${Add_rider.body}');
+        Fluttertoast.showToast(msg: 'อัปเดตสถานะใน MySQL ล้มเหลว');
+      }
 
       Fluttertoast.showToast(msg: 'รับออเดอร์เรียบร้อย');
       // รีเฟรชข้อมูลทันทีหลังรับออเดอร์
@@ -525,56 +552,57 @@ class _RiderHomePageState extends State<RiderHomePage>
     });
 
     try {
+      // ดึง SQL
+      final Rider_All_Order =
+          await http.get(Uri.parse("$url/db/loadRiderOrder"));
+      if (Rider_All_Order.statusCode == 200) {
+        final List<dynamic> jsonList = json.decode(Rider_All_Order.body);
+        sqlOrders =
+            jsonList.map((e) => CusOrderGetResponse.fromJson(e)).toList();
+
+        // ใส่ใน ordersList ด้วย
+        setState(() {
+          ordersList = sqlOrders;
+        });
+      }
+
+      // ดึง Firebase
       CollectionReference ordersCollection =
           FirebaseFirestore.instance.collection('BP_Order_detail');
 
-      // กรองเงื่อนไข: Order_status = 1 และ rid_id = 0
-      QuerySnapshot snapshot = await ordersCollection
-          .where('Order_status', isEqualTo: 1)
-          .where('rid_id', isEqualTo: 0)
-          .get();
+      QuerySnapshot snapshot = await ordersCollection.get();
 
-      List<Map<String, dynamic>> filteredOrders = [];
-
-      for (var doc in snapshot.docs) {
+      firebaseOrders = snapshot.docs.map((doc) {
         var data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id; // เพิ่ม order id ลงไปใน map
+        return {
+          'cusCoordinate': data['Cus_coordinate']?.toString() ?? '',
+          'resCoordinate': data['Res_coordinate']?.toString() ?? '',
+          'order_id': data['order_id']?.toString() ?? '',
+        };
+      }).toList();
 
-        // ถ้ามีตำแหน่งปัจจุบัน ให้ตรวจสอบระยะทาง
-        if (_currentPosition != null) {
-          // ดึงข้อมูลร้านเพื่อตรวจสอบ coordinate
-          var resInfo = _restaurantMap[data['res_id']];
-          if (resInfo == null) {
-            await loadRestaurant(data['res_id']);
-            resInfo = _restaurantMap[data['res_id']];
-          }
+      // 3. กรองออเดอร์ตามระยะทาง <= 3 กม.
+      if (_currentPosition != null) {
+        ordersList = sqlOrders.where((order) {
+          var firebaseOrder = firebaseOrders.firstWhere(
+            (e) => e['order_id'] == order.ordId.toString(),
+            orElse: () => {'resCoordinate': ''},
+          );
 
-          if (resInfo != null && resInfo.res_coordinate.isNotEmpty) {
-            var resCoord = parseCoordinates(resInfo.res_coordinate);
-            double distance = calculateDistance(
-              _currentPosition!.latitude,
-              _currentPosition!.longitude,
-              resCoord['lat']!,
-              resCoord['lng']!,
-            );
+          var resCoord = parseCoordinates(firebaseOrder['resCoordinate'] ?? '');
+          double distanceToRes = calculateDistance(
+            _currentPosition!.latitude,
+            _currentPosition!.longitude,
+            resCoord['lat']!,
+            resCoord['lng']!,
+          );
 
-            // เพิ่มเฉพาะออเดอร์ที่ระยะทางไม่เกิน 3 กิโลเมตร
-            if (distance <= 3.0) {
-              filteredOrders.add(data);
-            }
-          } else {
-            // ถ้าไม่มี coordinate ก็เพิ่มเข้าไป (กรณี fallback)
-            filteredOrders.add(data);
-          }
-        } else {
-          // ถ้าไม่มีตำแหน่งปัจจุบัน ให้แสดงทั้งหมด
-          filteredOrders.add(data);
-        }
+          return distanceToRes <= 3.0; // <= 3 กม.
+        }).toList();
+      } else {
+        // fallback: ถ้าไม่ได้ตำแหน่ง Rider แสดงทั้งหมด
+        ordersList = sqlOrders;
       }
-
-      setState(() {
-        ordersList = filteredOrders;
-      });
     } catch (e) {
       print('เกิดข้อผิดพลาดในการโหลดคำสั่งซื้อ: $e');
       Fluttertoast.showToast(msg: 'ไม่สามารถโหลดออเดอร์ได้');

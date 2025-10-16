@@ -18,7 +18,7 @@ import 'package:geocoding/geocoding.dart';
 
 class RiderOrderPage extends StatefulWidget {
   final List<dynamic> mergedMenus;
-  final double deliveryFee;
+  final int deliveryFee;
   final int order_id;
   final int order_status;
   final String? previousPage;
