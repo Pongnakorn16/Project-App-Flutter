@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:mobile_miniproject_app/models/response/AllMenu_Res_GetRes.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/CusCartGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
@@ -26,6 +27,7 @@ class ShareData with ChangeNotifier {
   List<ResTypeGetResponse> restaurant_type = [];
   List<ResInfoResponse> restaurant_near = [];
   List<ResInfoResponse> restaurant_all = [];
+  List<AllMenu_Res_GetResponse> menu_restaurant_all = [];
   List<MenuInfoGetResponse> all_menu_in_res = [];
 
   List<GetSendOrder> send_order_share = [];

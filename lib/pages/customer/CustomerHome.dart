@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/main.dart';
+import 'package:mobile_miniproject_app/models/response/AllMenu_Res_GetRes.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/CusCartGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
@@ -15,6 +16,7 @@ import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
 import 'package:mobile_miniproject_app/pages/Add_Item.dart';
 import 'package:mobile_miniproject_app/pages/customer/Cart.dart';
 import 'package:mobile_miniproject_app/pages/customer/CusAllOrder.dart';
+import 'package:mobile_miniproject_app/pages/customer/CusReview.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/RestaurantInfo.dart';
 import 'package:mobile_miniproject_app/shared/firebase_message_service.dart';
@@ -307,31 +309,55 @@ class _HomePageState extends State<CustomerHomePage> with RouteAware {
   }
 
   Widget buildSearchResultView() {
+    log(context.watch<ShareData>().restaurant_all.toString());
+    final MenuAllRestaurant = context.watch<ShareData>().menu_restaurant_all;
     final allRestaurants = context.watch<ShareData>().restaurant_all;
     final topAdd = context.watch<ShareData>().customer_addresses;
 
     double customerLat = 0.0;
     double customerLng = 0.0;
 
+    // ✅ ตรวจสอบพิกัดลูกค้า
     if (topAdd.isNotEmpty) {
-      final coordsCus = topAdd[0].ca_coordinate.split(',');
-      customerLat = double.tryParse(coordsCus[0].trim()) ?? 0.0;
-      customerLng = double.tryParse(coordsCus[1].trim()) ?? 0.0;
+      final coordinate = topAdd[0].ca_coordinate ?? '';
+      if (coordinate.isNotEmpty) {
+        final coordsCus = coordinate.split(',');
+        if (coordsCus.length >= 2) {
+          customerLat = double.tryParse(coordsCus[0].trim()) ?? 0.0;
+          customerLng = double.tryParse(coordsCus[1].trim()) ?? 0.0;
+        } else {
+          log("⚠️ พิกัดลูกค้าไม่ครบ: $coordinate");
+        }
+      }
     }
 
-    final filtered = allRestaurants
+    final searchLower = searchQuery.toLowerCase();
+
+    var filtered = allRestaurants
         .where(
             (r) => r.res_name.toLowerCase().contains(searchQuery.toLowerCase()))
         .toList();
 
+    // ค้นหาจากเมนู
     if (filtered.isEmpty) {
-      return Center(
-        child: Text(
-          "ไม่พบร้านที่มีชื่อหรือชื่อเมนูที่ตรงกัน",
-          style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-          textAlign: TextAlign.center,
-        ),
-      );
+      final matchedMenus = MenuAllRestaurant.where(
+          (m) => m.menu_name.toLowerCase().contains(searchLower)).toList();
+
+      final matchedResNames = matchedMenus.map((m) => m.res_name).toSet();
+
+      filtered = allRestaurants
+          .where((r) => matchedResNames.contains(r.res_name))
+          .toList();
+
+      if (filtered.isEmpty) {
+        return Center(
+          child: Text(
+            "ไม่พบร้านที่มีชื่อหรือชื่อเมนูที่ตรงกัน",
+            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+            textAlign: TextAlign.center,
+          ),
+        );
+      }
     }
 
     double calculateDistance(
@@ -353,16 +379,46 @@ class _HomePageState extends State<CustomerHomePage> with RouteAware {
       itemBuilder: (context, index) {
         final res = filtered[index];
 
-        final coordsRes = res.res_coordinate.split(',');
-        final double resLat = double.tryParse(coordsRes[0].trim()) ?? 0.0;
-        final double resLng = double.tryParse(coordsRes[1].trim()) ?? 0.0;
+        // ✅ ตรวจสอบพิกัดร้าน (รวมกรณีว่างเปล่า)
+        final coordinate = res.res_coordinate ?? '';
+        double resLat = 0.0;
+        double resLng = 0.0;
+        double distanceKm = 0.0;
 
-        double distanceKm =
-            calculateDistance(customerLat, customerLng, resLat, resLng);
+        if (coordinate.isNotEmpty) {
+          final coordsRes = coordinate.split(',');
+          if (coordsRes.length >= 2) {
+            resLat = double.tryParse(coordsRes[0].trim()) ?? 0.0;
+            resLng = double.tryParse(coordsRes[1].trim()) ?? 0.0;
+            distanceKm =
+                calculateDistance(customerLat, customerLng, resLat, resLng);
+          } else {
+            log("⚠️ พิกัดร้าน ${res.res_name} ไม่ครบ: $coordinate");
+          }
+        } else {
+          log("⚠️ พิกัดร้าน ${res.res_name} เป็นค่าว่าง");
+        }
+
+        // ✅ ตรวจสอบ Image URL
+        final imageUrl = res.res_image ?? '';
+        final isValidImage = imageUrl.isNotEmpty &&
+            (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'));
 
         return ListTile(
-          leading: Image.network(res.res_image, width: 50, height: 50),
-          title: Text(res.res_name),
+          leading: isValidImage
+              ? Image.network(
+                  imageUrl,
+                  width: 50,
+                  height: 50,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.restaurant, size: 40),
+                )
+              : const Icon(Icons.restaurant, size: 40, color: Colors.grey),
+          title: Text(
+            res.res_name,
+            overflow: TextOverflow.ellipsis, // ✅ แก้ overflow
+          ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -370,11 +426,26 @@ class _HomePageState extends State<CustomerHomePage> with RouteAware {
                 children: [
                   const Icon(Icons.star, color: Colors.amber, size: 20),
                   const SizedBox(width: 4),
-                  Text("rating: ${res.res_rating.toStringAsFixed(1)}"),
+                  Flexible(
+                    // ✅ แก้ overflow
+                    child: Text(
+                      "rating: ${res.res_rating.toStringAsFixed(1)}",
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 4),
-              Text("ระยะทาง: ${distanceKm.toStringAsFixed(2)} กม."),
+              Text(
+                distanceKm > 0
+                    ? "ระยะทาง: ${distanceKm.toStringAsFixed(2)} กม."
+                    : "ไม่สามารถคำนวณระยะทางได้",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: distanceKm > 0 ? Colors.black87 : Colors.grey,
+                ),
+                overflow: TextOverflow.ellipsis, // ✅ แก้ overflow
+              ),
             ],
           ),
           onTap: () {
@@ -757,6 +828,15 @@ class _HomePageState extends State<CustomerHomePage> with RouteAware {
           log("ร้าน: ${res.res_name}, พิกัด: ${res.res_coordinate}");
         }
         context.read<ShareData>().restaurant_all = list;
+      }
+
+      final menu_all = await http.get(Uri.parse("$url/db/loadAllMenu"));
+      if (menu_all.statusCode == 200) {
+        final List<AllMenu_Res_GetResponse> list =
+            (json.decode(menu_all.body) as List)
+                .map((e) => AllMenu_Res_GetResponse.fromJson(e))
+                .toList();
+        context.read<ShareData>().menu_restaurant_all = list;
       }
 
       final cus_Cart =

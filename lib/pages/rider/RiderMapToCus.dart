@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:http/http.dart' as http;
+import 'package:mobile_miniproject_app/pages/rider/RiderConfirm.dart';
 
 class RiderMapToCusPage extends StatefulWidget {
   final int ord_id;
@@ -340,9 +341,15 @@ class _RiderMapToCusPageState extends State<RiderMapToCusPage> {
                   right: 20,
                   child: ElevatedButton(
                     onPressed: () {
-                      // ทำสิ่งที่ต้องการ
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              RiderConfirmPage(ord_id: widget.ord_id),
+                        ),
+                      );
                     },
-                    child: const Text("ส่งอาหารให้ลูกค้า"),
+                    child: const Text("ยืนยันการส่งอาหารให้ลูกค้า"),
                   ),
                 ),
             ],

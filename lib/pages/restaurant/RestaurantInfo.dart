@@ -206,7 +206,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "ไปที่ตะกร้า (${totalCount} รายการ)",
+                    "ในตะกร้า (${totalCount} รายการ)",
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -231,7 +231,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
                           orl_id: context.read<ShareData>().orl_id));
                     },
                     child: const Text(
-                      "ดูตะกร้า",
+                      "สั่งซื้อ",
                       style: TextStyle(color: Colors.white, fontSize: 16),
                     ),
                   ),

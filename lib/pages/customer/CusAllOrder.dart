@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusOrderGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
+import 'package:mobile_miniproject_app/pages/customer/CusReview.dart';
 import 'package:mobile_miniproject_app/pages/customer/Order.dart';
 import 'package:mobile_miniproject_app/shared/firebase_message_service.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
@@ -80,18 +81,29 @@ class _CusallorderPageState extends State<CusallorderPage> {
 
                       return GestureDetector(
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => OrderPage(
-                                mergedMenus: order.orlOrderDetail,
-                                deliveryFee: order.ordDevPrice,
-                                order_id: order.ordId,
-                                order_status: order.ordStatus,
-                                previousPage: 'CusAllOrderPage',
+                          if (order.ordStatus < 3) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => OrderPage(
+                                  mergedMenus: order.orlOrderDetail,
+                                  deliveryFee: order.ordDevPrice,
+                                  order_id: order.ordId,
+                                  order_status: order.ordStatus,
+                                  previousPage: 'CusAllOrderPage',
+                                ),
                               ),
-                            ),
-                          );
+                            );
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CusReviewPage(
+                                  ord_id: order.ordId,
+                                ),
+                              ),
+                            );
+                          }
                         },
                         child: Card(
                           margin: EdgeInsets.symmetric(vertical: 6),

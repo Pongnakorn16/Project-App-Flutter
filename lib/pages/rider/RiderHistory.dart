@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusInfoGetRes.dart';
+import 'package:mobile_miniproject_app/models/response/CusOrderGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/pages/Home_Send.dart';
@@ -44,7 +45,7 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
   late PageController _pageController;
   String url = '';
   bool isLoading = true;
-  List<Map<String, dynamic>> ordersList = []; // เก็บ order
+  List<CusOrderGetResponse> ordersList = []; // เก็บ order
   Map<int, CusInfoGetResponse> _customerMap = {};
 
   @override
@@ -75,20 +76,18 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
                       var order = ordersList[index];
 
                       // ดึงข้อมูลร้านจาก map
-                      var cusInfo = _customerMap[order['cus_id']];
+                      var cusInfo = _customerMap[order.cusId];
 
                       // เรียกโหลดร้านถ้ายังไม่มีใน map
                       if (cusInfo == null) {
-                        loadCus(order['cus_id']);
+                        loadCus(order.cusId);
                       }
 
                       // แปลงวันเวลา
-                      var timestamp = order['Order_date'];
-                      DateTime orderDate = timestamp != null
-                          ? (timestamp as Timestamp).toDate()
-                          : DateTime.now();
+                      DateTime orderDate = order.ordDate;
                       String formattedDate =
-                          DateFormat('dd/MM/yyyy HH:mm').format(orderDate);
+                          DateFormat('dd/MM/yyyy เวลา HH:mm น.')
+                              .format(orderDate.toLocal());
 
                       return GestureDetector(
                           onTap: () {
@@ -96,10 +95,10 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => ResOrderPage(
-                                  mergedMenus: order['menus'],
-                                  deliveryFee: order['deliveryFee'],
-                                  order_id: order['order_id'],
-                                  order_status: order['Order_status'],
+                                  mergedMenus: order.orlOrderDetail,
+                                  deliveryFee: order.ordDevPrice,
+                                  order_id: order.ordId,
+                                  order_status: order.ordStatus,
                                   previousPage: 'ResOrderPage',
                                 ),
                               ),
@@ -120,7 +119,7 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          "หมายเลขออเดอร์ : ${order['order_id'] ?? '-'}",
+                                          "หมายเลขออเดอร์ : ${order.ordId ?? '-'}",
                                           style: TextStyle(
                                               fontSize: 12,
                                               color: Colors.grey[700]),
@@ -135,8 +134,7 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
                                               fontWeight: FontWeight.bold),
                                         ),
                                         SizedBox(height: 4),
-                                        buildStatusBox(
-                                            order['Order_status'] ?? -1),
+                                        buildStatusBox(order.ordStatus ?? -1),
                                         SizedBox(height: 4),
                                         Text("วันที่: $formattedDate"),
                                       ],
@@ -144,7 +142,7 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
                                   ),
 
                                   // ปุ่มทางขวา
-                                  if ((order['Order_status'] ?? -1) == 0)
+                                  if ((order.ordStatus ?? -1) == 0)
                                     Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -153,7 +151,7 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
                                           child: ElevatedButton(
                                             onPressed: () {
                                               updateOrderStatus(
-                                                  order['order_id'].toString(),
+                                                  order.ordId.toString(),
                                                   1); // กำลังเตรียมอาหาร → 1
                                             },
                                             style: ElevatedButton.styleFrom(
@@ -179,7 +177,7 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
                                           child: ElevatedButton(
                                             onPressed: () {
                                               updateOrderStatus(
-                                                  order['order_id'].toString(),
+                                                  order.ordId.toString(),
                                                   -2); // ปฏิเสธ → -2
                                             },
                                             style: ElevatedButton.styleFrom(
@@ -201,7 +199,7 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
                                         ),
                                       ],
                                     )
-                                  else if ((order['Order_status'] ?? -1) == 1)
+                                  else if ((order.ordStatus ?? -1) == 1)
                                     Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -211,7 +209,7 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
                                           child: ElevatedButton(
                                             onPressed: () {
                                               updateOrderStatus(
-                                                  order['order_id'].toString(),
+                                                  order.ordId.toString(),
                                                   2); // กำลังส่ง → 2
                                             },
                                             style: ElevatedButton.styleFrom(
@@ -304,19 +302,17 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
     });
 
     try {
-      int res_id = context.read<ShareData>().user_info_send.uid;
-      CollectionReference ordersCollection =
-          FirebaseFirestore.instance.collection('BP_Order_detail');
+      int rid_id = context.read<ShareData>().user_info_send.uid;
+      final rid_ResInfo =
+          await http.get(Uri.parse("$url/db/loadRidHisOrder/$rid_id"));
+      final List<CusOrderGetResponse> list =
+          (json.decode(rid_ResInfo.body) as List)
+              .map((e) => CusOrderGetResponse.fromJson(e))
+              .toList();
 
-      QuerySnapshot snapshot =
-          await ordersCollection.where('res_id', isEqualTo: res_id).get();
-
-      ordersList.clear();
-
-      for (var doc in snapshot.docs) {
-        var data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id; // เพิ่ม order id ลงไปใน map
-        ordersList.add(data);
+      if (rid_ResInfo.statusCode == 200) {
+        ordersList.clear();
+        ordersList = list;
       }
     } catch (e) {
       print('เกิดข้อผิดพลาดในการโหลดคำสั่งซื้อ: $e');

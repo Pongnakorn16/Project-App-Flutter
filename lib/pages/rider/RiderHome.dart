@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:geolocator/geolocator.dart'; // เพิ่มสำหรับตำแหน่ง
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
@@ -21,6 +21,7 @@ import 'package:mobile_miniproject_app/pages/rider/RiderHistory.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderMapToRes.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderOrder.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderProfile.dart';
+import 'package:mobile_miniproject_app/pages/rider/RiderVerifiPage.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 
@@ -37,22 +38,31 @@ class _RiderHomePageState extends State<RiderHomePage>
   late PageController _pageController;
   String url = '';
   bool isLoading = true;
-  List<CusOrderGetResponse> ordersList = []; // เก็บ order
+  List<CusOrderGetResponse> ordersList = [];
   Map<int, CusInfoGetResponse> _customerMap = {};
-  Map<int, ResInfoResponse> _restaurantMap = {}; // เพิ่ม map สำหรับร้านอาหาร
+  Map<int, ResInfoResponse> _restaurantMap = {};
   Map<int, CusAddressGetResponse> _cusAddMap = {};
   List<CusOrderGetResponse> sqlOrders = [];
   List<Map<String, String>> firebaseOrders = [];
-  Position? _currentPosition; // ตำแหน่งปัจจุบัน
+  Position? _currentPosition;
+  int RiderVerStatus = 0;
+  String vehicleImg = '';
+  String driveLicenseImg = '';
 
   @override
   void initState() {
     super.initState();
-    // เพิ่ม observer เพื่อตรวจสอบ app lifecycle
     WidgetsBinding.instance.addObserver(this);
 
-    Configuration.getConfig().then((value) {
+    Configuration.getConfig().then((value) async {
       url = value['apiEndpoint'];
+      await loadRiderStatus();
+
+      // เช็คสถานะไรเดอร์หลังโหลดข้อมูล
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkRiderVerification();
+      });
+
       _initLocationAndLoadOrders();
     });
     _pageController = PageController();
@@ -60,57 +70,151 @@ class _RiderHomePageState extends State<RiderHomePage>
 
   @override
   void dispose() {
-    // ลบ observer เมื่อ dispose
     WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
     super.dispose();
   }
 
-  // ฟังก์ชันจัดการเมื่อ app กลับมา active
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
     if (state == AppLifecycleState.resumed) {
-      // เมื่อ app กลับมา active ให้รีเฟรชข้อมูล
       if (_selectedIndex == 0) {
-        // ถ้าอยู่ที่หน้า Home
         _refreshData();
       }
     }
   }
 
-  // ฟังก์ชันรีเฟรชข้อมูลทั้งหมด
+  // ฟังก์ชันเช็คการยืนยันตัวตนไรเดอร์
+  void _checkRiderVerification() {
+    print('🔍 เช็คสถานะไรเดอร์:');
+    print('RiderStatus: $RiderVerStatus');
+    print('vehicleImg: "$vehicleImg"');
+    print('driveLicenseImg: "$driveLicenseImg"');
+
+    // เช็คทั้ง empty และ null
+    bool isVehicleImgEmpty = vehicleImg.isEmpty || vehicleImg == 'null';
+    bool isDriveLicenseImgEmpty =
+        driveLicenseImg.isEmpty || driveLicenseImg == 'null';
+
+    if (RiderVerStatus == 0 && (isVehicleImgEmpty || isDriveLicenseImgEmpty)) {
+      print('✅ แสดง popup ยืนยันตัวตน');
+      _showVerificationDialog();
+    } else {
+      print('❌ ไม่แสดง popup');
+    }
+  }
+
+  // แสดง popup แจ้งเตือน
+  void _showVerificationDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // ไม่สามารถปิดด้วยการแตะด้านนอกได้
+      builder: (BuildContext context) {
+        return WillPopScope(
+          onWillPop: () async => false, // ปิดการกดปุ่ม back
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded,
+                    color: Colors.orange, size: 32),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'ยืนยันตัวตนไรเดอร์',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ท่านยังไม่ได้ยืนยันตัวตนไรเดอร์',
+                  style: TextStyle(fontSize: 16),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'กรุณายืนยันตัวตนก่อนการทำงาน',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // ปิด dialog
+                    // นำทางไปหน้าถ่ายรูปยืนยัน
+                    // TODO: เปลี่ยนเป็นหน้าที่ต้องการไป
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            RiderVerificationPage(), // เปลี่ยนตามหน้าจริง
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    padding: EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    'ไปยืนยันตัวตน',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _refreshData() async {
     print("กำลังรีเฟรชข้อมูล...");
 
-    // Clear cache เพื่อให้ข้อมูลอัพเดท
     setState(() {
       _customerMap.clear();
       _restaurantMap.clear();
       ordersList.clear();
     });
 
-    // โหลดข้อมูลใหม่
     await _initLocationAndLoadOrders();
   }
 
-  // ฟังก์ชันรวม: ขอ GPS แล้วโหลดออเดอร์เลย
   Future<void> _initLocationAndLoadOrders() async {
     try {
       Position position = await _getCurrentLocation();
       setState(() {
         _currentPosition = position;
       });
-      LoadAllOrder(context); // โหลดออเดอร์หลังจากได้ตำแหน่งแล้ว
+      LoadAllOrder(context);
     } catch (e) {
       print("ไม่สามารถดึงตำแหน่งได้: $e");
       Fluttertoast.showToast(msg: "กรุณาเปิด GPS");
-      LoadAllOrder(context); // fallback โหลดออเดอร์ทั้งหมด
+      LoadAllOrder(context);
     }
   }
 
-  // ฟังก์ชันขออนุญาตและรับตำแหน่งปัจจุบัน
   Future<Position> _getCurrentLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
@@ -134,7 +238,6 @@ class _RiderHomePageState extends State<RiderHomePage>
         desiredAccuracy: LocationAccuracy.high);
   }
 
-  // ฟังก์ชันขออนุญาตและรับตำแหน่งปัจจุบัน
   Future<LatLng> getCurrentLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
@@ -159,9 +262,8 @@ class _RiderHomePageState extends State<RiderHomePage>
     return LatLng(position.latitude, position.longitude);
   }
 
-  // ฟังก์ชันคำนวณระยะทางระหว่างสองจุด (Haversine formula)
   double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const double earthRadius = 6371; // รัศมีของโลกเป็นกิโลเมตร
+    const double earthRadius = 6371;
 
     double dLat = _toRadians(lat2 - lat1);
     double dLon = _toRadians(lon2 - lon1);
@@ -182,7 +284,6 @@ class _RiderHomePageState extends State<RiderHomePage>
     return degree * pi / 180;
   }
 
-  // ฟังก์ชันแยก coordinate
   Map<String, double> parseCoordinates(String? coordinates) {
     if (coordinates == null || coordinates.isEmpty) {
       return {'lat': 0.0, 'lng': 0.0};
@@ -208,7 +309,6 @@ class _RiderHomePageState extends State<RiderHomePage>
       _selectedIndex = index;
     });
 
-    // ถ้าเป็นหน้า Home (index 0) ให้รีเฟรชข้อมูล
     if (index == 0) {
       _refreshData();
     }
@@ -225,7 +325,6 @@ class _RiderHomePageState extends State<RiderHomePage>
       _selectedIndex = index;
     });
 
-    // ถ้าเป็นหน้า Home (index 0) ให้รีเฟรชข้อมูล
     if (index == 0) {
       _refreshData();
     }
@@ -238,10 +337,8 @@ class _RiderHomePageState extends State<RiderHomePage>
         controller: _pageController,
         onPageChanged: _onPageChanged,
         children: [
-          // หน้า Order
           _buildOrderPage(),
           RiderHistoryPage(),
-          // หน้า Profile
           RiderProfilePage(),
         ],
       ),
@@ -276,7 +373,6 @@ class _RiderHomePageState extends State<RiderHomePage>
         automaticallyImplyLeading: false,
       ),
       body: RefreshIndicator(
-        // เพิ่ม Pull-to-refresh
         onRefresh: _refreshData,
         child: isLoading
             ? Center(child: CircularProgressIndicator())
@@ -306,32 +402,25 @@ class _RiderHomePageState extends State<RiderHomePage>
                         itemBuilder: (context, index) {
                           var order = ordersList[index];
 
-                          // ดึงข้อมูลลูกค้าจาก map
                           var cusInfo = _customerMap[order.cusId];
                           var cusAdd = _cusAddMap[order.cusId];
                           var resInfo = _restaurantMap[order.resId];
 
-                          // เรียกโหลดลูกค้าถ้ายังไม่มีใน map
                           if (cusInfo == null) {
                             loadCus(order.cusId);
                           }
 
-                          // เรียกโหลดร้านถ้ายังไม่มีใน map
                           if (resInfo == null) {
                             loadRestaurant(order.resId);
                           }
 
-                          // แปลงวันเวลา
                           DateTime orderDate = order.ordDate;
                           String formattedDate =
                               DateFormat('dd/MM/yyyy เวลา HH:mm น.')
                                   .format(orderDate.toLocal());
 
-                          // คำนวณระยะทาง
                           double distance = 0.0;
                           String distanceText = "คำนวณระยะทาง...";
-
-// ใช้พิกัดจาก Firebase
 
                           var firebaseOrder = firebaseOrders.firstWhere(
                             (e) => e['order_id'] == order.ordId.toString(),
@@ -355,7 +444,6 @@ class _RiderHomePageState extends State<RiderHomePage>
 
                           return GestureDetector(
                               onTap: () async {
-                                // รอให้หน้าใหม่ปิดแล้วค่อยรีเฟรช
                                 await Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -368,7 +456,6 @@ class _RiderHomePageState extends State<RiderHomePage>
                                     ),
                                   ),
                                 );
-                                // รีเฟรชข้อมูลเมื่อกลับมา
                                 _refreshData();
                               },
                               child: Card(
@@ -377,10 +464,9 @@ class _RiderHomePageState extends State<RiderHomePage>
                                 child: Padding(
                                   padding: EdgeInsets.all(8.0),
                                   child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment
-                                        .center, // จัดให้ทุกอย่างอยู่กึ่งกลางแนวตั้ง
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
                                     children: [
-                                      // ฝั่งซ้าย (ข้อมูลออเดอร์)
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment:
@@ -425,8 +511,6 @@ class _RiderHomePageState extends State<RiderHomePage>
                                           ],
                                         ),
                                       ),
-
-                                      // ฝั่งขวา (ปุ่มรับออเดอร์)
                                       if ((order.ordStatus ?? -1) == 1)
                                         SizedBox(
                                           width: 100,
@@ -486,7 +570,6 @@ class _RiderHomePageState extends State<RiderHomePage>
           await http.put(Uri.parse("$url/db/AddRider/$riderId/$orderId"));
 
       if (Add_rider.statusCode == 200) {
-        // รีโหลดรายการคำสั่งซื้อ
         LoadAllOrder(context);
         setState(() {});
       } else {
@@ -495,7 +578,6 @@ class _RiderHomePageState extends State<RiderHomePage>
       }
 
       Fluttertoast.showToast(msg: 'รับออเดอร์เรียบร้อย');
-      // รีเฟรชข้อมูลทันทีหลังรับออเดอร์
       _refreshData();
     } catch (e) {
       print('รับออเดอร์ล้มเหลว: $e');
@@ -552,7 +634,6 @@ class _RiderHomePageState extends State<RiderHomePage>
     });
 
     try {
-      // ดึง SQL
       final Rider_All_Order =
           await http.get(Uri.parse("$url/db/loadRiderOrder"));
       if (Rider_All_Order.statusCode == 200) {
@@ -560,13 +641,11 @@ class _RiderHomePageState extends State<RiderHomePage>
         sqlOrders =
             jsonList.map((e) => CusOrderGetResponse.fromJson(e)).toList();
 
-        // ใส่ใน ordersList ด้วย
         setState(() {
           ordersList = sqlOrders;
         });
       }
 
-      // ดึง Firebase
       CollectionReference ordersCollection =
           FirebaseFirestore.instance.collection('BP_Order_detail');
 
@@ -581,7 +660,6 @@ class _RiderHomePageState extends State<RiderHomePage>
         };
       }).toList();
 
-      // 3. กรองออเดอร์ตามระยะทาง <= 3 กม.
       if (_currentPosition != null) {
         ordersList = sqlOrders.where((order) {
           var firebaseOrder = firebaseOrders.firstWhere(
@@ -597,10 +675,9 @@ class _RiderHomePageState extends State<RiderHomePage>
             resCoord['lng']!,
           );
 
-          return distanceToRes <= 3.0; // <= 3 กม.
+          return distanceToRes <= 3.0;
         }).toList();
       } else {
-        // fallback: ถ้าไม่ได้ตำแหน่ง Rider แสดงทั้งหมด
         ordersList = sqlOrders;
       }
     } catch (e) {
@@ -645,7 +722,28 @@ class _RiderHomePageState extends State<RiderHomePage>
     }
   }
 
-  // ฟังก์ชันโหลดข้อมูลร้านอาหาร
+  Future<void> loadRiderStatus() async {
+    final rid = context.read<ShareData>().user_info_send.uid;
+    try {
+      final res_ResInfo =
+          await http.get(Uri.parse("$url/db/get_ridStatus/$rid"));
+
+      if (res_ResInfo.statusCode == 200) {
+        final data = jsonDecode(res_ResInfo.body);
+
+        if (data is List && data.isNotEmpty) {
+          setState(() {
+            RiderVerStatus = data[0]['rid_active_status'] ?? 0;
+            vehicleImg = data[0]['Vehicle_img']?.toString() ?? '';
+            driveLicenseImg = data[0]['Drive_lisense_img']?.toString() ?? '';
+          });
+        }
+      }
+    } catch (e) {
+      print('ไม่สามารถโหลดข้อมูลไรเดอร์: $e');
+    }
+  }
+
   Future<void> loadRestaurant(int res_id) async {
     if (_restaurantMap.containsKey(res_id)) {
       return;
