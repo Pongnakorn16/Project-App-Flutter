@@ -13,8 +13,6 @@ import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/CusCartGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
-import 'package:mobile_miniproject_app/pages/Add_Item.dart';
-import 'package:mobile_miniproject_app/pages/customer/Cart.dart';
 import 'package:mobile_miniproject_app/pages/customer/CusAllOrder.dart';
 import 'package:mobile_miniproject_app/pages/customer/CusReview.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';

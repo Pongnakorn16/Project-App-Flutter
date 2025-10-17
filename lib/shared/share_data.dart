@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:mobile_miniproject_app/models/response/AllMenu_Res_GetRes.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/CusCartGetRes.dart';
-import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
 import 'package:mobile_miniproject_app/models/response/MenuInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
@@ -29,11 +28,6 @@ class ShareData with ChangeNotifier {
   List<ResInfoResponse> restaurant_all = [];
   List<AllMenu_Res_GetResponse> menu_restaurant_all = [];
   List<MenuInfoGetResponse> all_menu_in_res = [];
-
-  List<GetSendOrder> send_order_share = [];
-  List<GetSendOrder> snack_order_share = [];
-  List<GetSendOrder> receive_order_share = [];
-  List<GetSendOrder> rider_order_share = [];
 
   StreamSubscription? listener;
   List<CusCartGetResponse> cus_all_cart = [];
