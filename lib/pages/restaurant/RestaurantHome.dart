@@ -220,8 +220,8 @@ class _HomePageState extends State<RestaurantHomePage> {
                         ),
                       ),
                       ElevatedButton.icon(
-                        onPressed: () {
-                          loadAllOpCat();
+                        onPressed: () async {
+                          await loadAllOpCat();
                           POP_UPallOpcat();
                         },
                         icon: const Icon(Icons.playlist_add),
@@ -887,7 +887,7 @@ class _HomePageState extends State<RestaurantHomePage> {
                       const Padding(
                         padding: EdgeInsets.all(8.0),
                         child: Text(
-                          "เมนูนี้ยังไม่ได้เลือกหมวดหมู่เพิ่มเติม",
+                          "ร้านไม่มีหมวดหมู่เพิ่มเติม",
                           style: TextStyle(color: Colors.orange),
                         ),
                       ),
