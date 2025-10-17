@@ -12,9 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/customer_regis_post_req.dart';
-import 'package:mobile_miniproject_app/models/request/user_regis_post_req.dart';
 import 'package:mobile_miniproject_app/pages/login/Login.dart';
-import 'package:mobile_miniproject_app/pages/Home_Send.dart';
 import 'package:mobile_miniproject_app/pages/register/Register_Restaurant.dart';
 import 'package:mobile_miniproject_app/pages/register/Register_Rider.dart';
 

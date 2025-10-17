@@ -19,10 +19,7 @@ import 'package:mobile_miniproject_app/models/request/Rider_pro_edit_post_req.da
 import 'package:mobile_miniproject_app/models/request/user_edit_post_req.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/CusInfoGetRes.dart';
-import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
 import 'package:mobile_miniproject_app/models/response/RiderInfoGetRes.dart';
-import 'package:mobile_miniproject_app/pages/Add_Item.dart';
-import 'package:mobile_miniproject_app/pages/Home.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerHome.dart';
 import 'package:mobile_miniproject_app/pages/login/Login.dart';
 import 'package:mobile_miniproject_app/shared/firebase_message_service.dart';

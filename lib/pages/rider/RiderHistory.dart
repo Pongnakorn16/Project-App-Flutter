@@ -14,19 +14,15 @@ import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/CusOrderGetRes.dart';
-import 'package:mobile_miniproject_app/models/response/GetSendOrder_Res.dart';
-import 'package:mobile_miniproject_app/models/response/GetUserSearch_Res.dart';
-import 'package:mobile_miniproject_app/pages/Home_Send.dart';
+
 import 'package:mobile_miniproject_app/pages/restaurant/ResOrder.dart';
-import 'package:mobile_miniproject_app/pages/rider/RiderHistoryDetail.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderHome.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderOrder.dart';
-import 'package:mobile_miniproject_app/pages/rider/RiderReceive.dart';
+
 import 'package:mobile_miniproject_app/pages/rider/RiderHistory.dart';
-import 'package:mobile_miniproject_app/pages/rider/RiderOrderInfo.dart';
+
 import 'package:mobile_miniproject_app/pages/rider/RiderProfile.dart';
-import 'package:mobile_miniproject_app/pages/Shop.dart';
-import 'package:mobile_miniproject_app/pages/Ticket.dart';
+
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
