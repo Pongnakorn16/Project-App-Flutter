@@ -12,12 +12,14 @@ import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/Cus_pro_edit_post_req.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/CusInfoGetRes.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerHome.dart';
+import 'package:mobile_miniproject_app/pages/customer/TopUp.dart';
 import 'package:mobile_miniproject_app/pages/login/Login.dart';
 import 'package:mobile_miniproject_app/shared/firebase_message_service.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
@@ -113,7 +115,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: Column(
                     children: [
                       Padding(
-                        padding: const EdgeInsets.only(top: 80.0, bottom: 30.0),
+                        padding: const EdgeInsets.only(top: 80.0, bottom: 10.0),
                         child: GestureDetector(
                           onTap: () {
                             uploadProfileImage();
@@ -155,6 +157,51 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ],
                           ),
+                        ),
+                      ),
+
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => TopupPage()),
+                          );
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // เหรียญ D
+                            Container(
+                              width: 25,
+                              height: 25,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.amber,
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  'D',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(
+                                width: 6), // เว้นระยะระหว่างเหรียญกับตัวเลข
+                            Text(
+                              NumberFormat('#,###').format(context
+                                  .read<ShareData>()
+                                  .user_info_send
+                                  .balance),
+                              style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white),
+                            ),
+                          ],
                         ),
                       ),
 
@@ -968,6 +1015,18 @@ class _ProfilePageState extends State<ProfilePage> {
     int userId = context.read<ShareData>().user_info_send.uid;
     log("${userId} + IDDDDDIIIIIIIIIIIIIIIIIIDDDDDDDDDDDDDDDIDDDDDDDDDDDDDDDDD");
 
+    final cus_balance =
+        await http.get(Uri.parse("$url/db/loadCusbalance/$userId"));
+    print('Status code: ${cus_balance.statusCode}');
+    print('Response body: ${cus_balance.body}');
+
+    if (cus_balance.statusCode == 200) {
+      final data = jsonDecode(cus_balance.body);
+      final int balance = data['balance'] ?? 0;
+      context.read<ShareData>().user_info_send.balance = balance;
+    } else {
+      Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
+    }
     final res_Add = await http.get(Uri.parse("$url/db/loadCusAdd/$userId"));
     if (res_Add.statusCode == 200) {
       final List<dynamic> jsonResponse = json.decode(res_Add.body);

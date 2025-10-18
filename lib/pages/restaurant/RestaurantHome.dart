@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/get_navigation.dart';
+import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/MenuInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/OpCatGetRes.dart';
@@ -138,13 +139,29 @@ class _HomePageState extends State<RestaurantHomePage> {
                 // Rating
                 Row(
                   children: [
-                    const Icon(Icons.star, color: Colors.yellow, size: 18),
-                    const SizedBox(width: 4),
-                    Text(
-                      "Rating : ${_restaurantInfo[0].res_rating ?? 0.0}",
-                      style: const TextStyle(color: Colors.black),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 4.0, horizontal: 8.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.star,
+                            color: Colors.amber,
+                            size: 20, // ขนาดไอคอนใหญ่ขึ้นเล็กน้อย
+                          ),
+                          const SizedBox(width: 6), // spacing เพิ่มขึ้นเล็กน้อย
+                          Text(
+                            "Rating: ${_restaurantInfo[0].res_rating?.toStringAsFixed(1) ?? "0.0"}",
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w500, // ตัวหนังสือชัดขึ้น
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(width: 10), // เว้นระยะ
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
@@ -172,48 +189,109 @@ class _HomePageState extends State<RestaurantHomePage> {
                         ),
                       ),
                     ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 50),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // เหรียญ D
+                          Container(
+                            width: 25,
+                            height: 25,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.amber,
+                            ),
+                            child: const Center(
+                              child: Text(
+                                'D',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(
+                              width: 6), // เว้นระยะระหว่างเหรียญกับตัวเลข
+                          Text(
+                            NumberFormat('#,###').format(context
+                                .read<ShareData>()
+                                .user_info_send
+                                .balance),
+                            style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.deepPurple),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
 
                 const SizedBox(height: 8),
                 // Description
-                Row(
-                  children: [
-                    const Icon(Icons.description_outlined,
-                        color: Colors.black, size: 18),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        "Description : ${_restaurantInfo[0].res_description ?? ''}",
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.black87,
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 6.0, horizontal: 4.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.description_outlined,
+                        color: Colors.deepPurple, // เปลี่ยนสีให้เด่นขึ้น
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8), // spacing เพิ่มขึ้น
+                      Flexible(
+                        child: Text(
+                          "Description: ${_restaurantInfo[0].res_description ?? 'ไม่มีรายละเอียด'}",
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.black87,
+                            fontWeight: FontWeight.w500, // ตัวหนังสือชัดขึ้น
+                            height: 1.4, // ระยะบรรทัดสวยขึ้น
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+
                 // ปุ่มจัดการ
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4),
                   child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                    spacing: 12, // ระยะห่างแนวนอน
+                    runSpacing: 12, // ระยะห่างแนวตั้ง
                     children: [
                       ElevatedButton.icon(
                         onPressed: () => POP_UPCaterogy(),
-                        icon: const Icon(Icons.category),
-                        label: const Text("จัดการหมวดหมู่เมนู"),
+                        icon: const Icon(Icons.category, color: Colors.amber),
+                        label: const Text(
+                          "จัดการหมวดหมู่เมนู",
+                          style: TextStyle(color: Colors.white),
+                        ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
+                          backgroundColor: Colors.deepPurple, // สีเดียวกัน
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
                         ),
                       ),
                       ElevatedButton.icon(
                         onPressed: () => POP_UPMenu(),
-                        icon: const Icon(Icons.fastfood),
-                        label: const Text("จัดการเมนู"),
+                        icon: const Icon(Icons.fastfood, color: Colors.amber),
+                        label: const Text(
+                          "จัดการเมนู",
+                          style: TextStyle(color: Colors.white),
+                        ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
+                          backgroundColor: Colors.deepPurple,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
                         ),
                       ),
                       ElevatedButton.icon(
@@ -221,35 +299,39 @@ class _HomePageState extends State<RestaurantHomePage> {
                           await loadAllOpCat();
                           POP_UPallOpcat();
                         },
-                        icon: const Icon(Icons.playlist_add),
-                        label: const Text("จัดการหมวดหมู่ตัวเลือกเพิ่มเติม"),
+                        icon:
+                            const Icon(Icons.playlist_add, color: Colors.amber),
+                        label: const Text(
+                          "จัดการหมวดหมู่ตัวเลือกเพิ่มเติม",
+                          style: TextStyle(color: Colors.white),
+                        ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
+                          backgroundColor: Colors.deepPurple,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
                         ),
                       ),
                       ElevatedButton.icon(
                         onPressed: () async {
-                          // เปลี่ยนสถานะร้าน
                           await ChangeOpen();
-
-                          // โหลดข้อมูลร้านใหม่
                           await LoadResInfo();
-
-                          // รีเฟรช UI หลังโหลดเสร็จ
-                          if (mounted) {
-                            setState(() {});
-                          }
+                          if (mounted) setState(() {});
                         },
-                        icon: const Icon(Icons.restaurant_menu),
-                        label: const Text("เปิด/ปิด ร้าน"),
+                        icon: const Icon(Icons.restaurant_menu,
+                            color: Colors.amber),
+                        label: const Text(
+                          "เปิด/ปิด ร้าน",
+                          style: TextStyle(color: Colors.white),
+                        ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              const Color.fromARGB(255, 238, 146, 238),
+                          backgroundColor: Colors.deepPurple,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
                         ),
                       ),
                     ],
                   ),
-                ),
+                )
               ],
             ),
           ),
@@ -1068,6 +1150,21 @@ class _HomePageState extends State<RestaurantHomePage> {
 
   Future<void> LoadResInfo() async {
     try {
+      int userId = context.read<ShareData>().user_info_send.uid;
+
+      final res_balance =
+          await http.get(Uri.parse("$url/db/loadResbalance/$userId"));
+      print('Status code: ${res_balance.statusCode}');
+      print('Response body: ${res_balance.body}');
+
+      if (res_balance.statusCode == 200) {
+        final data = jsonDecode(res_balance.body);
+        final int balance = data['balance'] ?? 0;
+        context.read<ShareData>().user_info_send.balance = balance;
+      } else {
+        Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
+      }
+
       final res_ResInfo =
           await http.get(Uri.parse("$url/db/loadResInfo/${ResId}"));
 
@@ -1130,8 +1227,8 @@ class _HomePageState extends State<RestaurantHomePage> {
 
   Future<void> loadAllOpCat() async {
     final res_id = context.read<ShareData>().user_info_send.uid;
-    final res_Cat = await http.get(Uri.parse("$url/db/loadAllOpCat/${ResId}"));
 
+    final res_Cat = await http.get(Uri.parse("$url/db/loadAllOpCat/${ResId}"));
     if (res_Cat.statusCode == 200) {
       final List<OpCatGetResponse> list = (json.decode(res_Cat.body) as List)
           .map((e) => OpCatGetResponse.fromJson(e))

@@ -197,10 +197,14 @@ class _HomePageState extends State<ResAllOrderPage> {
                                         SizedBox(
                                           width: 100,
                                           child: ElevatedButton(
-                                            onPressed: () {
-                                              updateOrderStatus(
+                                            onPressed: () async {
+                                              await updateOrderStatus(
                                                   order.ordId.toString(),
                                                   2); // กำลังส่ง → 2
+                                              await cal_ResShareRate(
+                                                  order.ordId,
+                                                  order.totalOrderPrice
+                                                      .toDouble());
                                             },
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor:
@@ -385,6 +389,46 @@ class _HomePageState extends State<ResAllOrderPage> {
     } catch (e) {
       log("update_cus_balance Error: $e");
       throw e; // ส่ง error ต่อไปให้ caller จัดการ
+    }
+  }
+
+  Future<void> cal_ResShareRate(int order_id, double totalPrice) async {
+    double share_rate = 0;
+    double res_income = 0;
+    int res_id = context.read<ShareData>().user_info_send.uid;
+
+    try {
+      final res_share = await http.get(Uri.parse("$url/db/loadResShare"));
+      print('Status code: ${res_share.statusCode}');
+      print('Response body: ${res_share.body}');
+
+      if (res_share.statusCode == 200) {
+        final data = jsonDecode(res_share.body);
+        share_rate = (data['share_rate'] ?? 0).toDouble();
+      } else {
+        Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
+      }
+
+      res_income = totalPrice * (share_rate / 100);
+
+      final update_res_income = await http.put(
+        Uri.parse("$url/db/updateResIncome"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "ord_id": order_id,
+          "res_id": res_id,
+          "res_income": res_income,
+        }),
+      );
+
+      if (update_res_income.statusCode == 200) {
+        log("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC");
+      } else {
+        throw Exception("Server error: ${update_res_income.statusCode}");
+      }
+    } catch (e) {
+      log("update_cus_balance Error: $e");
+      throw e;
     }
   }
 }

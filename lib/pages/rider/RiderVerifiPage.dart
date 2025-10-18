@@ -7,6 +7,8 @@ import 'dart:convert';
 
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/pages/login/login.dart';
+import 'package:mobile_miniproject_app/shared/share_data.dart';
+import 'package:provider/provider.dart';
 
 class RiderVerificationPage extends StatefulWidget {
   const RiderVerificationPage({super.key});
@@ -102,9 +104,8 @@ class _RiderVerificationPageState extends State<RiderVerificationPage> {
           "rid_driv_license_image": licenseUrl,
         });
 
-        Configuration.getConfig().then((value) async {
-          url = value['apiEndpoint'];
-        });
+        final config = await Configuration.getConfig();
+        final url = config['apiEndpoint'];
 
         final response = await http.post(
           Uri.parse("$url/db/updateRiderImg"),
@@ -131,7 +132,10 @@ class _RiderVerificationPageState extends State<RiderVerificationPage> {
 
   @override
   Widget build(BuildContext context) {
-    final int rid = 1; // ตัวอย่าง ใช้ uid จาก ShareData ของคุณจริงๆ
+    final int rid = context
+        .read<ShareData>()
+        .user_info_send
+        .uid; // ตัวอย่าง ใช้ uid จริงจาก ShareData
 
     return Scaffold(
       appBar: AppBar(
@@ -146,44 +150,73 @@ class _RiderVerificationPageState extends State<RiderVerificationPage> {
           },
         ),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Vehicle image
-            GestureDetector(
-              onTap: () => pickImage(true),
-              child: Container(
-                width: double.infinity,
-                height: 150,
-                color: Colors.grey[300],
-                child: vehicleImg != null
-                    ? Image.file(vehicleImg!, fit: BoxFit.cover)
-                    : const Center(child: Text("เลือกรูป Vehicle")),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-            // Driver license image
-            GestureDetector(
-              onTap: () => pickImage(false),
-              child: Container(
-                width: double.infinity,
-                height: 150,
-                color: Colors.grey[300],
-                child: drivLicenseImg != null
-                    ? Image.file(drivLicenseImg!, fit: BoxFit.cover)
-                    : const Center(child: Text("เลือกรูป Driver License")),
-              ),
-            ),
+            buildImagePicker(
+                label: "Vehicle",
+                file: vehicleImg,
+                onTap: () => pickImage(true)),
+            const SizedBox(height: 16),
+            buildImagePicker(
+                label: "Driver License",
+                file: drivLicenseImg,
+                onTap: () => pickImage(false)),
             const SizedBox(height: 30),
             ElevatedButton(
               onPressed: uploading ? null : () => submitImages(rid),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                backgroundColor: Colors.deepPurple,
+              ),
               child: uploading
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("ยืนยันและอัปโหลด"),
+                  : const Text(
+                      "ยืนยันและอัปโหลด",
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white),
+                    ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+// ฟังก์ชัน helper สร้าง picker
+  Widget buildImagePicker(
+      {required String label,
+      required File? file,
+      required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 180,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 6,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: file != null
+              ? Image.file(file, fit: BoxFit.cover)
+              : Center(
+                  child: Text(
+                    "เลือกรูป $label",
+                    style: TextStyle(color: Colors.black54, fontSize: 16),
+                  ),
+                ),
         ),
       ),
     );

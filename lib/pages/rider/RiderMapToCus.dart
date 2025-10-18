@@ -349,7 +349,23 @@ class _RiderMapToCusPageState extends State<RiderMapToCusPage> {
                         ),
                       );
                     },
-                    child: const Text("ยืนยันการส่งอาหารให้ลูกค้า"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple, // สีพื้นหลัง
+                      foregroundColor: Colors.white, // สีตัวหนังสือ
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 16, horizontal: 24), // ขนาดปุ่ม
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12), // มุมโค้ง
+                      ),
+                      elevation: 4, // เงา
+                    ),
+                    child: const Text(
+                      "ยืนยันการส่งอาหารให้ลูกค้า",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
             ],

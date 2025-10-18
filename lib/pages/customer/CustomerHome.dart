@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/main.dart';
@@ -16,6 +17,7 @@ import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
 import 'package:mobile_miniproject_app/pages/customer/CusAllOrder.dart';
 import 'package:mobile_miniproject_app/pages/customer/CusReview.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
+import 'package:mobile_miniproject_app/pages/customer/TopUp.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/RestaurantInfo.dart';
 import 'package:mobile_miniproject_app/shared/firebase_message_service.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
@@ -205,22 +207,70 @@ class _HomePageState extends State<CustomerHomePage> with RouteAware {
           children: [
             const Icon(Icons.location_on, color: Colors.red, size: 20),
             const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  topAdd.isNotEmpty ? topAdd[0].ca_detail : 'ไม่มีที่อยู่',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 19,
-                      color: Colors.black),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  topAdd.isNotEmpty ? topAdd[0].ca_address : '',
-                  style: const TextStyle(fontSize: 14, color: Colors.black),
-                ),
-              ],
+            ConstrainedBox(
+              constraints:
+                  BoxConstraints(maxWidth: 200), // กำหนด max width ให้ข้อความ
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    topAdd.isNotEmpty ? topAdd[0].ca_detail : 'ไม่มีที่อยู่',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 19,
+                        color: Colors.black),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    topAdd.isNotEmpty ? topAdd[0].ca_address : '',
+                    style: const TextStyle(fontSize: 14, color: Colors.black),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 100),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => TopupPage()),
+                );
+              },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // เหรียญ D
+                  Container(
+                    width: 25,
+                    height: 25,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.amber,
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'D',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6), // เว้นระยะระหว่างเหรียญกับตัวเลข
+                  Text(
+                    NumberFormat('#,###').format(
+                        context.read<ShareData>().user_info_send.balance),
+                    style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepPurple),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -805,6 +855,19 @@ class _HomePageState extends State<CustomerHomePage> with RouteAware {
   Future<void> LoadCusHome() async {
     try {
       int userId = context.read<ShareData>().user_info_send.uid;
+
+      final cus_balance =
+          await http.get(Uri.parse("$url/db/loadCusbalance/$userId"));
+      print('Status code: ${cus_balance.statusCode}');
+      print('Response body: ${cus_balance.body}');
+
+      if (cus_balance.statusCode == 200) {
+        final data = jsonDecode(cus_balance.body);
+        final int balance = data['balance'] ?? 0;
+        context.read<ShareData>().user_info_send.balance = balance;
+      } else {
+        Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
+      }
 
       context.read<ShareData>().customer_addresses = [];
       final cus_Add = await http.get(Uri.parse("$url/db/loadCusAdd/$userId"));

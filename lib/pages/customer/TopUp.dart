@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/MenuInfoGetRes.dart';
@@ -82,7 +83,6 @@ class _HomePageState extends State<TopupPage> {
               padding: const EdgeInsets.all(16),
               child: _buildTopupForm(),
             ),
-      bottomNavigationBar: buildBottomNavigationBar(),
     );
   }
 
@@ -90,6 +90,10 @@ class _HomePageState extends State<TopupPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        Text(
+          "D-Wallet ปัจจุบันของคุณคือ : ${NumberFormat('#,###').format(context.read<ShareData>().user_info_send.balance)}",
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 16),
         const Text(
           "กรอกจำนวนเงินที่ต้องการเติม",
@@ -124,6 +128,16 @@ class _HomePageState extends State<TopupPage> {
               _qrData = generatePromptPayQR(phone, amount);
             });
           },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.deepPurple, // สีพื้นหลัง
+            foregroundColor: Colors.white, // สีตัวหนังสือ
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            textStyle:
+                const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8), // มุมโค้ง
+            ),
+          ),
           child: const Text("สร้าง QR Code"),
         ),
         const SizedBox(height: 20),
@@ -161,39 +175,6 @@ class _HomePageState extends State<TopupPage> {
 
 // เพิ่ม
   String _selectedPayment = "COD";
-
-  Widget buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(40.0)),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, -2)),
-        ],
-      ),
-      child: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        selectedItemColor: const Color.fromARGB(255, 115, 28, 168),
-        unselectedItemColor: Colors.grey,
-        backgroundColor: Colors.white,
-        iconSize: 20,
-        selectedLabelStyle:
-            const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-        unselectedLabelStyle: const TextStyle(fontSize: 10),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.list_alt_rounded), label: 'Order'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
-      ),
-    );
-  }
 
   @override
   void dispose() {
@@ -278,6 +259,19 @@ class _HomePageState extends State<TopupPage> {
 
   void LoadCusAdd() async {
     int userId = context.read<ShareData>().user_info_send.uid;
+
+    final cus_balance =
+        await http.get(Uri.parse("$url/db/loadCusbalance/$userId"));
+    print('Status code: ${cus_balance.statusCode}');
+    print('Response body: ${cus_balance.body}');
+
+    if (cus_balance.statusCode == 200) {
+      final data = jsonDecode(cus_balance.body);
+      final int balance = data['balance'] ?? 0;
+      context.read<ShareData>().user_info_send.balance = balance;
+    } else {
+      Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
+    }
     try {
       context.read<ShareData>().customer_addresses = [];
       final res_Add = await http.get(Uri.parse("$url/db/loadCusAdd/$userId"));
@@ -320,7 +314,6 @@ class _HomePageState extends State<TopupPage> {
       );
 
       if (res_Add.statusCode == 200) {
-        // ทำอย่างอื่นถ้าต้องการ
       } else {
         // handle error กรณี response ไม่ใช่ 200
         Fluttertoast.showToast(

@@ -793,13 +793,13 @@ class _HomePageState extends State<CartPage> {
         }
       }
 
-      final res_balance =
+      final cus_balance =
           await http.get(Uri.parse("$url/db/loadCusbalance/$userId"));
-      print('Status code: ${res_balance.statusCode}');
-      print('Response body: ${res_balance.body}');
+      print('Status code: ${cus_balance.statusCode}');
+      print('Response body: ${cus_balance.body}');
 
-      if (res_balance.statusCode == 200) {
-        final data = jsonDecode(res_balance.body);
+      if (cus_balance.statusCode == 200) {
+        final data = jsonDecode(cus_balance.body);
         final int balance = data['balance'] ?? 0;
         context.read<ShareData>().user_info_send.balance = balance;
       } else {

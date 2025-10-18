@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -5,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
+import 'package:mobile_miniproject_app/models/response/CusOrderGetRes.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderHome.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
@@ -23,14 +26,16 @@ class _RiderConfirmPageState extends State<RiderConfirmPage> {
   String? _uploadedImageUrl;
   bool _isUploading = false;
   String url = '';
+  List<CusOrderGetResponse> orders_info = []; // เก็บ order
 
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    Configuration.getConfig().then((value) {
+    Configuration.getConfig().then((value) async {
       url = value['apiEndpoint'];
+      await get_RidOrder();
     });
   }
 
@@ -94,44 +99,6 @@ class _RiderConfirmPageState extends State<RiderConfirmPage> {
     }
   }
 
-  Future<void> _confirmDelivery() async {
-    // if (_uploadedImageUrl == null) {
-    //   Fluttertoast.showToast(msg: "กรุณาถ่ายรูปก่อนยืนยันจัดส่ง");
-    //   return;
-    // }
-
-    try {
-      await FirebaseFirestore.instance
-          .collection('BP_Order_detail')
-          .doc('order${widget.ord_id}')
-          .update({
-        'Confirm_Order_image': _uploadedImageUrl,
-        'order_status': '3',
-      });
-
-      final newStatus = 3;
-      final changeStatus = await http.put(
-        Uri.parse("$url/db/ChangeOrderStatus/${widget.ord_id}/$newStatus"),
-      );
-
-      if (changeStatus.statusCode == 200) {
-        Fluttertoast.showToast(msg: "อัปเดตสถานะจัดส่งสำเร็จ!");
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => RiderHomePage(),
-          ),
-        );
-      } else {
-        print('MySQL update failed: ${changeStatus.body}');
-        Fluttertoast.showToast(msg: 'อัปเดตสถานะใน MySQL ล้มเหลว');
-      }
-    } catch (e) {
-      print('อัปเดตสถานะล้มเหลว: $e');
-      Fluttertoast.showToast(msg: 'ไม่สามารถอัปเดตสถานะได้: $e');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -180,7 +147,11 @@ class _RiderConfirmPageState extends State<RiderConfirmPage> {
                 ),
               const SizedBox(height: 30),
               ElevatedButton.icon(
-                onPressed: _confirmDelivery,
+                onPressed: () async {
+                  await _confirmDelivery();
+                  await cal_RidShareRate(widget.ord_id,
+                      orders_info.first.totalOrderPrice.toDouble());
+                },
                 icon: const Icon(Icons.check_circle),
                 label: const Text("จัดส่งสำเร็จ"),
                 style: ElevatedButton.styleFrom(
@@ -195,5 +166,98 @@ class _RiderConfirmPageState extends State<RiderConfirmPage> {
         ),
       ),
     );
+  }
+
+  Future<void> get_RidOrder() async {
+    double share_rate = 0;
+
+    final order_info =
+        await http.get(Uri.parse("$url/db/loadOrderById/${widget.ord_id}"));
+    final List<CusOrderGetResponse> list =
+        (json.decode(order_info.body) as List)
+            .map((e) => CusOrderGetResponse.fromJson(e))
+            .toList();
+
+    if (order_info.statusCode == 200) {
+      orders_info = list;
+    }
+  }
+
+  Future<void> _confirmDelivery() async {
+    if (_uploadedImageUrl == null) {
+      Fluttertoast.showToast(msg: "กรุณาถ่ายรูปก่อนยืนยันจัดส่ง");
+      return;
+    }
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('BP_Order_detail')
+          .doc('order${widget.ord_id}')
+          .update({
+        'Confirm_Order_image': _uploadedImageUrl,
+        'order_status': '3',
+      });
+
+      final newStatus = 3;
+      final changeStatus = await http.put(
+        Uri.parse("$url/db/ChangeOrderStatus/${widget.ord_id}/$newStatus"),
+      );
+
+      if (changeStatus.statusCode == 200) {
+        Fluttertoast.showToast(msg: "อัปเดตสถานะจัดส่งสำเร็จ!");
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RiderHomePage(),
+          ),
+        );
+      } else {
+        print('MySQL update failed: ${changeStatus.body}');
+        Fluttertoast.showToast(msg: 'อัปเดตสถานะใน MySQL ล้มเหลว');
+      }
+    } catch (e) {
+      print('อัปเดตสถานะล้มเหลว: $e');
+      Fluttertoast.showToast(msg: 'ไม่สามารถอัปเดตสถานะได้: $e');
+    }
+  }
+
+  Future<void> cal_RidShareRate(int order_id, double totalPrice) async {
+    double share_rate = 0;
+    double rid_income = 0;
+    int rid_id = context.read<ShareData>().user_info_send.uid;
+
+    try {
+      final rid_share = await http.get(Uri.parse("$url/db/loadRidShare"));
+      print('Status code: ${rid_share.statusCode}');
+      print('Response body: ${rid_share.body}');
+
+      if (rid_share.statusCode == 200) {
+        final data = jsonDecode(rid_share.body);
+        share_rate = (data['share_rate'] ?? 0).toDouble();
+      } else {
+        Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
+      }
+
+      rid_income = totalPrice * (share_rate / 100);
+
+      final update_res_income = await http.put(
+        Uri.parse("$url/db/updateRidIncome"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "ord_id": order_id,
+          "rid_id": rid_id,
+          "rid_income": rid_income,
+        }),
+      );
+
+      if (update_res_income.statusCode == 200) {
+        log("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC");
+      } else {
+        throw Exception("Server error: ${update_res_income.statusCode}");
+      }
+    } catch (e) {
+      log("update_cus_balance Error: $e");
+      throw e;
+    }
   }
 }

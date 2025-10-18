@@ -16,6 +16,7 @@ import 'package:mobile_miniproject_app/models/response/CusOrderGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/OptionGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/pages/customer/Order.dart';
+import 'package:mobile_miniproject_app/pages/login/login.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/ResOrder.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderHistory.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderMapToRes.dart';
@@ -101,6 +102,10 @@ class _RiderHomePageState extends State<RiderHomePage>
     if (RiderVerStatus == 0 && (isVehicleImgEmpty || isDriveLicenseImgEmpty)) {
       print('✅ แสดง popup ยืนยันตัวตน');
       _showVerificationDialog();
+    } else if (RiderVerStatus == 0 &&
+        (!isVehicleImgEmpty && !isDriveLicenseImgEmpty)) {
+      // เปลี่ยน || → &&
+      _showWaitungDialog();
     } else {
       print('❌ ไม่แสดง popup');
     }
@@ -155,8 +160,6 @@ class _RiderHomePageState extends State<RiderHomePage>
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop(); // ปิด dialog
-                    // นำทางไปหน้าถ่ายรูปยืนยัน
-                    // TODO: เปลี่ยนเป็นหน้าที่ต้องการไป
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -174,6 +177,85 @@ class _RiderHomePageState extends State<RiderHomePage>
                   ),
                   child: Text(
                     'ไปยืนยันตัวตน',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showWaitungDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // ไม่สามารถปิดด้วยการแตะด้านนอกได้
+      builder: (BuildContext context) {
+        return WillPopScope(
+          onWillPop: () async => false, // ปิดการกดปุ่ม back
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded,
+                    color: Colors.orange, size: 32),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'ยืนยันตัวตนไรเดอร์',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ท่านได้ส่งรูปยืนยันตัวตนไรเดอร์ไปแล้ว',
+                  style: TextStyle(fontSize: 16),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'กรุณารอผู้ดูแลระบบทำการตรวจสอบ',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // ปิด dialog
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => LoginPage(), // เปลี่ยนตามหน้าจริง
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    padding: EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    'กลับไปยังหน้า Login',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -369,7 +451,57 @@ class _RiderHomePageState extends State<RiderHomePage>
   Widget _buildOrderPage() {
     return Scaffold(
       appBar: AppBar(
-        title: Text("ออเดอร์ที่พร้อม"),
+        title: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "ออเดอร์ที่พร้อม",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // เหรียญ D
+                    Container(
+                      width: 25,
+                      height: 25,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.amber,
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'D',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6), // เว้นระยะระหว่างเหรียญกับตัวเลข
+                    Text(
+                      NumberFormat('#,###').format(
+                          context.read<ShareData>().user_info_send.balance),
+                      style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.deepPurple),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
         automaticallyImplyLeading: false,
       ),
       body: RefreshIndicator(
@@ -629,11 +761,25 @@ class _RiderHomePageState extends State<RiderHomePage>
   }
 
   void LoadAllOrder(BuildContext context) async {
+    int userId = context.read<ShareData>().user_info_send.uid;
     setState(() {
       isLoading = true;
     });
 
     try {
+      final rid_balance =
+          await http.get(Uri.parse("$url/db/loadRiderbalance/$userId"));
+      print('Status code: ${rid_balance.statusCode}');
+      print('Response body: ${rid_balance.body}');
+
+      if (rid_balance.statusCode == 200) {
+        final data = jsonDecode(rid_balance.body);
+        final int balance = data['balance'] ?? 0;
+        context.read<ShareData>().user_info_send.balance = balance;
+      } else {
+        Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
+      }
+
       final Rider_All_Order =
           await http.get(Uri.parse("$url/db/loadRiderOrder"));
       if (Rider_All_Order.statusCode == 200) {
@@ -733,9 +879,10 @@ class _RiderHomePageState extends State<RiderHomePage>
 
         if (data is List && data.isNotEmpty) {
           setState(() {
-            RiderVerStatus = data[0]['rid_active_status'] ?? 0;
-            vehicleImg = data[0]['Vehicle_img']?.toString() ?? '';
-            driveLicenseImg = data[0]['Drive_lisense_img']?.toString() ?? '';
+            RiderVerStatus = data[0]['rid_ver_status'] ?? 0;
+            vehicleImg = data[0]['rid_vehicle_image']?.toString() ?? '';
+            driveLicenseImg =
+                data[0]['rid_driv_license_image']?.toString() ?? '';
           });
         }
       }

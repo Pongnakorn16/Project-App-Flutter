@@ -159,6 +159,46 @@ class _HomePageState extends State<ResProfilePage> {
                         ),
                       ),
 
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // เหรียญ D
+                            Container(
+                              width: 25,
+                              height: 25,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.amber,
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  'D',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(
+                                width: 6), // เว้นระยะระหว่างเหรียญกับตัวเลข
+                            Text(
+                              NumberFormat('#,###').format(context
+                                  .read<ShareData>()
+                                  .user_info_send
+                                  .balance),
+                              style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+
                       // เพิ่ม Padding รอบ ๆ ฟิลด์กรอกข้อมูล
                       Padding(
                         padding: const EdgeInsets.all(20),
@@ -741,6 +781,19 @@ class _HomePageState extends State<ResProfilePage> {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
     int userId = context.read<ShareData>().user_info_send.uid;
+
+    final res_balance =
+        await http.get(Uri.parse("$url/db/loadResbalance/$userId"));
+    print('Status code: ${res_balance.statusCode}');
+    print('Response body: ${res_balance.body}');
+
+    if (res_balance.statusCode == 200) {
+      final data = jsonDecode(res_balance.body);
+      final int balance = data['balance'] ?? 0;
+      context.read<ShareData>().user_info_send.balance = balance;
+    } else {
+      Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
+    }
 
     try {
       var res = await http.get(Uri.parse("$url/db/get_ResProfile/$userId"));

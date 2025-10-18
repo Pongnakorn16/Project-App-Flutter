@@ -12,6 +12,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/request/Cus_pro_edit_post_req.dart';
@@ -151,6 +152,46 @@ class _ProfilePageState extends State<RiderProfilePage> {
                               ),
                             ],
                           ),
+                        ),
+                      ),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // เหรียญ D
+                            Container(
+                              width: 25,
+                              height: 25,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.amber,
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  'D',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(
+                                width: 6), // เว้นระยะระหว่างเหรียญกับตัวเลข
+                            Text(
+                              NumberFormat('#,###').format(context
+                                  .read<ShareData>()
+                                  .user_info_send
+                                  .balance),
+                              style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white),
+                            ),
+                          ],
                         ),
                       ),
 
@@ -445,6 +486,19 @@ class _ProfilePageState extends State<RiderProfilePage> {
     log("${userId} + IDDDDDIIIIIIIIIIIIIIIIIIDDDDDDDDDDDDDDDIDDDDDDDDDDDDDDDDD");
 
     try {
+      final rid_balance =
+          await http.get(Uri.parse("$url/db/loadRiderbalance/$userId"));
+      print('Status code: ${rid_balance.statusCode}');
+      print('Response body: ${rid_balance.body}');
+
+      if (rid_balance.statusCode == 200) {
+        final data = jsonDecode(rid_balance.body);
+        final int balance = data['balance'] ?? 0;
+        context.read<ShareData>().user_info_send.balance = balance;
+      } else {
+        Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
+      }
+
       var res = await http.get(Uri.parse("$url/db/get_RiderProfile/$userId"));
       log("Response status: ${res.statusCode}");
       log("Response body: ${res.body}");
