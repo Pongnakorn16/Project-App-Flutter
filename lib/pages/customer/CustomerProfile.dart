@@ -75,13 +75,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     uid = context.read<ShareData>().user_info_send.uid;
     send_user_name = context.read<ShareData>().user_info_send.name;
     send_user_type = context.read<ShareData>().user_info_send.user_type;
     send_user_image = context.read<ShareData>().user_info_send.user_image;
-    // log(widget.uid.toString());
     context.read<ShareData>().selected_index = widget.selectedIndex;
     loadData = loadProfileData();
     _pageController = PageController();
@@ -102,14 +100,12 @@ class _ProfilePageState extends State<ProfilePage> {
             scrollDirection: Axis.vertical,
             child: Stack(
               children: [
-                // รูปพื้นหลัง
                 Positioned.fill(
                   child: Image.asset(
-                    'assets/images/BG_delivery_profile.png', // ลิงค์ของรูปพื้นหลัง
+                    'assets/images/BG_delivery_profile.png',
                     fit: BoxFit.cover,
                   ),
                 ),
-                // เพิ่ม Padding เพื่อไม่ให้รูปภาพชนกับขอบ
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12.0),
                   child: Column(
@@ -159,7 +155,6 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                         ),
                       ),
-
                       TextButton(
                         onPressed: () {
                           Navigator.push(
@@ -170,7 +165,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // เหรียญ D
                             Container(
                               width: 25,
                               height: 25,
@@ -189,8 +183,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                               ),
                             ),
-                            const SizedBox(
-                                width: 6), // เว้นระยะระหว่างเหรียญกับตัวเลข
+                            const SizedBox(width: 6),
                             Text(
                               NumberFormat('#,###').format(context
                                   .read<ShareData>()
@@ -204,8 +197,6 @@ class _ProfilePageState extends State<ProfilePage> {
                           ],
                         ),
                       ),
-
-                      // เพิ่ม Padding รอบ ๆ ฟิลด์กรอกข้อมูล
                       Padding(
                         padding: const EdgeInsets.all(20),
                         child: Column(
@@ -225,7 +216,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                     : 'เพิ่มเบอร์โทร',
                               ),
                             ),
-                            SizedBox(height: 15.0), // เพิ่มระยะห่างระหว่างฟิลด์
+                            SizedBox(height: 15.0),
                             TextField(
                               controller: nameCtl,
                               decoration: InputDecoration(
@@ -241,12 +232,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                     : '',
                               ),
                             ),
-                            SizedBox(height: 15.0), // เพิ่มระยะห่างระหว่างฟิลด์
+                            SizedBox(height: 15.0),
                             TextField(
                               obscureText: true,
                               controller: passwordCtl,
-                              enabled: cus_Info.cus_password
-                                  .isNotEmpty, // ถ้า password ว่าง จะ disable field
+                              enabled: cus_Info.cus_password.isNotEmpty,
                               decoration: InputDecoration(
                                 filled: true,
                                 fillColor: Color.fromARGB(255, 228, 225, 225),
@@ -256,12 +246,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 prefixIcon: Icon(Icons.lock),
                                 hintText: cus_Info.cus_password.isNotEmpty
-                                    ? '' // ถ้ามี password ก็ไม่ต้องแสดง hint
+                                    ? ''
                                     : 'เข้าสู่ระบบด้วย Google แก้ไขไม่ได้',
                               ),
                             ),
-
-                            SizedBox(height: 15.0), // เพิ่มระยะห่างระหว่างฟิลด์
+                            SizedBox(height: 15.0),
                             TextField(
                               obscureText: true,
                               controller: conPassCtl,
@@ -276,12 +265,13 @@ class _ProfilePageState extends State<ProfilePage> {
                                 prefixIcon: Icon(Icons.lock),
                                 hintText: cus_Info.cus_password.isNotEmpty
                                     ? cus_Info.cus_password
-                                    : 'เข้าสู่ระบบด้วย Google แก้ไขไม่ได้', // ทำให้ hintText ว่างไปเลย
+                                    : 'เข้าสู่ระบบด้วย Google แก้ไขไม่ได้',
                               ),
                             ),
                             SizedBox(height: 15.0),
                             TextField(
                               controller: addressCtl,
+                              readOnly: true,
                               decoration: InputDecoration(
                                 filled: true,
                                 fillColor: Color.fromARGB(255, 228, 225, 225),
@@ -302,128 +292,251 @@ class _ProfilePageState extends State<ProfilePage> {
                                       builder: (context) {
                                         return AlertDialog(
                                           title: Text("เลือกที่อยู่"),
-                                          content: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              if (addresses.isNotEmpty &&
-                                                  addresses[0] != null)
-                                                ListTile(
-                                                  leading: Text('1.'),
-                                                  title: Text(
-                                                      addresses[0].ca_address ??
-                                                          'ไม่มีที่อยู่'),
-                                                  subtitle: Text(
-                                                      addresses[0].ca_detail ??
-                                                          ''),
-                                                  trailing: SizedBox(
-                                                    width:
-                                                        30, // กำหนดความกว้างให้พอดี
-                                                    height: 30,
-                                                    child: InkWell(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              20),
-                                                      child: Icon(Icons.edit,
-                                                          size: 18,
-                                                          color: Colors.blue),
-                                                      onTap: () {
-                                                        context
-                                                                .read<ShareData>()
-                                                                .selected_ca_id =
-                                                            addresses[0].ca_id;
-                                                        context
-                                                            .read<ShareData>()
-                                                            .selected_address_index = 0;
-                                                        edit_cusShowMap(
-                                                            context,
-                                                            context
-                                                                .read<
-                                                                    ShareData>()
-                                                                .selected_ca_id);
-                                                      },
+                                          content: SingleChildScrollView(
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                for (int i = 0;
+                                                    i < addresses.length &&
+                                                        i < 2;
+                                                    i++)
+                                                  if (addresses[i] != null)
+                                                    Padding(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          vertical: 6.0),
+                                                      child: ListTile(
+                                                        shape: RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        12)),
+                                                        tileColor:
+                                                            Colors.grey[100],
+                                                        contentPadding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                horizontal: 12,
+                                                                vertical: 8),
+                                                        leading: CircleAvatar(
+                                                          backgroundColor:
+                                                              Colors.deepPurple,
+                                                          radius: 16,
+                                                          child: Text(
+                                                            '${i + 1}',
+                                                            style: TextStyle(
+                                                                color: Colors
+                                                                    .white),
+                                                          ),
+                                                        ),
+                                                        title: Text(
+                                                          addresses[i]
+                                                                  .ca_address ??
+                                                              'ไม่มีที่อยู่',
+                                                          style: TextStyle(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold),
+                                                        ),
+                                                        subtitle: Text(
+                                                            addresses[i]
+                                                                    .ca_detail ??
+                                                                ''),
+                                                        trailing: Row(
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          children: [
+                                                            // ปุ่มแก้ไข
+                                                            InkWell(
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          20),
+                                                              child: Icon(
+                                                                  Icons.edit,
+                                                                  size: 24,
+                                                                  color: Colors
+                                                                      .orange),
+                                                              onTap: () {
+                                                                TextEditingController
+                                                                    addressEditCtl =
+                                                                    TextEditingController(
+                                                                        text: addresses[i]
+                                                                            .ca_address);
+                                                                TextEditingController
+                                                                    detailEditCtl =
+                                                                    TextEditingController(
+                                                                        text: addresses[i]
+                                                                            .ca_detail);
+
+                                                                showDialog(
+                                                                  context:
+                                                                      context,
+                                                                  builder:
+                                                                      (context) {
+                                                                    return AlertDialog(
+                                                                      title: Text(
+                                                                          "แก้ไขที่อยู่"),
+                                                                      content:
+                                                                          Column(
+                                                                        mainAxisSize:
+                                                                            MainAxisSize.min,
+                                                                        children: [
+                                                                          TextField(
+                                                                            controller:
+                                                                                addressEditCtl,
+                                                                            decoration:
+                                                                                InputDecoration(
+                                                                              labelText: "ที่อยู่",
+                                                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                                                            ),
+                                                                          ),
+                                                                          SizedBox(
+                                                                              height: 10),
+                                                                          TextField(
+                                                                            controller:
+                                                                                detailEditCtl,
+                                                                            decoration:
+                                                                                InputDecoration(
+                                                                              labelText: "รายละเอียด",
+                                                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                                                            ),
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                      actions: [
+                                                                        TextButton(
+                                                                          onPressed:
+                                                                              () {
+                                                                            Navigator.pop(context);
+                                                                          },
+                                                                          child:
+                                                                              Text("ยกเลิก"),
+                                                                        ),
+                                                                        ElevatedButton(
+                                                                          onPressed:
+                                                                              () async {
+                                                                            // บันทึกแก้ไขลง DB
+                                                                            var value =
+                                                                                await Configuration.getConfig();
+                                                                            String
+                                                                                url =
+                                                                                value['apiEndpoint'];
+                                                                            int selected_ca_id =
+                                                                                addresses[i].ca_id;
+
+                                                                            var model =
+                                                                                {
+                                                                              "address": addressEditCtl.text,
+                                                                              "detail": detailEditCtl.text
+                                                                            };
+
+                                                                            var response =
+                                                                                await http.put(
+                                                                              Uri.parse("$url/db/edit_cusAdd/$selected_ca_id"),
+                                                                              headers: {
+                                                                                "Content-Type": "application/json; charset=utf-8"
+                                                                              },
+                                                                              body: jsonEncode(model),
+                                                                            );
+
+                                                                            if (response.statusCode ==
+                                                                                200) {
+                                                                              setState(() {
+                                                                                addresses[i].ca_address = addressEditCtl.text;
+                                                                                addresses[i].ca_detail = detailEditCtl.text;
+                                                                                addressCtl.text = "${addresses[i].ca_address}, ${addresses[i].ca_detail}";
+                                                                              });
+
+                                                                              Fluttertoast.showToast(
+                                                                                msg: "แก้ไขที่อยู่สำเร็จ",
+                                                                                backgroundColor: Colors.green,
+                                                                              );
+
+                                                                              Navigator.pop(context); // ปิด popup edit
+                                                                              Navigator.pop(context); // ปิด popup list
+                                                                              await loadProfileData();
+                                                                            } else {
+                                                                              Fluttertoast.showToast(
+                                                                                msg: "แก้ไขที่อยู่ไม่สำเร็จ",
+                                                                                backgroundColor: Colors.red,
+                                                                              );
+                                                                            }
+                                                                          },
+                                                                          child:
+                                                                              Text("บันทึก"),
+                                                                        ),
+                                                                      ],
+                                                                    );
+                                                                  },
+                                                                );
+                                                              },
+                                                            ),
+                                                            SizedBox(width: 12),
+                                                            // ปุ่มแผนที่
+                                                            InkWell(
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          20),
+                                                              child: Icon(
+                                                                  Icons
+                                                                      .location_on,
+                                                                  size: 24,
+                                                                  color: Colors
+                                                                      .blue),
+                                                              onTap: () {
+                                                                context
+                                                                        .read<
+                                                                            ShareData>()
+                                                                        .selected_ca_id =
+                                                                    addresses[i]
+                                                                        .ca_id;
+                                                                context
+                                                                    .read<
+                                                                        ShareData>()
+                                                                    .selected_address_index = i;
+                                                                edit_cusShowMap(
+                                                                    context,
+                                                                    addresses[i]
+                                                                        .ca_id);
+                                                              },
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        onTap: () {
+                                                          final a =
+                                                              addresses[i];
+                                                          final addressText =
+                                                              "${a.ca_address}, ${a.ca_detail}";
+                                                          addressCtl.text =
+                                                              addressText;
+                                                          context
+                                                              .read<ShareData>()
+                                                              .selected_address_index = i;
+                                                          Navigator.pop(
+                                                              context);
+                                                        },
+                                                      ),
                                                     ),
+                                                if (addresses.length < 2) ...[
+                                                  Divider(height: 20),
+                                                  ListTile(
+                                                    leading: Icon(
+                                                        Icons
+                                                            .add_circle_outline_rounded,
+                                                        color: Colors.blue),
+                                                    title: Text(
+                                                        "เพิ่มที่อยู่โดยเลือกตำแหน่งจากแผนที่"),
+                                                    onTap: () async {
+                                                      await showMapPickerDialog(
+                                                          context);
+                                                      Navigator.pop(context);
+                                                    },
                                                   ),
-                                                  onTap: () {
-                                                    final a = addresses[0];
-                                                    final addressText =
-                                                        "${a.ca_address}, ${a.ca_detail}";
-                                                    addressCtl.text =
-                                                        addressText;
-                                                    context
-                                                        .read<ShareData>()
-                                                        .selected_address_index = 0;
-                                                    Navigator.pop(context);
-                                                  },
-                                                ),
-                                              if (addresses.length > 1 &&
-                                                  addresses[1] != null)
-                                                ListTile(
-                                                  leading: Text('2.'),
-                                                  title: Text(
-                                                      addresses[1].ca_address ??
-                                                          'ไม่มีที่อยู่'),
-                                                  subtitle: Text(
-                                                      addresses[1].ca_detail ??
-                                                          ''),
-                                                  trailing: SizedBox(
-                                                    width:
-                                                        30, // กำหนดความกว้างให้พอดี
-                                                    height: 30,
-                                                    child: InkWell(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              20),
-                                                      child: Icon(Icons.edit,
-                                                          size: 18,
-                                                          color: Colors.blue),
-                                                      onTap: () {
-                                                        context
-                                                                .read<ShareData>()
-                                                                .selected_ca_id =
-                                                            addresses[1].ca_id;
-                                                        context
-                                                            .read<ShareData>()
-                                                            .selected_address_index = 1;
-                                                        edit_cusShowMap(
-                                                            context,
-                                                            context
-                                                                .read<
-                                                                    ShareData>()
-                                                                .selected_ca_id);
-                                                      },
-                                                    ),
-                                                  ),
-                                                  onTap: () {
-                                                    final a = addresses[1];
-                                                    final addressText =
-                                                        "${a.ca_address}, ${a.ca_detail}";
-                                                    addressCtl.text =
-                                                        addressText;
-                                                    context
-                                                        .read<ShareData>()
-                                                        .selected_address_index = 1;
-                                                    Navigator.pop(context);
-                                                  },
-                                                ),
-                                              if (addresses.length < 2) ...[
-                                                Divider(),
-                                                ListTile(
-                                                  leading: Icon(
-                                                    Icons
-                                                        .add_circle_outline_rounded,
-                                                    color: Colors.blue,
-                                                  ),
-                                                  title: Text(
-                                                      "เพิ่มที่อยู่โดยเลือกตำแหน่งจากแผนที่"),
-                                                  onTap: () async {
-                                                    // ปิด popup ที่อยู่
-                                                    await showMapPickerDialog(
-                                                        context); // เรียก popup map
-                                                    Navigator.pop(context);
-                                                  },
-                                                ),
+                                                ],
                                               ],
-                                            ],
+                                            ),
                                           ),
                                         );
                                       },
@@ -438,7 +551,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                     : 'เพิ่มที่อยู่',
                               ),
                             ),
-
                             Padding(
                               padding: const EdgeInsets.symmetric(
                                   vertical: 20, horizontal: 10),
@@ -477,23 +589,19 @@ class _ProfilePageState extends State<ProfilePage> {
                                         }
                                       },
                                       style: FilledButton.styleFrom(
-                                        backgroundColor: Colors
-                                            .green, // เปลี่ยนสีพื้นหลังของปุ่ม
+                                        backgroundColor: Colors.green,
                                         padding: EdgeInsets.symmetric(
-                                            vertical: 10.0,
-                                            horizontal:
-                                                35.0), // กำหนดขนาดของปุ่ม
+                                            vertical: 10.0, horizontal: 35.0),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                              30.0), // กำหนดรูปแบบมุมปุ่ม
+                                          borderRadius:
+                                              BorderRadius.circular(30.0),
                                         ),
                                       ),
                                       child: Text(
                                         "Save",
                                         style: TextStyle(
-                                          color:
-                                              Colors.white, // เปลี่ยนสีตัวอักษร
-                                          fontSize: 18.0, // ขนาดตัวอักษร
+                                          color: Colors.white,
+                                          fontSize: 18.0,
                                         ),
                                       ),
                                     ),
@@ -528,23 +636,19 @@ class _ProfilePageState extends State<ProfilePage> {
                                         Get.to(() => LoginPage());
                                       },
                                       style: FilledButton.styleFrom(
-                                        backgroundColor: Colors
-                                            .red, // เปลี่ยนสีพื้นหลังของปุ่ม
+                                        backgroundColor: Colors.red,
                                         padding: EdgeInsets.symmetric(
-                                            vertical: 10.0,
-                                            horizontal:
-                                                26.0), // กำหนดขนาดของปุ่ม
+                                            vertical: 10.0, horizontal: 26.0),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                              30.0), // กำหนดรูปแบบมุมปุ่ม
+                                          borderRadius:
+                                              BorderRadius.circular(30.0),
                                         ),
                                       ),
                                       child: Text(
                                         "Logout",
                                         style: TextStyle(
-                                          color:
-                                              Colors.white, // เปลี่ยนสีตัวอักษร
-                                          fontSize: 18.0, // ขนาดตัวอักษร
+                                          color: Colors.white,
+                                          fontSize: 18.0,
                                         ),
                                       ),
                                     )
@@ -562,7 +666,6 @@ class _ProfilePageState extends State<ProfilePage> {
           floatingActionButtonLocation:
               FloatingActionButtonLocation.centerDocked,
         ),
-        // 3. Overlay Loader
         if (isLoading)
           Positioned.fill(
             child: Container(
@@ -580,10 +683,6 @@ class _ProfilePageState extends State<ProfilePage> {
     if (index == 2) return;
     if (index == 0) {
       Navigator.pop(context);
-      // Navigator.push(
-      //   context,
-      //   MaterialPageRoute(builder: (context) => CustomerHomePage()),
-      // );
     } else {
       _pageController.animateToPage(
         index > 2 ? index - 1 : index,
@@ -617,8 +716,11 @@ class _ProfilePageState extends State<ProfilePage> {
     return LatLng(position.latitude, position.longitude);
   }
 
+  // ฟังก์ชันเพิ่มที่อยู่ใหม่ - ไม่แปลงพิกัด
   Future<void> showMapPickerDialog(BuildContext context) async {
     LatLng? pickedLocation;
+    TextEditingController newAddressCtl = TextEditingController();
+    TextEditingController newDetailCtl = TextEditingController();
 
     await showDialog(
       context: context,
@@ -641,27 +743,46 @@ class _ProfilePageState extends State<ProfilePage> {
             LatLng currentCenter = snapshot.data!;
 
             return AlertDialog(
-              title: Text('เลือกตำแหน่งบนแผนที่'),
+              title: Text('เพิ่มที่อยู่ใหม่'),
               content: SizedBox(
                 width: double.maxFinite,
-                height: 400,
+                height: 550,
                 child: Column(
                   children: [
+                    // กรอกที่อยู่
+                    TextField(
+                      controller: newAddressCtl,
+                      decoration: InputDecoration(
+                        labelText: "ที่อยู่",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    // กรอกรายละเอียด
+                    TextField(
+                      controller: newDetailCtl,
+                      decoration: InputDecoration(
+                        labelText: "รายละเอียด",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    SizedBox(height: 10),
                     // แสดงพิกัดที่เลือก
                     if (pickedLocation != null)
                       Container(
                         padding: EdgeInsets.all(8),
-                        margin: EdgeInsets.only(bottom: 8),
                         decoration: BoxDecoration(
                           color: Colors.blue.shade50,
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          'พิกัด: ${pickedLocation!.latitude}, ${pickedLocation!.longitude}',
+                          'พิกัด: ${pickedLocation!.latitude.toStringAsFixed(6)}, ${pickedLocation!.longitude.toStringAsFixed(6)}',
                           style: TextStyle(
                               fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                       ),
+                    SizedBox(height: 10),
+                    // แผนที่
                     Expanded(
                       child: StatefulBuilder(
                         builder: (context, setState) {
@@ -683,7 +804,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                     "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
                                 userAgentPackageName: 'com.example.app',
                               ),
-                              // แสดงตำแหน่งปัจจุบัน
                               MarkerLayer(
                                 markers: [
                                   Marker(
@@ -706,7 +826,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                 ],
                               ),
-                              // แสดงตำแหน่งที่เลือก
                               if (pickedLocation != null)
                                 MarkerLayer(
                                   markers: [
@@ -736,88 +855,67 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: Text('ยกเลิก'),
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    if (pickedLocation != null) {
-                      Navigator.pop(context, pickedLocation);
-                    } else {
+                  onPressed: () async {
+                    if (pickedLocation == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('กรุณาเลือกตำแหน่งก่อน')),
                       );
+                      return;
+                    }
+                    if (newAddressCtl.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('กรุณากรอกที่อยู่')),
+                      );
+                      return;
+                    }
+
+                    // บันทึกที่อยู่ใหม่ไปยัง API
+                    var value = await Configuration.getConfig();
+                    String url = value['apiEndpoint'];
+                    int userId = context.read<ShareData>().user_info_send.uid;
+
+                    var model = {
+                      "cus_id": userId,
+                      "address": newAddressCtl.text,
+                      "detail": newDetailCtl.text
+                    };
+
+                    var response = await http.post(
+                      Uri.parse("$url/db/add_cusAdd"),
+                      headers: {
+                        "Content-Type": "application/json; charset=utf-8"
+                      },
+                      body: jsonEncode(model),
+                    );
+
+                    if (response.statusCode == 200 ||
+                        response.statusCode == 201) {
+                      Fluttertoast.showToast(
+                        msg: "เพิ่มที่อยู่สำเร็จ",
+                        backgroundColor: Colors.green,
+                      );
+                      Navigator.pop(context);
+                      await loadProfileData();
+                    } else {
+                      Fluttertoast.showToast(
+                        msg: "เพิ่มที่อยู่ไม่สำเร็จ",
+                        backgroundColor: Colors.red,
+                      );
                     }
                   },
-                  child: Text('ตกลง'),
+                  child: Text('บันทึก'),
                 ),
               ],
             );
           },
         );
       },
-    ).then((value) async {
-      if (value != null && value is LatLng) {
-        try {
-          // ✅ บันทึกพิกัดที่เลือกจริง
-          selectedCoordinate = value;
-
-          print(
-              '📍 Selected exact coordinates: ${value.latitude}, ${value.longitude}');
-
-          List<Placemark> placemarks = await placemarkFromCoordinates(
-            value.latitude,
-            value.longitude,
-            localeIdentifier: 'th_TH',
-          );
-
-          if (placemarks.isNotEmpty) {
-            final place = placemarks.first;
-            print('🏠 Placemark result: $place');
-
-            List<String> addressParts = [];
-
-            if (place.street != null && place.street!.isNotEmpty) {
-              addressParts.add(place.street!);
-            }
-            if (place.subLocality != null && place.subLocality!.isNotEmpty) {
-              addressParts.add(place.subLocality!);
-            }
-            if (place.locality != null && place.locality!.isNotEmpty) {
-              addressParts.add(place.locality!);
-            }
-            if (place.administrativeArea != null &&
-                place.administrativeArea!.isNotEmpty) {
-              addressParts.add(place.administrativeArea!);
-            }
-
-            final address = addressParts.isNotEmpty
-                ? addressParts.join(', ')
-                : "${value.latitude.toStringAsFixed(6)}, ${value.longitude.toStringAsFixed(6)}";
-
-            addressCtl.text = address;
-            context.read<ShareData>().res_selected_add = address;
-
-            print('📝 Final address: $address');
-            print(
-                '✅ Exact coordinates stored: ${selectedCoordinate!.latitude}, ${selectedCoordinate!.longitude}');
-          } else {
-            final coordinateString =
-                "${value.latitude.toStringAsFixed(6)}, ${value.longitude.toStringAsFixed(6)}";
-            addressCtl.text = coordinateString;
-            context.read<ShareData>().res_selected_add = coordinateString;
-          }
-        } catch (e) {
-          print('❌ Error in reverse geocoding: $e');
-          final coordinateString =
-              "${value.latitude.toStringAsFixed(6)}, ${value.longitude.toStringAsFixed(6)}";
-          addressCtl.text = coordinateString;
-          context.read<ShareData>().res_selected_add = coordinateString;
-        }
-      }
-    });
+    );
   }
 
+  // ฟังก์ชันแก้ไขพิกัด - บันทึกพิกัดเท่านั้น
   Future<void> edit_cusShowMap(BuildContext context, int selected_ca_id) async {
     LatLng? pickedLocation;
-    var config = await Configuration.getConfig();
-    String url = config['apiEndpoint'];
 
     await showDialog(
       context: context,
@@ -843,13 +941,12 @@ class _ProfilePageState extends State<ProfilePage> {
             LatLng initialCenter = snapshot.data!;
 
             return AlertDialog(
-              title: Text('เลือกตำแหน่งบนแผนที่'),
+              title: Text('เลือกพิกัดบนแผนที่'),
               content: SizedBox(
                 width: double.maxFinite,
                 height: 400,
                 child: Column(
                   children: [
-                    // แสดงพิกัดที่เลือก
                     if (pickedLocation != null)
                       Container(
                         padding: EdgeInsets.all(8),
@@ -885,7 +982,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                     "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
                                 userAgentPackageName: 'com.example.app',
                               ),
-                              // แสดงตำแหน่งปัจจุบัน
                               MarkerLayer(
                                 markers: [
                                   Marker(
@@ -908,7 +1004,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                 ],
                               ),
-                              // แสดงตำแหน่งที่เลือก
                               if (pickedLocation != null)
                                 MarkerLayer(
                                   markers: [
@@ -938,82 +1033,66 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: Text('ยกเลิก'),
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    if (pickedLocation != null) {
-                      Navigator.pop(context, pickedLocation);
-                    } else {
+                  onPressed: () async {
+                    if (pickedLocation == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('กรุณาเลือกตำแหน่งก่อน')),
                       );
+                      return;
+                    }
+
+                    // บันทึกพิกัดที่เลือก
+                    var value = await Configuration.getConfig();
+                    String url = value['apiEndpoint'];
+
+                    var model = {
+                      "coordinate":
+                          "${pickedLocation!.latitude},${pickedLocation!.longitude}",
+                    };
+
+                    log("Updating coordinates for ca_id: $selected_ca_id");
+                    log("New coordinates: ${model['coordinate']}");
+
+                    var response = await http.put(
+                      Uri.parse("$url/db/edit_cusCoordinate/$selected_ca_id"),
+                      headers: {
+                        "Content-Type": "application/json; charset=utf-8"
+                      },
+                      body: jsonEncode(model),
+                    );
+
+                    log("Response status: ${response.statusCode}");
+                    log("Response body: ${response.body}");
+
+                    if (response.statusCode == 200) {
+                      Fluttertoast.showToast(
+                        msg: "บันทึกพิกัดสำเร็จ",
+                        backgroundColor: Colors.green,
+                      );
+                      Navigator.pop(context);
+                      await loadProfileData();
+                    } else {
+                      Fluttertoast.showToast(
+                        msg: "บันทึกพิกัดไม่สำเร็จ",
+                        backgroundColor: Colors.red,
+                      );
                     }
                   },
-                  child: Text('ตกลง'),
+                  child: Text('บันทึกพิกัด'),
                 ),
               ],
             );
-            ;
           },
         );
       },
-    ).then((value) async {
-      if (value != null && value is LatLng) {
-        pickedLocation = value;
-        try {
-          List<Placemark> placemarks =
-              await placemarkFromCoordinates(value.latitude, value.longitude);
-          if (placemarks.isNotEmpty) {
-            final place = placemarks.first;
-            final address =
-                "${place.thoroughfare ?? ''} ${place.subThoroughfare ?? ''}, ${place.locality ?? ''}, ${place.country ?? ''}";
-            addressCtl.text = address;
-          } else {
-            addressCtl.text = "${value.latitude}, ${value.longitude}";
-          }
-        } catch (e) {
-          print('Error in reverse geocoding: $e');
-          addressCtl.text = "${value.latitude}, ${value.longitude}";
-        }
-      }
-
-      if (pickedLocation != null) {
-        int select_ca_id = context.read<ShareData>().selected_ca_id;
-        context.read<ShareData>().cus_selected_add = addressCtl.text;
-        List<String> addressParts =
-            context.read<ShareData>().cus_selected_add.split(',');
-        String addressFromUI =
-            addressParts.isNotEmpty ? addressParts[0].trim() : '';
-        String detailFromUI = addressParts.length > 1
-            ? addressParts.sublist(1).join(',').trim()
-            : '';
-
-        var model = {
-          "coordinate":
-              "${pickedLocation!.latitude}, ${pickedLocation!.longitude}", // รวมเป็น string เดียว
-          "address": addressFromUI,
-          "detail": detailFromUI
-        };
-        log("${context.read<ShareData>().selected_ca_id}");
-        log("${model}");
-
-        var response = await http.put(
-          Uri.parse("$url/db/edit_cusAdd/$select_ca_id"),
-          headers: {"Content-Type": "application/json; charset=utf-8"},
-          body: jsonEncode(model),
-        );
-
-        log("Response status: ${response.statusCode}");
-        log("Response body: ${response.body}");
-      }
-      Navigator.pop(context);
-      loadProfileData();
-    });
+    );
   }
 
   Future<void> loadProfileData() async {
     var value = await Configuration.getConfig();
     String url = value['apiEndpoint'];
     int userId = context.read<ShareData>().user_info_send.uid;
-    log("${userId} + IDDDDDIIIIIIIIIIIIIIIIIIDDDDDDDDDDDDDDDIDDDDDDDDDDDDDDDDD");
+    log("$userId + Loading profile data");
 
     final cus_balance =
         await http.get(Uri.parse("$url/db/loadCusbalance/$userId"));
@@ -1027,6 +1106,7 @@ class _ProfilePageState extends State<ProfilePage> {
     } else {
       Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
     }
+
     final res_Add = await http.get(Uri.parse("$url/db/loadCusAdd/$userId"));
     if (res_Add.statusCode == 200) {
       final List<dynamic> jsonResponse = json.decode(res_Add.body);
@@ -1109,6 +1189,7 @@ class _ProfilePageState extends State<ProfilePage> {
           textColor: Colors.white,
           fontSize: 15.0,
         );
+        return;
       } else {
         phoneCtl.text = cus_Info.cus_phone;
       }
@@ -1119,17 +1200,13 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     if (passwordCtl.text.isEmpty) {
-      if (cus_Info.cus_password.isEmpty) {
-        passwordCtl.text = "";
-      }
-      passwordCtl.text = cus_Info.cus_password;
+      passwordCtl.text =
+          cus_Info.cus_password.isEmpty ? "" : cus_Info.cus_password;
     }
 
     if (conPassCtl.text.isEmpty) {
-      if (cus_Info.cus_password.isEmpty) {
-        conPassCtl.text = "";
-      }
-      conPassCtl.text = cus_Info.cus_password; // กำหนดให้ตรงกับ password
+      conPassCtl.text =
+          cus_Info.cus_password.isEmpty ? "" : cus_Info.cus_password;
     }
 
     if (addressCtl.text.isEmpty) {
@@ -1143,65 +1220,33 @@ class _ProfilePageState extends State<ProfilePage> {
           textColor: Colors.white,
           fontSize: 15.0,
         );
+        return;
       } else {
-        addressCtl.text =
-            context.read<ShareData>().customer_addresses.toString();
+        addressCtl.text = context.read<ShareData>().cus_selected_add;
       }
     }
 
-    // Getting coordinates from the address
-    LatLng coor;
-    try {
-      List<Location> locations = await locationFromAddress(addressCtl.text);
-      coor = LatLng(locations.first.latitude, locations.first.longitude);
-      log("${coor.latitude},${coor.longitude}");
-    } catch (e) {
-      print('Error occurred while fetching coordinates: $e');
-      coor = LatLng(0, 0); // Default value in case of error
-    }
-
+    // ใช้พิกัดเริ่มต้นจาก database
+    String coordinates = "0,0";
     if (context.read<ShareData>().customer_addresses.isNotEmpty) {
-      cusAddr = context
-          .read<ShareData>()
-          .customer_addresses[0]; ////////เดี์ยวหาวิธีแก้ก่อนหาคิดก่อน
-
+      int selectedIndex = context.read<ShareData>().selected_address_index;
+      cusAddr = context.read<ShareData>().customer_addresses[selectedIndex];
+      coordinates = cusAddr!.ca_coordinate ?? "0,0";
       address = cusAddr!.ca_address;
       detail = cusAddr!.ca_detail;
-    } else {
-      localCusAddr = cusAddr;
-      cusAddr = null;
-      address = "";
-      detail = "";
+      ca_id_check = cusAddr!.ca_id;
     }
-
-    context.read<ShareData>().cus_selected_add = addressCtl.text;
-    List<String> addressParts =
-        context.read<ShareData>().cus_selected_add.split(',');
-    String addressFromUI =
-        addressParts.isNotEmpty ? addressParts[0].trim() : '';
-    String detailFromUI =
-        addressParts.length > 1 ? addressParts.sublist(1).join(',').trim() : '';
-    log("cus_selected_add: ${context.read<ShareData>().cus_selected_add}");
-    log("addressFromUI: $addressFromUI");
-    log("detailFromUI: $detailFromUI");
-
-    // Create the model only with changed fields
 
     var model = CusProEditPostRequest(
       cus_id: cus_Info.cus_id,
-      cus_phone: phoneCtl.text == cus_Info.cus_phone
-          ? cus_Info.cus_phone
-          : phoneCtl.text,
-      cus_name:
-          nameCtl.text == cus_Info.cus_name ? cus_Info.cus_name : nameCtl.text,
-      cus_password: passwordCtl.text == cus_Info.cus_password
-          ? cus_Info.cus_password
-          : passwordCtl.text,
+      cus_phone: phoneCtl.text,
+      cus_name: nameCtl.text,
+      cus_password: passwordCtl.text,
       cus_image: cus_Info.cus_image,
-      ca_id: localCusAddr != null ? localCusAddr.ca_id : ca_id_check,
-      ca_address: addressFromUI,
-      ca_detail: detailFromUI,
-      ca_coordinates: "${coor.latitude},${coor.longitude}",
+      ca_id: ca_id_check,
+      ca_address: address,
+      ca_detail: detail,
+      ca_coordinates: coordinates,
     );
 
     var response = await http.put(
@@ -1227,7 +1272,6 @@ class _ProfilePageState extends State<ProfilePage> {
       await loadProfileData();
       setState(() {});
     } else {
-      // If the status code is not 200, get the message from response body
       var responseBody = jsonDecode(response.body);
       setState(() {
         Fluttertoast.showToast(
@@ -1253,7 +1297,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
       try {
         setState(() {
-          isLoading = true; // เริ่มโหลด
+          isLoading = true;
         });
 
         String fileName =
@@ -1270,12 +1314,12 @@ class _ProfilePageState extends State<ProfilePage> {
         print('✅ อัปโหลดสำเร็จ: $downloadURL');
         setState(() {
           cus_Info.cus_image = downloadURL;
-          isLoading = false; // โหลดเสร็จ
+          isLoading = false;
         });
       } catch (e) {
         print('❌ เกิดข้อผิดพลาดในการอัปโหลด: $e');
         setState(() {
-          isLoading = false; // โหลดเสร็จแม้ error
+          isLoading = false;
         });
       }
     }

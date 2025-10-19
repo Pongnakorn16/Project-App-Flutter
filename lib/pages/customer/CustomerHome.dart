@@ -201,79 +201,116 @@ class _HomePageState extends State<CustomerHomePage> with RouteAware {
   AppBar buildHomeAppBar(dynamic topAdd) {
     return AppBar(
       automaticallyImplyLeading: false,
-      title: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            const Icon(Icons.location_on, color: Colors.red, size: 20),
-            const SizedBox(width: 8),
-            ConstrainedBox(
-              constraints:
-                  BoxConstraints(maxWidth: 200), // กำหนด max width ให้ข้อความ
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    topAdd.isNotEmpty ? topAdd[0].ca_detail : 'ไม่มีที่อยู่',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 19,
-                        color: Colors.black),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    topAdd.isNotEmpty ? topAdd[0].ca_address : '',
-                    style: const TextStyle(fontSize: 14, color: Colors.black),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 100),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => TopupPage()),
-                );
-              },
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // เหรียญ D
-                  Container(
-                    width: 25,
-                    height: 25,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.amber,
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'D',
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Location + Address
+          Expanded(
+            child: Row(
+              children: [
+                const Icon(Icons.location_on, color: Colors.red, size: 20),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    // เปิด Dialog เลือกที่อยู่
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: Text("เลือกที่อยู่"),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: List.generate(topAdd.length, (i) {
+                              return ListTile(
+                                title: Text(
+                                    "${topAdd[i].ca_detail}, ${topAdd[i].ca_address}"),
+                                onTap: () {
+                                  context
+                                      .read<ShareData>()
+                                      .selected_address_index = i;
+                                  Navigator.pop(context);
+                                },
+                              );
+                            }),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 180),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          topAdd.isNotEmpty
+                              ? "${topAdd[context.read<ShareData>().selected_address_index].ca_detail}"
+                              : "ไม่มีที่อยู่",
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 17,
+                              color: Colors.black),
+                          overflow: TextOverflow.ellipsis,
                         ),
+                        const SizedBox(height: 2),
+                        Text(
+                          topAdd.isNotEmpty
+                              ? "${topAdd[context.read<ShareData>().selected_address_index].ca_address}"
+                              : "",
+                          style: const TextStyle(
+                              fontSize: 13, color: Colors.black),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // D-Wallet
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => TopupPage()),
+              );
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 25,
+                  height: 25,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.amber,
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'D',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 6), // เว้นระยะระหว่างเหรียญกับตัวเลข
-                  Text(
-                    NumberFormat('#,###').format(
-                        context.read<ShareData>().user_info_send.balance),
-                    style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  NumberFormat('#,###')
+                      .format(context.read<ShareData>().user_info_send.balance),
+                  style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.deepPurple),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(60),
@@ -966,13 +1003,6 @@ class _HomePageState extends State<CustomerHomePage> with RouteAware {
       log("LoadCusHome Error: $e");
       log("STACK TRACE: $stacktrace");
     }
-    // catch (e) {
-    //   log("LoadCusHome Error: $e");
-    //   Fluttertoast.showToast(
-    //       msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
-    //       backgroundColor: Colors.red,
-    //       textColor: Colors.white);
-    // }
   }
 
   double calculateDistance(double lat1, double lon1, double lat2, double lon2) {

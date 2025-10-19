@@ -73,7 +73,7 @@ class _HomePageState extends State<RestaurantHomePage> {
                 ),
               ),
               TextSpan(
-                text: context.read<ShareData>().user_info_send.name,
+                text: _restaurantInfo.first.res_name,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Color.fromARGB(255, 241, 199, 12),
