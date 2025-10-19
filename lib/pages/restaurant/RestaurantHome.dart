@@ -130,6 +130,32 @@ class _HomePageState extends State<RestaurantHomePage> {
               ),
             ],
           ),
+          if (_restaurantCategories.isEmpty)
+            Container(
+              margin: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                border: Border.all(color: Colors.red, width: 2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning, color: Colors.red, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "กรุณาเพิ่มหมวดหมู่เมนูก่อนเป็นอันดับแรก",
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           // Description, คะแนน, ปุ่มจัดการ ฯลฯ
           Padding(
             padding: const EdgeInsets.all(16.0),

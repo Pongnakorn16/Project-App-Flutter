@@ -146,8 +146,9 @@ class _CusallorderPageState extends State<CusallorderPage> {
                                     child: SizedBox(
                                       width: double.infinity,
                                       child: ElevatedButton.icon(
-                                        onPressed: () {
-                                          Navigator.push(
+                                        onPressed: () async {
+                                          final didReview =
+                                              await Navigator.push(
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) =>
@@ -156,6 +157,13 @@ class _CusallorderPageState extends State<CusallorderPage> {
                                               ),
                                             ),
                                           );
+                                          ;
+                                          if (didReview == true) {
+                                            setState(() {
+                                              LoadAllOrder(
+                                                  context); // โหลดข้อมูลใหม่เพื่อรีเฟรช
+                                            });
+                                          }
                                         },
                                         icon: Icon(Icons.rate_review, size: 18),
                                         label: Text("รีวิว"),

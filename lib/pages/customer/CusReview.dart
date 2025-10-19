@@ -13,6 +13,7 @@ import 'package:mobile_miniproject_app/models/response/ReportTopicGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResCatGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResTypeGetRes.dart';
+import 'package:mobile_miniproject_app/pages/customer/CusAllOrder.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/shared/firebase_message_service.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
@@ -53,6 +54,40 @@ class _CusReviewPageState extends State<CusReviewPage> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ เช็คก่อนว่ารีวิวครบหรือยัง
+    if (CusReviewInfo.isNotEmpty &&
+        CusReviewInfo.first.res_review_status == 1 &&
+        CusReviewInfo.first.rid_review_status == 1) {
+      // ✅ หน่วงเวลา 0.8 วิ แล้วกลับหน้าออเดอร์
+      Future.delayed(const Duration(milliseconds: 800), () {
+        Navigator.pop(context, true);
+      });
+
+      // ✅ แสดง Loading UI ชั่วคราวก่อนกลับ
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 80),
+              const SizedBox(height: 20),
+              Text(
+                "คุณได้รีวิวครบถ้วนแล้ว",
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green),
+              ),
+              const SizedBox(height: 10),
+              Text("กำลังพากลับไปหน้าออเดอร์...",
+                  style: TextStyle(color: Colors.grey)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // ✅ ถ้ายังรีวิวไม่ครบ แสดงหน้าปกติ
     return Scaffold(
       appBar: AppBar(
         title: const Text("รีวิว"),
@@ -68,37 +103,40 @@ class _CusReviewPageState extends State<CusReviewPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // รีวิวร้านอาหาร
-                  Text(
-                    "รีวิวร้านอาหาร",
-                    style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple),
-                  ),
-                  const SizedBox(height: 10),
-                  buildReviewCard(
-                    imageUrl: CusReviewInfo.first.resImage,
-                    name: CusReviewInfo.first.resName,
-                    title: "ร้านอาหาร",
-                    resId: CusReviewInfo.first.resId,
-                  ),
-                  const SizedBox(height: 30),
-                  // รีวิวไรเดอร์
-                  Text(
-                    "รีวิวไรเดอร์",
-                    style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple),
-                  ),
-                  const SizedBox(height: 10),
-                  buildReviewCard(
-                    imageUrl: CusReviewInfo.first.ridImage,
-                    name: CusReviewInfo.first.ridName,
-                    title: "ไรเดอร์",
-                    ridId: CusReviewInfo.first.ridId,
-                  ),
+                  // ✅ รีวิวร้าน
+                  if (CusReviewInfo.isNotEmpty &&
+                      CusReviewInfo.first.res_review_status != 1) ...[
+                    Text("รีวิวร้านอาหาร",
+                        style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.deepPurple)),
+                    const SizedBox(height: 10),
+                    buildReviewCard(
+                      imageUrl: CusReviewInfo.first.resImage,
+                      name: CusReviewInfo.first.resName,
+                      title: "ร้านอาหาร",
+                      resId: CusReviewInfo.first.resId,
+                    ),
+                    const SizedBox(height: 30),
+                  ],
+
+                  // ✅ รีวิวไรเดอร์
+                  if (CusReviewInfo.isNotEmpty &&
+                      CusReviewInfo.first.rid_review_status != 1) ...[
+                    Text("รีวิวไรเดอร์",
+                        style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.deepPurple)),
+                    const SizedBox(height: 10),
+                    buildReviewCard(
+                      imageUrl: CusReviewInfo.first.ridImage,
+                      name: CusReviewInfo.first.ridName,
+                      title: "ไรเดอร์",
+                      ridId: CusReviewInfo.first.ridId,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -113,6 +151,14 @@ class _CusReviewPageState extends State<CusReviewPage> {
     int? resId,
     int? ridId,
   }) {
+    // ✅ เช็คสถานะการกด Report แล้วหรือยัง
+    bool alreadyReported = false;
+    if (title == "ร้านอาหาร") {
+      alreadyReported = CusReviewInfo.first.res_report_status == 1;
+    } else if (title == "ไรเดอร์") {
+      alreadyReported = CusReviewInfo.first.rid_report_status == 1;
+    }
+
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 3,
@@ -131,6 +177,7 @@ class _CusReviewPageState extends State<CusReviewPage> {
               ),
             ),
             const SizedBox(width: 12),
+
             // ชื่อ
             Expanded(
               child: Text(
@@ -139,16 +186,19 @@ class _CusReviewPageState extends State<CusReviewPage> {
                     const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
+
             // ปุ่มรีวิว
             IconButton(
               icon: const Icon(Icons.star, color: Colors.amber),
               onPressed: () => _showReviewDialog(title, resId, ridId),
             ),
-            // ปุ่มรายงาน
-            IconButton(
-              icon: const Icon(Icons.report, color: Colors.redAccent),
-              onPressed: () => _showReportDialog(title, resId, ridId),
-            ),
+
+            // ✅ ปุ่มรายงาน ซ่อนถ้าเคยรายงานแล้ว
+            if (!alreadyReported)
+              IconButton(
+                icon: const Icon(Icons.report, color: Colors.redAccent),
+                onPressed: () => _showReportDialog(title, resId, ridId),
+              ),
           ],
         ),
       ),
@@ -237,6 +287,7 @@ class _CusReviewPageState extends State<CusReviewPage> {
                     rating: tempRating,
                     review_des: commentController.text,
                     res_id: resId,
+                    ord_id: widget.ord_id,
                   );
                   print("→ insertReview_res เสร็จ");
                   await update_res_rating(resId);
@@ -247,6 +298,7 @@ class _CusReviewPageState extends State<CusReviewPage> {
                     rating: tempRating,
                     review_des: commentController.text,
                     rid_id: ridId,
+                    ord_id: widget.ord_id,
                   );
                   print("→ insertReview_rid เสร็จ");
                   await update_rid_rating(ridId);
@@ -256,10 +308,9 @@ class _CusReviewPageState extends State<CusReviewPage> {
                 }
 
                 Navigator.pop(context);
-                Fluttertoast.showToast(
-                  msg:
-                      "ส่งรีวิว $title สำเร็จ ($tempRating ดาว)\nข้อความ: ${commentController.text}",
-                );
+
+                // ✅ โหลดข้อมูลใหม่หลังรีวิวสำเร็จ
+                await LoadCusReviewReport();
               },
               child: const Text(
                 "ยืนยัน",
@@ -345,20 +396,20 @@ class _CusReviewPageState extends State<CusReviewPage> {
                     rept_id: selectedTopic!.reptId,
                     report_des: reportController.text,
                     res_id: resId,
+                    ord_id: widget.ord_id,
                   );
+                  await LoadCusReviewReport();
                 } else if (ridId != null) {
                   await insertReport_rid(
                     rept_id: selectedTopic!.reptId,
                     report_des: reportController.text,
                     rid_id: ridId,
+                    ord_id: widget.ord_id,
                   );
+                  await LoadCusReviewReport();
                 }
 
                 Navigator.pop(context);
-                Fluttertoast.showToast(
-                  msg:
-                      "ส่งรายงาน ${selectedTopic!.reptTopic} สำเร็จ\nข้อความ: ${reportController.text}",
-                );
               },
               child: const Text(
                 "ยืนยัน",
@@ -431,6 +482,7 @@ class _CusReviewPageState extends State<CusReviewPage> {
     required int rating,
     required String review_des,
     required int res_id,
+    required int ord_id,
   }) async {
     try {
       final cus_id = context.read<ShareData>().user_info_send.uid;
@@ -440,6 +492,7 @@ class _CusReviewPageState extends State<CusReviewPage> {
         "rating": rating,
         "review_des": review_des,
         "res_id": res_id,
+        "ord_id": ord_id,
       });
 
       final response = await http.post(
@@ -468,6 +521,7 @@ class _CusReviewPageState extends State<CusReviewPage> {
     required int rating,
     required String review_des,
     required int rid_id,
+    required int ord_id,
   }) async {
     try {
       final cus_id = context.read<ShareData>().user_info_send.uid;
@@ -477,6 +531,7 @@ class _CusReviewPageState extends State<CusReviewPage> {
         "rating": rating,
         "review_des": review_des,
         "rid_id": rid_id,
+        "ord_id": ord_id,
       });
 
       final response = await http.post(
@@ -505,15 +560,14 @@ class _CusReviewPageState extends State<CusReviewPage> {
     required int rept_id,
     required String report_des,
     required int res_id,
+    required int ord_id,
   }) async {
     try {
-      final cus_id = context.read<ShareData>().user_info_send.uid;
-
       final body = jsonEncode({
-        "cus_id": cus_id,
         "rept_id": rept_id,
         "report_des": report_des,
         "res_id": res_id,
+        "ord_id": ord_id,
       });
 
       final response = await http.post(
@@ -553,6 +607,7 @@ class _CusReviewPageState extends State<CusReviewPage> {
     required int rept_id,
     required String report_des,
     required int rid_id,
+    required int ord_id,
   }) async {
     try {
       final cus_id = context.read<ShareData>().user_info_send.uid;
@@ -562,6 +617,7 @@ class _CusReviewPageState extends State<CusReviewPage> {
         "rept_id": rept_id,
         "report_des": report_des,
         "rid_id": rid_id,
+        "ord_id": ord_id,
       });
 
       final response = await http.post(
