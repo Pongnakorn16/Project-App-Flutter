@@ -39,7 +39,7 @@ class User_Info_Send {
   String name = '';
   String phone = '';
   String user_image = '';
-  int balance = 0;
+  double balance = 0.0;
   int active_status = 0;
   String user_type = '';
 }

@@ -863,8 +863,9 @@ class _HomePageState extends State<CustomerHomePage> with RouteAware {
 
       if (cus_balance.statusCode == 200) {
         final data = jsonDecode(cus_balance.body);
-        final int balance = data['balance'] ?? 0;
-        context.read<ShareData>().user_info_send.balance = balance;
+        final int balance = data['balance'];
+
+        context.read<ShareData>().user_info_send.balance = balance.toDouble();
       } else {
         Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
       }
@@ -961,13 +962,17 @@ class _HomePageState extends State<CustomerHomePage> with RouteAware {
       }
 
       setState(() => isLoading = false);
-    } catch (e) {
+    } catch (e, stacktrace) {
       log("LoadCusHome Error: $e");
-      Fluttertoast.showToast(
-          msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
-          backgroundColor: Colors.red,
-          textColor: Colors.white);
+      log("STACK TRACE: $stacktrace");
     }
+    // catch (e) {
+    //   log("LoadCusHome Error: $e");
+    //   Fluttertoast.showToast(
+    //       msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
+    //       backgroundColor: Colors.red,
+    //       textColor: Colors.white);
+    // }
   }
 
   double calculateDistance(double lat1, double lon1, double lat2, double lon2) {

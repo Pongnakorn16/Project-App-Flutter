@@ -26,14 +26,16 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
   final MapController mapController = MapController();
   List<LatLng> routePoints = [];
   StreamSubscription<Position>? _positionStream;
+
   @override
   void initState() {
     super.initState();
     _initMap();
-    _listenOrderStatus(); // เริ่มฟังสถานะออเดอร์
+    _listenToFirebaseChanges(); // ✅ ฟังทั้ง Order_status และ Rider_coordinate
   }
 
-  void _listenOrderStatus() {
+  // ✅ ฟังการเปลี่ยนแปลงจาก Firebase ทั้งหมด
+  void _listenToFirebaseChanges() {
     _orderStream = FirebaseFirestore.instance
         .collection('BP_Order_detail')
         .doc('order${widget.ord_id}')
@@ -42,9 +44,10 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
       if (snapshot.exists) {
         var data = snapshot.data()!;
         int ordStatus = data['Order_status'] ?? 0;
+        String riderCoord = data['Rider_coordinate'] ?? '';
 
+        // ✅ เช็ค Order_status = 2 (ไปส่งลูกค้า)
         if (ordStatus == 2) {
-          // ✅ แสดง Snackbar แทน Toast
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content:
@@ -53,13 +56,35 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
             ),
           );
 
-          // ✅ ไปหน้า RiderMapToCusPage
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
               builder: (_) => RiderMapToCusPage(ord_id: widget.ord_id),
             ),
           );
+        }
+
+        // ✅ อัปเดต UI เมื่อ Rider_coordinate เปลี่ยน
+        if (riderCoord.isNotEmpty) {
+          LatLng? newPos = _parseCoordinates(riderCoord);
+
+          if (newPos != null && newPos != riderPosition) {
+            setState(() {
+              riderPosition = newPos;
+            });
+
+            // ✅ เคลื่อนกล้องตามตำแหน่งใหม่
+            mapController.move(riderPosition!, mapController.camera.zoom);
+
+            // ✅ รีคำนวณเส้นทางใหม่
+            if (resPosition != null) {
+              _getRouteFromORS(newPos, resPosition!).then((route) {
+                setState(() {
+                  routePoints = route;
+                });
+              });
+            }
+          }
         }
       }
     });
@@ -68,7 +93,7 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
   void _startTracking() {
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 100, // ปกติจะอัปเดตทุก 100 เมตร
+      distanceFilter: 2,
     );
 
     _positionStream =
@@ -80,7 +105,6 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
         riderPosition = newPosition;
       });
 
-      // ✅ เช็คระยะระหว่างไรเดอร์กับร้าน (ถ้ามีตำแหน่งร้าน)
       bool shouldUpdate = true;
       if (resPosition != null) {
         double distanceToRestaurant = Geolocator.distanceBetween(
@@ -90,17 +114,14 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
           resPosition!.longitude,
         );
 
-        // ✅ อัปเดตพิกัดถ้าอยู่ไกลร้านเกิน 50 เมตร
         if (distanceToRestaurant < 50) {
-          shouldUpdate = false; // ถ้าใกล้ร้านเกินไปไม่ต้องอัปเดต
+          shouldUpdate = false;
         }
       }
 
       if (shouldUpdate) {
-        // ✅ เคลื่อนกล้องตามไรเดอร์
         mapController.move(riderPosition!, mapController.camera.zoom);
 
-        // ✅ อัปเดตพิกัดไปยัง Firestore
         await FirebaseFirestore.instance
             .collection('BP_Order_detail')
             .doc('order${widget.ord_id}')
@@ -108,7 +129,6 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
           'Rider_coordinate': '${position.latitude},${position.longitude}',
         });
 
-        // ✅ รีคำนวณเส้นทางใหม่ไปยังร้าน
         if (resPosition != null) {
           final newRoute = await _getRouteFromORS(riderPosition!, resPosition!);
           setState(() {
@@ -128,7 +148,6 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
 
   Future<void> _initMap() async {
     try {
-      // 1️⃣ ดึงข้อมูลจาก Firebase ก่อน
       var snapshot = await FirebaseFirestore.instance
           .collection('BP_Order_detail')
           .doc('order${widget.ord_id}')
@@ -141,19 +160,16 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
         String resCoordinate = data['Res_coordinate'] ?? '';
         resPosition = _parseCoordinates(resCoordinate);
 
-        // ✅ ถ้ามี Rider_coordinate เก็บไว้ ให้ใช้
         String riderCoordinate = data['Rider_coordinate'] ?? '';
         if (riderCoordinate.isNotEmpty) {
           initialRiderPos = _parseCoordinates(riderCoordinate);
         }
       }
 
-      // 2️⃣ ถ้าไม่มี Rider_coordinate ให้ fallback ไปที่ GPS
       if (initialRiderPos == null) {
         Position position = await _getCurrentLocation();
         initialRiderPos = LatLng(position.latitude, position.longitude);
 
-        // อัปเดตตำแหน่งเริ่มต้นใน Firebase ด้วย
         await FirebaseFirestore.instance
             .collection('BP_Order_detail')
             .doc('order${widget.ord_id}')
@@ -165,7 +181,6 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
 
       riderPosition = initialRiderPos;
 
-      // 3️⃣ สร้าง route ถ้ามี resPosition
       if (riderPosition != null && resPosition != null) {
         routePoints = await _getRouteFromORS(riderPosition!, resPosition!);
         mapController.move(riderPosition!, 13);
@@ -173,7 +188,6 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
 
       setState(() => isLoading = false);
 
-      // 4️⃣ เริ่มติดตามตำแหน่งจาก GPS และอัปเดต Firebase
       _startTracking();
     } catch (e) {
       Fluttertoast.showToast(msg: "เกิดข้อผิดพลาด: $e");
@@ -185,14 +199,12 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
     bool serviceEnabled;
     LocationPermission permission;
 
-    // ตรวจสอบว่าเปิด GPS หรือยัง
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       Fluttertoast.showToast(msg: "กรุณาเปิด GPS ก่อนใช้งาน");
       throw Exception('GPS not enabled');
     }
 
-    // ขอสิทธิ์การเข้าถึง
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -207,7 +219,6 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
       throw Exception('Permission denied forever');
     }
 
-    // คืนค่าตำแหน่งปัจจุบัน
     return await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high);
   }
@@ -250,7 +261,6 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
                     ),
                     MarkerLayer(
                       markers: [
-                        // ✅ Marker: Rider
                         Marker(
                           point: riderPosition!,
                           width: 60,
@@ -261,7 +271,6 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
                             size: 40,
                           ),
                         ),
-                        // ✅ Marker: ร้าน
                         Marker(
                           point: resPosition!,
                           width: 60,
@@ -274,7 +283,6 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
                         ),
                       ],
                     ),
-                    // ✅ เส้นเชื่อมระหว่าง Rider กับ ร้าน
                     PolylineLayer(
                       polylines: [
                         Polyline(
@@ -293,7 +301,7 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
 
   Future<List<LatLng>> _getRouteFromORS(LatLng start, LatLng end) async {
     const orsApiKey =
-        'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjA5YzBkODc1YmM4MzQwNDZhNGRkZDcwODNjZDAxMTFkIiwiaCI6Im11cm11cjY0In0='; /////////////  ตรงนี้มีจำกัด
+        'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjA5YzBkODc1YmM4MzQwNDZhNGRkZDcwODNjZDAxMTFkIiwiaCI6Im11cm11cjY0In0=';
     final url =
         'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$orsApiKey&start=${start.longitude},${start.latitude}&end=${end.longitude},${end.latitude}';
 
@@ -302,7 +310,6 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final coords = data['features'][0]['geometry']['coordinates'] as List;
-      // แปลงเป็น List<LatLng>
       return coords
           .map((c) => LatLng(c[1].toDouble(), c[0].toDouble()))
           .toList();

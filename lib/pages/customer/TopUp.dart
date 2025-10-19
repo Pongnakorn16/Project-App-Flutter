@@ -268,7 +268,7 @@ class _HomePageState extends State<TopupPage> {
     if (cus_balance.statusCode == 200) {
       final data = jsonDecode(cus_balance.body);
       final int balance = data['balance'] ?? 0;
-      context.read<ShareData>().user_info_send.balance = balance;
+      context.read<ShareData>().user_info_send.balance = balance.toDouble();
     } else {
       Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
     }

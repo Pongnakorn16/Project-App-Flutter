@@ -21,7 +21,7 @@ class UserLoginPostResponse {
   String? address_detail;
   String? coordinates;
   String? license_plate;
-  int balance;
+  double balance; // ✅ แก้เป็น double
   int active_status;
   String source_table;
 
@@ -47,13 +47,14 @@ class UserLoginPostResponse {
         email: json["email"] ?? '',
         phone: json["phone"] ?? '',
         name: json["name"] ?? '',
-        password: '', // เนื่องจาก backend ไม่ส่ง password มา
+        password: '',
         user_image: json["user_image"] ?? '',
-        address: json["address"], // ถ้ามี
+        address: json["address"],
         address_detail: json["address_detail"],
         coordinates: json["coordinates"],
         license_plate: json["license_plate"],
-        balance: json["balance"] ?? 0,
+        balance:
+            (json["balance"] as num?)?.toDouble() ?? 0.0, // ✅ รองรับ double
         active_status: json["active_status"] ?? 0,
         source_table: json["source_table"] ?? '',
       );

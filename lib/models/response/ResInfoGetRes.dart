@@ -20,7 +20,8 @@ class ResInfoResponse {
   String res_closing_time;
   int res_type_id;
   double res_rating;
-  int res_balance;
+  double res_balance;
+
   int res_active_status;
   int res_open_status;
   double? distanceFromCustomer;
@@ -58,7 +59,7 @@ class ResInfoResponse {
       res_closing_time: json['res_closing_time'] ?? '',
       res_type_id: json['res_type_id'] ?? 0,
       res_rating: (json['res_rating'] as num?)?.toDouble() ?? 0.0,
-      res_balance: json['res_balance'] ?? 0,
+      res_balance: (json['res_balance'] as num?)?.toDouble() ?? 0.0,
       res_active_status: json['res_active_status'] ?? 0,
       res_open_status: json['res_open_status'] ?? 0,
     );

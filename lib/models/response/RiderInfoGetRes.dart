@@ -18,7 +18,7 @@ class RiderInfoGetResponse {
   String rid_password;
   String rid_phone;
   String rid_image;
-  int rid_balance;
+  double rid_balance;
   String rid_address;
   String rid_license;
   int rid_rating;
@@ -31,7 +31,7 @@ class RiderInfoGetResponse {
     this.rid_password = '',
     this.rid_phone = '',
     this.rid_image = '',
-    this.rid_balance = 0,
+    this.rid_balance = 0.0,
     this.rid_address = '',
     this.rid_license = '',
     this.rid_rating = 0,
@@ -46,7 +46,7 @@ class RiderInfoGetResponse {
       rid_password: json['rid_password'] ?? '',
       rid_phone: json['rid_phone'] ?? '',
       rid_image: json['rid_image'] ?? '',
-      rid_balance: json['rid_balance'] ?? 0,
+      rid_balance: (json['rid_balance'] as num?)?.toDouble() ?? 0.0,
       rid_address: json['rid_address'] ?? '',
       rid_license: json['rid_license'] ?? '',
       rid_rating: json['rid_rating'] ?? 0,

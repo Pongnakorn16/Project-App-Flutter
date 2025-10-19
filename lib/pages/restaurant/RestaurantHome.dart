@@ -1159,7 +1159,7 @@ class _HomePageState extends State<RestaurantHomePage> {
 
       if (res_balance.statusCode == 200) {
         final data = jsonDecode(res_balance.body);
-        final int balance = data['balance'] ?? 0;
+        final double balance = (data['balance'] as num).toDouble();
         context.read<ShareData>().user_info_send.balance = balance;
       } else {
         Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
@@ -1217,7 +1217,7 @@ class _HomePageState extends State<RestaurantHomePage> {
         });
       }
     } catch (e) {
-      log("LoadCusHome Error: $e");
+      log("LoadResHome Error: $e");
       Fluttertoast.showToast(
           msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
           backgroundColor: Colors.red,

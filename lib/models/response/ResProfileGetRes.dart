@@ -18,7 +18,7 @@ class ResProfileGetResponse {
   String res_opening_time;
   String res_closing_time;
   double res_rating;
-  int res_balance;
+  double res_balance;
   int res_active_status;
 
   ResProfileGetResponse({
@@ -33,7 +33,7 @@ class ResProfileGetResponse {
     this.res_opening_time = '',
     this.res_closing_time = '',
     this.res_rating = 0.0,
-    this.res_balance = 0,
+    this.res_balance = 0.0,
     this.res_active_status = 0,
   });
 
@@ -52,7 +52,7 @@ class ResProfileGetResponse {
       res_rating: (json['res_rating'] != null)
           ? double.tryParse(json['res_rating'].toString()) ?? 0.0
           : 0.0,
-      res_balance: json['res_balance'] ?? 0,
+      res_balance: (json['res_balance'] as num?)?.toDouble() ?? 0.0,
       res_active_status: json['res_active_status'] ?? 0,
     );
   }

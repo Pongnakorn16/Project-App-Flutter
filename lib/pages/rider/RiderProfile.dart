@@ -493,7 +493,7 @@ class _ProfilePageState extends State<RiderProfilePage> {
 
       if (rid_balance.statusCode == 200) {
         final data = jsonDecode(rid_balance.body);
-        final int balance = data['balance'] ?? 0;
+        final double balance = (data['balance'] as num).toDouble();
         context.read<ShareData>().user_info_send.balance = balance;
       } else {
         Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
