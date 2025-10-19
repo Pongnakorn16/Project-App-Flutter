@@ -73,7 +73,6 @@ class _CusallorderPageState extends State<CusallorderPage> {
                       }
 
                       // แปลงวันเวลา
-
                       DateTime orderDate = order.ordDate;
                       String formattedDate =
                           DateFormat('dd/MM/yyyy เวลา HH:mm น.')
@@ -94,36 +93,86 @@ class _CusallorderPageState extends State<CusallorderPage> {
                                 ),
                               ),
                             );
-                          } else {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CusReviewPage(
-                                  ord_id: order.ordId,
-                                ),
-                              ),
-                            );
                           }
                         },
                         child: Card(
                           margin: EdgeInsets.symmetric(vertical: 6),
                           elevation: 3,
-                          child: ListTile(
-                            title: Text(resInfo != null
-                                ? resInfo.res_name
-                                : "กำลังโหลด..."),
-                            subtitle: Column(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                buildStatusBox(order.ordStatus ?? -1),
-                                SizedBox(height: 4),
-                                Text("วันที่: $formattedDate"),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            resInfo != null
+                                                ? resInfo.res_name
+                                                : "กำลังโหลด...",
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 8),
+                                          buildStatusBox(order.ordStatus ?? -1),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            "วันที่: $formattedDate",
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(
+                                      "ราคารวม: ${(order.totalOrderPrice as num?)?.toInt() ?? '-'} ฿",
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13),
+                                    ),
+                                  ],
+                                ),
+                                // แสดงปุ่มรีวิวเมื่อสถานะเป็น 3
+                                if (order.ordStatus == 3)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 12.0),
+                                    child: SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  CusReviewPage(
+                                                ord_id: order.ordId,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        icon: Icon(Icons.rate_review, size: 18),
+                                        label: Text("รีวิว"),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green,
+                                          foregroundColor: Colors.white,
+                                          padding: EdgeInsets.symmetric(
+                                              vertical: 10),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                               ],
-                            ),
-                            trailing: Text(
-                              "ราคารวม: ${(order.totalOrderPrice as num?)?.toInt() ?? '-'} ฿",
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 13),
                             ),
                           ),
                         ),

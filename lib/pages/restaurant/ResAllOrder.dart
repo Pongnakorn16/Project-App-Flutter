@@ -188,7 +188,8 @@ class _HomePageState extends State<ResAllOrderPage> {
                                               await updateOrderStatus(
                                                   order.ordId.toString(),
                                                   -2); // ปฏิเสธ → -2
-                                              RefundCus(order.cusId);
+                                              await RefundCus(
+                                                  order.ordId, order.cusId);
                                             },
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: Colors.red,
@@ -388,28 +389,56 @@ class _HomePageState extends State<ResAllOrderPage> {
     }
   }
 
-  Future<void> RefundCus(int cus_id) async {
-    int total = context.read<ShareData>().Refund_balance;
+  Future<void> RefundCus(int ord_id, int cus_id) async {
+    log("$ord_id ORDER_ID");
+    log("$cus_id CUS_ID");
 
     try {
+      // 1️⃣ ดึงค่า Refund_D-wallet จาก Firebase
+      final docRef = FirebaseFirestore.instance
+          .collection('BP_Order_detail')
+          .doc('order$ord_id');
+
+      final docSnapshot = await docRef.get();
+
+      if (!docSnapshot.exists) {
+        throw Exception("Order $ord_id not found");
+      }
+
+      final data = docSnapshot.data();
+
+      // ✅ ป้องกัน error double -> int
+      num totalRefundNum = data?['Refund_D-wallet'] ?? 0;
+      int totalRefund = totalRefundNum.round();
+
+      if (totalRefund <= 0) {
+        log("No refund to process for order $ord_id");
+        return;
+      }
+
+      // 2️⃣ ส่งไปอัปเดต balance ของลูกค้า ผ่าน API
       final res_Add = await http.put(
         Uri.parse("$url/db/updateRefundCus_balance"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "total": total,
+          "total": totalRefund,
           "cus_id": cus_id,
         }),
       );
 
       if (res_Add.statusCode == 200) {
-        log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-        context.read<ShareData>().Refund_balance = 0;
+        log("Refund success: $totalRefund to customer $cus_id");
+
+        // ✅ 3️⃣ ลบฟิลด์ Refund_D-wallet ออกจาก Firebase
+        await docRef.update({
+          'Refund_D-wallet': FieldValue.delete(),
+        });
       } else {
         throw Exception("Server error: ${res_Add.statusCode}");
       }
     } catch (e) {
-      log("update_cus_balance Error: $e");
-      throw e; // ส่ง error ต่อไปให้ caller จัดการ
+      log("RefundCus Error: $e");
+      throw e;
     }
   }
 

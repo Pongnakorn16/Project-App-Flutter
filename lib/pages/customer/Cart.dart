@@ -542,7 +542,8 @@ class _HomePageState extends State<CartPage> {
                           'Order_status': 0,
                           'Cus_coordinate': Cus_coordinate,
                           'Res_coordinate': Res_coordinate,
-                          'Rider_coordinate': ""
+                          'Rider_coordinate': "",
+                          'Refund_D-wallet': finalest_Price,
                         });
                       });
 
