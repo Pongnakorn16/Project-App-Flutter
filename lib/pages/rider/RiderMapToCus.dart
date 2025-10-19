@@ -38,7 +38,7 @@ class _RiderMapToCusPageState extends State<RiderMapToCusPage> {
   void _startTracking() {
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 5,
+      distanceFilter: 100,
     );
 
     _positionStream =

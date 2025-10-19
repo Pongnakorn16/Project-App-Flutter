@@ -68,7 +68,7 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
   void _startTracking() {
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 5, // อัปเดตทุก 5 เมตร
+      distanceFilter: 100, // ปกติจะอัปเดตทุก 100 เมตร
     );
 
     _positionStream =
@@ -80,24 +80,41 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
         riderPosition = newPosition;
       });
 
-      // เคลื่อนกล้องตามตำแหน่งใหม่
-      mapController.move(riderPosition!, mapController.camera.zoom);
-
-      // 🔄 อัปเดตตำแหน่งไปยัง Firestore
-      await FirebaseFirestore.instance
-          .collection('BP_Order_detail')
-          .doc('order${widget.ord_id}')
-          .update({
-        'Rider_coordinate':
-            '${position.latitude},${position.longitude}', // เก็บเป็น string เช่น "16.4332,102.8231"
-      });
-
-      // ถ้ามี resPosition ให้รีเฟรชเส้นทาง
+      // ✅ เช็คระยะระหว่างไรเดอร์กับร้าน (ถ้ามีตำแหน่งร้าน)
+      bool shouldUpdate = true;
       if (resPosition != null) {
-        final newRoute = await _getRouteFromORS(riderPosition!, resPosition!);
-        setState(() {
-          routePoints = newRoute;
+        double distanceToRestaurant = Geolocator.distanceBetween(
+          riderPosition!.latitude,
+          riderPosition!.longitude,
+          resPosition!.latitude,
+          resPosition!.longitude,
+        );
+
+        // ✅ อัปเดตพิกัดถ้าอยู่ไกลร้านเกิน 50 เมตร
+        if (distanceToRestaurant < 50) {
+          shouldUpdate = false; // ถ้าใกล้ร้านเกินไปไม่ต้องอัปเดต
+        }
+      }
+
+      if (shouldUpdate) {
+        // ✅ เคลื่อนกล้องตามไรเดอร์
+        mapController.move(riderPosition!, mapController.camera.zoom);
+
+        // ✅ อัปเดตพิกัดไปยัง Firestore
+        await FirebaseFirestore.instance
+            .collection('BP_Order_detail')
+            .doc('order${widget.ord_id}')
+            .update({
+          'Rider_coordinate': '${position.latitude},${position.longitude}',
         });
+
+        // ✅ รีคำนวณเส้นทางใหม่ไปยังร้าน
+        if (resPosition != null) {
+          final newRoute = await _getRouteFromORS(riderPosition!, resPosition!);
+          setState(() {
+            routePoints = newRoute;
+          });
+        }
       }
     });
   }
