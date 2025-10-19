@@ -3,8 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:another_flushbar/flushbar.dart';
 
 class OrderNotificationService {
+  OrderNotificationService._privateConstructor();
+  static final OrderNotificationService _instance =
+      OrderNotificationService._privateConstructor();
+  factory OrderNotificationService() => _instance;
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   int _lastNotifiedStep = -1; // ✅ เก็บสถานะล่าสุด
+  final Map<String, int> _lastNotifiedSteps = {};
 
   void listenOrderChanges(BuildContext context, int ordId,
       void Function(String orderId, int newStep) onStepChanged) {
@@ -71,5 +77,44 @@ class OrderNotificationService {
         // ),
       ).show(context);
     });
+  }
+
+  void listenSpecificOrders(BuildContext context, List<int> orderIds,
+      void Function(String orderId, int newStep) onStepChanged) {
+    for (var ordId in orderIds) {
+      final key = 'order$ordId';
+      if (_lastNotifiedSteps.containsKey(key))
+        continue; // ป้องกัน subscribe ซ้ำ
+
+      _firestore
+          .collection('BP_Order_detail')
+          .doc(key)
+          .snapshots()
+          .listen((snapshot) {
+        final data = snapshot.data();
+        if (data == null) return;
+
+        final currentOrderId = data['order_id'] ?? -1;
+        final orderStatus = data['Order_status'] ?? -1;
+
+        if (currentOrderId != ordId || orderStatus != 0) return;
+
+        if (_lastNotifiedSteps[key] == orderStatus) return;
+        _lastNotifiedSteps[key] = orderStatus;
+
+        // แสดง Notification
+        Flushbar(
+          title: "ออเดอร์ใหม่",
+          message: "Order$ordId รอร้านยืนยัน",
+          duration: Duration(seconds: 3),
+          flushbarPosition: FlushbarPosition.TOP,
+          margin: EdgeInsets.all(8),
+          borderRadius: BorderRadius.circular(8),
+          backgroundColor: Colors.deepPurple,
+        ).show(context);
+
+        onStepChanged(key, orderStatus);
+      });
+    }
   }
 }

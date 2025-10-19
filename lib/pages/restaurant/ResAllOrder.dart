@@ -30,20 +30,41 @@ class _HomePageState extends State<ResAllOrderPage> {
   bool isLoading = true;
   List<CusOrderGetResponse> ordersList = []; // เก็บ order
   Map<int, CusInfoGetResponse> _customerMap = {};
+  bool hasSubscribed = false; // ✅ ป้องกัน subscribe ซ้ำ
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController();
+
     Configuration.getConfig().then((value) {
       url = value['apiEndpoint'];
-      LoadAllOrder(context);
-      final res_id = context.read<ShareData>().user_info_send.uid;
-      OrderNotificationService().listenOrderChanges(context, res_id,
-          (orderId, newStep) {
-        if (!mounted) return;
-      });
+
+      // LoadAllOrder ก่อนก็ได้ แต่ subscribe listener ต้องทำแค่ครั้งเดียว
+      if (!hasSubscribed) {
+        hasSubscribed = true; // ✅ ตั้งก่อน subscribe
+
+        LoadAllOrder(context).then((_) {
+          final res_id = context.read<ShareData>().user_info_send.uid;
+          List<int> orderIds = ordersList.map((order) => order.ordId).toList();
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            OrderNotificationService().listenSpecificOrders(
+              context,
+              orderIds,
+              (orderId, step) {
+                if (!mounted) return;
+
+                // โหลด Order ใหม่และรีเฟรช UI
+                LoadAllOrder(context).then((_) {
+                  setState(() {});
+                });
+              },
+            );
+          });
+        });
+      }
     });
-    _pageController = PageController();
   }
 
   @override
@@ -315,7 +336,7 @@ class _HomePageState extends State<ResAllOrderPage> {
     );
   }
 
-  void LoadAllOrder(BuildContext context) async {
+  Future<void> LoadAllOrder(BuildContext context) async {
     setState(() {
       isLoading = true;
     });
