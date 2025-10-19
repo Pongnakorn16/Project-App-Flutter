@@ -21,7 +21,7 @@ class RiderInfoGetResponse {
   double rid_balance;
   String rid_address;
   String rid_license;
-  int rid_rating;
+  double rid_rating;
   int rid_active_status;
 
   RiderInfoGetResponse({
@@ -49,7 +49,7 @@ class RiderInfoGetResponse {
       rid_balance: (json['rid_balance'] as num?)?.toDouble() ?? 0.0,
       rid_address: json['rid_address'] ?? '',
       rid_license: json['rid_license'] ?? '',
-      rid_rating: json['rid_rating'] ?? 0,
+      rid_rating: (json['rid_rating'] as num?)?.toDouble() ?? 0.0,
       rid_active_status: json['rid_active_status'] ?? 0,
     );
   }

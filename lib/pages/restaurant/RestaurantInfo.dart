@@ -1418,6 +1418,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
 
   Future<void> ReplaceMenu(int menuId, List<dynamic> selectedOptions) async {
     final cus_id = context.read<ShareData>().user_info_send.uid;
+    log(selectedOptions.toString() + "SELECTED OP");
     var Value = await http.put(
       Uri.parse("$url/db/ReplaceToCart/${cus_id}"),
       headers: {"Content-Type": "application/json; charset=utf-8"},
@@ -1433,6 +1434,7 @@ class _HomePageState extends State<RestaurantinfoPage> {
       // ถ้า status code ไม่ใช่ 200 ให้ดึงข้อความจาก response body
       var responseBody = jsonDecode(Value.body);
       setState(() {
+        log(responseBody['error'] + "REPLACERCERCERCER");
         Fluttertoast.showToast(
             msg: "เปลี่ยนแปลงเมนูใส่ตะกร้าไม่สำเร็จ!!!",
             toastLength: Toast.LENGTH_SHORT,

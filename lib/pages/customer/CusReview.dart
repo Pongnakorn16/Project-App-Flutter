@@ -232,17 +232,27 @@ class _CusReviewPageState extends State<CusReviewPage> {
 
                 // ✅ เรียก API ตามประเภท
                 if (resId != null) {
+                  print("กำลังรีวิวร้าน res_id = $resId");
                   await insertReview_res(
                     rating: tempRating,
                     review_des: commentController.text,
                     res_id: resId,
                   );
+                  print("→ insertReview_res เสร็จ");
+                  await update_res_rating(resId);
+                  print("→ update_res_rating ทำงานแล้ว");
                 } else if (ridId != null) {
+                  print("กำลังรีวิวไรเดอร์ rid_id = $ridId");
                   await insertReview_rid(
                     rating: tempRating,
                     review_des: commentController.text,
                     rid_id: ridId,
                   );
+                  print("→ insertReview_rid เสร็จ");
+                  await update_rid_rating(ridId);
+                  print("→ update_rid_rating ทำงานแล้ว");
+                } else {
+                  print("❌ resId และ ridId เป็น null ทั้งคู่");
                 }
 
                 Navigator.pop(context);
@@ -572,6 +582,32 @@ class _CusReviewPageState extends State<CusReviewPage> {
     } catch (e) {
       log("❌ เกิดข้อผิดพลาดขณะส่งรายงานไรเดอร์: $e");
       Fluttertoast.showToast(msg: "เกิดข้อผิดพลาดในการส่งข้อมูล");
+    }
+  }
+
+  Future<void> update_res_rating(int res_id) async {
+    final res_rating =
+        await http.get(Uri.parse("$url/db/updateResRating/$res_id"));
+    print('Status code: ${res_rating.statusCode}');
+    print('Response body: ${res_rating.body}');
+
+    if (res_rating.statusCode == 200) {
+      Fluttertoast.showToast(msg: "รีวิวร้านสำเร็จ");
+    } else {
+      Fluttertoast.showToast(msg: "รีวิวร้านไม่สำเร็จ");
+    }
+  }
+
+  Future<void> update_rid_rating(int rid_id) async {
+    final rid_rating =
+        await http.get(Uri.parse("$url/db/updateRidRating/$rid_id"));
+    print('Status code: ${rid_rating.statusCode}');
+    print('Response body: ${rid_rating.body}');
+
+    if (rid_rating.statusCode == 200) {
+      Fluttertoast.showToast(msg: "รีวิวร้านสำเร็จ");
+    } else {
+      Fluttertoast.showToast(msg: "รีวิวร้านไม่สำเร็จ");
     }
   }
 }

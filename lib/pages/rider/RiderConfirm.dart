@@ -148,9 +148,24 @@ class _RiderConfirmPageState extends State<RiderConfirmPage> {
               const SizedBox(height: 30),
               ElevatedButton.icon(
                 onPressed: () async {
-                  await _confirmDelivery();
-                  await cal_RidShareRate(widget.ord_id,
-                      orders_info.first.totalOrderPrice.toDouble());
+                  try {
+                    await _confirmDelivery();
+                    await cal_RidShareRate(widget.ord_id,
+                        orders_info.first.totalOrderPrice.toDouble());
+                    await cal_AdminShareRate(widget.ord_id,
+                        orders_info.first.totalOrderPrice.toDouble());
+
+                    if (!mounted) return; // ป้องกัน widget ถูก unmounted
+
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => RiderHomePage(),
+                      ),
+                    );
+                  } catch (e) {
+                    print("Error: $e");
+                  }
                 },
                 icon: const Icon(Icons.check_circle),
                 label: const Text("จัดส่งสำเร็จ"),
@@ -160,7 +175,7 @@ class _RiderConfirmPageState extends State<RiderConfirmPage> {
                   backgroundColor: Colors.green,
                   foregroundColor: Colors.white,
                 ),
-              ),
+              )
             ],
           ),
         ),
@@ -184,10 +199,10 @@ class _RiderConfirmPageState extends State<RiderConfirmPage> {
   }
 
   Future<void> _confirmDelivery() async {
-    if (_uploadedImageUrl == null) {
-      Fluttertoast.showToast(msg: "กรุณาถ่ายรูปก่อนยืนยันจัดส่ง");
-      return;
-    }
+    // if (_uploadedImageUrl == null) {
+    //   Fluttertoast.showToast(msg: "กรุณาถ่ายรูปก่อนยืนยันจัดส่ง");
+    //   return;
+    // }
 
     try {
       await FirebaseFirestore.instance
@@ -195,7 +210,7 @@ class _RiderConfirmPageState extends State<RiderConfirmPage> {
           .doc('order${widget.ord_id}')
           .update({
         'Confirm_Order_image': _uploadedImageUrl,
-        'order_status': '3',
+        'Order_status': 3,
       });
 
       final newStatus = 3;
@@ -205,12 +220,6 @@ class _RiderConfirmPageState extends State<RiderConfirmPage> {
 
       if (changeStatus.statusCode == 200) {
         Fluttertoast.showToast(msg: "อัปเดตสถานะจัดส่งสำเร็จ!");
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => RiderHomePage(),
-          ),
-        );
       } else {
         print('MySQL update failed: ${changeStatus.body}');
         Fluttertoast.showToast(msg: 'อัปเดตสถานะใน MySQL ล้มเหลว');
@@ -240,7 +249,7 @@ class _RiderConfirmPageState extends State<RiderConfirmPage> {
 
       rid_income = totalPrice * (share_rate / 100);
 
-      final update_res_income = await http.put(
+      final update_rid_income = await http.put(
         Uri.parse("$url/db/updateRidIncome"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -250,14 +259,74 @@ class _RiderConfirmPageState extends State<RiderConfirmPage> {
         }),
       );
 
-      if (update_res_income.statusCode == 200) {
+      if (update_rid_income.statusCode == 200) {
         log("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC");
       } else {
-        throw Exception("Server error: ${update_res_income.statusCode}");
+        throw Exception("Server error: ${update_rid_income.statusCode}");
       }
     } catch (e) {
       log("update_cus_balance Error: $e");
       throw e;
+    }
+  }
+
+  Future<void> cal_AdminShareRate(int order_id, double totalPrice) async {
+    double share_rate = 0;
+    int admin_id = 0;
+    double adm_income = 0;
+    int rid_id = context.read<ShareData>().user_info_send.uid;
+
+    try {
+      if (url.isEmpty) {
+        final config = await Configuration.getConfig();
+        url = config['apiEndpoint'];
+      }
+
+      // โหลด share rate
+      final adm_share = await http.get(Uri.parse("$url/db/loadAdmShare"));
+      if (adm_share.statusCode == 200) {
+        final data = jsonDecode(adm_share.body);
+        share_rate = (data['share_rate'] ?? 0).toDouble();
+      } else {
+        Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
+        return;
+      }
+
+      // โหลด admin id
+      final admID = await http.get(Uri.parse("$url/db/loadAdmId"));
+      if (admID.statusCode == 200) {
+        final data = jsonDecode(admID.body);
+        admin_id = data['admin_id'] ?? 0;
+      } else {
+        Fluttertoast.showToast(msg: "โหลดยอดเงินไม่สำเร็จ");
+        return;
+      }
+
+      adm_income = totalPrice * (share_rate / 100);
+
+      log(order_id.toString() + "ORDER_ID");
+      log(admin_id.toString() + "ADMIN_ID");
+      log(adm_income.toString() + "AD_INCOME");
+
+      // อัปเดต server
+      final updateResponse = await http.put(
+        Uri.parse("$url/db/updateAdmIncome"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "ord_id": order_id,
+          "ad_id": admin_id,
+          "ad_income": adm_income.toDouble(),
+        }),
+      );
+
+      print("PUT status: ${updateResponse.statusCode}");
+      print("PUT body: ${updateResponse.body}");
+
+      if (updateResponse.statusCode != 200) {
+        throw Exception("Server error: ${updateResponse.statusCode}");
+      }
+    } catch (e) {
+      log("cal_AdminShareRate Error: $e");
     }
   }
 }
