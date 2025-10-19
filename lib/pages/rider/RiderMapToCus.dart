@@ -19,211 +19,221 @@ class RiderMapToCusPage extends StatefulWidget {
 }
 
 class _RiderMapToCusPageState extends State<RiderMapToCusPage> {
-  StreamSubscription<DocumentSnapshot>?
-      _firebaseStream; // ✅ เพิ่ม Firebase listener
+  StreamSubscription<Position>? _positionStream;
+  StreamSubscription<DocumentSnapshot>? _firebaseStream;
   LatLng? riderPosition;
   LatLng? cusPosition;
   bool isLoading = true;
   final MapController mapController = MapController();
   List<LatLng> routePoints = [];
-  StreamSubscription<Position>? _positionStream;
   bool isNearCustomer = false;
-  LatLng? _lastRiderPos;
-  final double routeUpdateThreshold = 50;
 
   @override
   void initState() {
     super.initState();
     _initMap();
-    _listenToFirebaseChanges(); // ✅ เริ่มฟัง Firebase
+  }
+
+  @override
+  void dispose() {
+    _positionStream?.cancel();
+    _firebaseStream?.cancel();
+    super.dispose();
   }
 
   // ✅ ฟังการเปลี่ยนแปลงของ Rider_coordinate จาก Firebase
   void _listenToFirebaseChanges() {
+    print("🔥 Starting Firebase listener...");
     _firebaseStream = FirebaseFirestore.instance
         .collection('BP_Order_detail')
         .doc('order${widget.ord_id}')
         .snapshots()
         .listen((snapshot) {
+      print("🔥 Firebase snapshot received");
       if (snapshot.exists) {
         var data = snapshot.data()!;
         String riderCoord = data['Rider_coordinate'] ?? '';
+        print("🔥 Rider_coordinate from Firebase: $riderCoord");
 
         if (riderCoord.isNotEmpty) {
           LatLng? newPos = _parseCoordinates(riderCoord);
 
-          if (newPos != null && newPos != riderPosition) {
+          if (newPos != null) {
+            print(
+                "🔥 New position parsed: ${newPos.latitude}, ${newPos.longitude}");
+            print(
+                "🔥 Current position: ${riderPosition?.latitude}, ${riderPosition?.longitude}");
+
+            // ✅ คำนวณระยะทางกับลูกค้า
+            bool nearCustomer = false;
+            if (cusPosition != null) {
+              double distanceInMeters = Geolocator.distanceBetween(
+                newPos.latitude,
+                newPos.longitude,
+                cusPosition!.latitude,
+                cusPosition!.longitude,
+              );
+              nearCustomer = distanceInMeters <= 50;
+              print("🔥 Distance to customer: ${distanceInMeters}m");
+            }
+
             setState(() {
               riderPosition = newPos;
-
-              // อัปเดตสถานะใกล้ลูกค้าหรือไม่
-              if (cusPosition != null) {
-                double distanceInMeters = Geolocator.distanceBetween(
-                  newPos.latitude,
-                  newPos.longitude,
-                  cusPosition!.latitude,
-                  cusPosition!.longitude,
-                );
-                isNearCustomer = distanceInMeters <= 50;
-              }
+              isNearCustomer = nearCustomer;
             });
+            print("🔥 UI Updated!");
 
             // เคลื่อนกล้องตามตำแหน่งใหม่
             mapController.move(newPos, mapController.camera.zoom);
 
-            // รีคำนวณเส้นทางถ้าขยับมากพอ
+            // รีคำนวณเส้นทาง
             if (cusPosition != null) {
-              bool shouldUpdateRoute = true;
-              if (_lastRiderPos != null) {
-                double movedDistance = Geolocator.distanceBetween(
-                  _lastRiderPos!.latitude,
-                  _lastRiderPos!.longitude,
-                  newPos.latitude,
-                  newPos.longitude,
-                );
-                if (movedDistance < routeUpdateThreshold) {
-                  shouldUpdateRoute = false;
+              _getRouteFromORS(newPos, cusPosition!).then((newRoute) {
+                if (mounted) {
+                  setState(() {
+                    routePoints = newRoute;
+                  });
+                  print("🔥 Route updated!");
                 }
-              }
-
-              if (shouldUpdateRoute) {
-                _getRouteFromORS(newPos, cusPosition!).then((newRoute) {
-                  if (mounted) {
-                    setState(() {
-                      routePoints = newRoute;
-                      _lastRiderPos = newPos;
-                    });
-                  }
-                });
-              }
-            }
-          }
-        }
-      }
-    });
-  }
-
-  void _startTracking() {
-    const locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 2,
-    );
-
-    _positionStream =
-        Geolocator.getPositionStream(locationSettings: locationSettings)
-            .listen((Position position) async {
-      final newPosition = LatLng(position.latitude, position.longitude);
-
-      setState(() {
-        riderPosition = newPosition;
-
-        if (cusPosition != null) {
-          double distanceInMeters = Geolocator.distanceBetween(
-            newPosition.latitude,
-            newPosition.longitude,
-            cusPosition!.latitude,
-            cusPosition!.longitude,
-          );
-          isNearCustomer = distanceInMeters <= 50;
-        }
-      });
-
-      mapController.move(newPosition, 13);
-
-      // อัปเดต Firebase
-      await FirebaseFirestore.instance
-          .collection('BP_Order_detail')
-          .doc('order${widget.ord_id}')
-          .update({
-        'Rider_coordinate': '${position.latitude},${position.longitude}',
-      });
-
-      // เช็คว่าต้องอัปเดต route หรือใช้ cache
-      if (cusPosition != null) {
-        bool shouldUpdateRoute = true;
-        if (_lastRiderPos != null) {
-          double movedDistance = Geolocator.distanceBetween(
-            _lastRiderPos!.latitude,
-            _lastRiderPos!.longitude,
-            newPosition.latitude,
-            newPosition.longitude,
-          );
-          if (movedDistance < routeUpdateThreshold) {
-            shouldUpdateRoute = false;
-          }
-        }
-
-        if (shouldUpdateRoute) {
-          try {
-            final newRoute = await _getRouteFromORS(newPosition, cusPosition!);
-            if (mounted) {
-              setState(() {
-                routePoints = newRoute;
               });
             }
-          } catch (e) {
-            print('❌ Routing update failed: $e');
           }
-
-          _lastRiderPos = newPosition;
         }
       }
     });
   }
 
-  bool checkIsNearCustomer(LatLng rider, LatLng customer,
-      {double threshold = 50}) {
-    double distance = Geolocator.distanceBetween(
-      rider.latitude,
-      rider.longitude,
-      customer.latitude,
-      customer.longitude,
-    );
-    return distance <= threshold;
+  // ✅ เริ่มติดตามตำแหน่งไรเดอร์ด้วย GPS
+  Future<void> startRiderMovement() async {
+    print("📍 Starting GPS tracking...");
+
+    // ตรวจสอบการอนุญาตตำแหน่ง
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      Fluttertoast.showToast(msg: "กรุณาเปิด GPS ก่อนใช้งาน");
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        Fluttertoast.showToast(msg: "ไม่ได้รับอนุญาตให้เข้าถึงตำแหน่ง");
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      Fluttertoast.showToast(msg: "การเข้าถึงตำแหน่งถูกปฏิเสธถาวร");
+      return;
+    }
+
+    // ✅ เริ่มติดตามตำแหน่ง GPS
+    _positionStream = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5, // ลดเหลือ 5 เมตร เพื่อให้อัปเดตบ่อยขึ้น
+      ),
+    ).listen((Position position) async {
+      print("📍 GPS Update: ${position.latitude}, ${position.longitude}");
+
+      LatLng newPosition = LatLng(position.latitude, position.longitude);
+
+      // ✅ คำนวณระยะทางกับลูกค้า
+      bool nearCustomer = false;
+      if (cusPosition != null) {
+        double distanceInMeters = Geolocator.distanceBetween(
+          newPosition.latitude,
+          newPosition.longitude,
+          cusPosition!.latitude,
+          cusPosition!.longitude,
+        );
+        nearCustomer = distanceInMeters <= 50;
+        print("📍 Distance to customer: ${distanceInMeters}m");
+      }
+
+      // ✅ อัปเดต UI
+      setState(() {
+        riderPosition = newPosition;
+        isNearCustomer = nearCustomer;
+      });
+
+      // ✅ เคลื่อนกล้องตามตำแหน่งไรเดอร์
+      mapController.move(riderPosition!, mapController.camera.zoom);
+
+      // ✅ อัปเดตตำแหน่งไปยัง Firebase
+      try {
+        await FirebaseFirestore.instance
+            .collection('BP_Order_detail')
+            .doc('order${widget.ord_id}')
+            .update({
+          'Rider_coordinate': '${position.latitude},${position.longitude}',
+        });
+        print("✅ Firebase updated successfully");
+      } catch (e) {
+        print("❌ Error updating Firebase: $e");
+      }
+
+      // ✅ คำนวณเส้นทางใหม่
+      if (cusPosition != null) {
+        try {
+          final newRoute = await _getRouteFromORS(riderPosition!, cusPosition!);
+          if (mounted) {
+            setState(() {
+              routePoints = newRoute;
+            });
+          }
+        } catch (e) {
+          print('❌ Routing update failed: $e');
+        }
+      }
+    });
   }
 
-  @override
-  void dispose() {
-    _firebaseStream?.cancel(); // ✅ ยกเลิก Firebase listener
-    _positionStream?.cancel();
-    super.dispose();
-  }
-
+  // ✅ เริ่มต้นแผนที่
   Future<void> _initMap() async {
     try {
+      print("🚀 Initializing map...");
+
       var snapshot = await FirebaseFirestore.instance
           .collection('BP_Order_detail')
           .doc('order${widget.ord_id}')
           .get();
 
-      LatLng? initialRiderPos;
-
       if (snapshot.exists) {
         var data = snapshot.data()!;
+
+        // ดึงพิกัดลูกค้า
         String cusCoordinate = data['Cus_coordinate'] ?? '';
         cusPosition = _parseCoordinates(cusCoordinate);
+        print("🏠 Customer position: $cusPosition");
 
+        // ดึงพิกัดไรเดอร์ (ถ้ามี)
         String riderCoordinate = data['Rider_coordinate'] ?? '';
         if (riderCoordinate.isNotEmpty) {
-          initialRiderPos = _parseCoordinates(riderCoordinate);
+          riderPosition = _parseCoordinates(riderCoordinate);
+          print("🏍️ Initial rider position: $riderPosition");
         }
       }
 
-      if (initialRiderPos == null) {
-        Position position = await _getCurrentLocation();
-        initialRiderPos = LatLng(position.latitude, position.longitude);
+      // ถ้ายังไม่มีตำแหน่งไรเดอร์ ใช้ตำแหน่งปัจจุบัน
+      if (riderPosition == null) {
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+        riderPosition = LatLng(position.latitude, position.longitude);
+        print("📍 Current GPS position: $riderPosition");
 
+        // บันทึกตำแหน่งเริ่มต้นลง Firebase
         await FirebaseFirestore.instance
             .collection('BP_Order_detail')
             .doc('order${widget.ord_id}')
             .update({
-          'Rider_coordinate':
-              '${initialRiderPos.latitude},${initialRiderPos.longitude}',
+          'Rider_coordinate': '${position.latitude},${position.longitude}',
         });
       }
 
-      riderPosition = initialRiderPos;
-
+      // คำนวณเส้นทาง
       if (riderPosition != null && cusPosition != null) {
         routePoints = await _getRouteFromORS(riderPosition!, cusPosition!);
         mapController.move(riderPosition!, 13);
@@ -236,45 +246,24 @@ class _RiderMapToCusPageState extends State<RiderMapToCusPage> {
           cusPosition!.longitude,
         );
         isNearCustomer = distanceInMeters <= 50;
+        print("📏 Initial distance: ${distanceInMeters}m");
       }
 
       setState(() => isLoading = false);
 
-      _startTracking();
+      // ✅ เริ่มทั้ง GPS tracking และ Firebase listener
+      await startRiderMovement();
+      _listenToFirebaseChanges();
+
+      print("✅ Map initialized successfully!");
     } catch (e) {
+      print("❌ Error initializing map: $e");
       Fluttertoast.showToast(msg: "เกิดข้อผิดพลาด: $e");
       setState(() => isLoading = false);
     }
   }
 
-  Future<Position> _getCurrentLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      Fluttertoast.showToast(msg: "กรุณาเปิด GPS ก่อนใช้งาน");
-      throw Exception('GPS not enabled');
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        Fluttertoast.showToast(msg: "ไม่ได้รับอนุญาตให้เข้าถึงตำแหน่ง");
-        throw Exception('Permission denied');
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      Fluttertoast.showToast(msg: "การเข้าถึงตำแหน่งถูกปฏิเสธถาวร");
-      throw Exception('Permission denied forever');
-    }
-
-    return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
-  }
-
+  // แปลงพิกัดจาก String เป็น LatLng
   LatLng? _parseCoordinates(String coordinates) {
     try {
       var parts = coordinates.split(',');
@@ -331,7 +320,7 @@ class _RiderMapToCusPageState extends State<RiderMapToCusPage> {
                               width: 60,
                               height: 60,
                               child: const Icon(
-                                Icons.store,
+                                Icons.home,
                                 color: Colors.red,
                                 size: 40,
                               ),
@@ -359,6 +348,8 @@ class _RiderMapToCusPageState extends State<RiderMapToCusPage> {
                         right: 20,
                         child: ElevatedButton(
                           onPressed: () {
+                            _positionStream?.cancel();
+                            _firebaseStream?.cancel();
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
@@ -386,27 +377,59 @@ class _RiderMapToCusPageState extends State<RiderMapToCusPage> {
                           ),
                         ),
                       ),
+
+                    // ✅ Debug info (ลบออกได้เมื่อทดสอบเสร็จ)
+                    Positioned(
+                      top: 10,
+                      left: 10,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Rider: ${riderPosition?.latitude.toStringAsFixed(6)}, ${riderPosition?.longitude.toStringAsFixed(6)}",
+                              style: const TextStyle(fontSize: 10),
+                            ),
+                            Text(
+                              "Near: $isNearCustomer",
+                              style: const TextStyle(fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
     );
   }
 
+  // ดึงเส้นทางจาก OpenRouteService API
   Future<List<LatLng>> _getRouteFromORS(LatLng start, LatLng end) async {
     const orsApiKey =
         'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjA5YzBkODc1YmM4MzQwNDZhNGRkZDcwODNjZDAxMTFkIiwiaCI6Im11cm11cjY0In0=';
     final url =
         'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$orsApiKey&start=${start.longitude},${start.latitude}&end=${end.longitude},${end.latitude}';
 
-    final response = await http.get(Uri.parse(url));
+    try {
+      final response = await http.get(Uri.parse(url));
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final coords = data['features'][0]['geometry']['coordinates'] as List;
-      return coords
-          .map((c) => LatLng(c[1].toDouble(), c[0].toDouble()))
-          .toList();
-    } else {
-      print('❌ Routing API Error: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final coords = data['features'][0]['geometry']['coordinates'] as List;
+        return coords
+            .map((c) => LatLng(c[1].toDouble(), c[0].toDouble()))
+            .toList();
+      } else {
+        print('❌ Routing API Error: ${response.statusCode}');
+        return [start, end];
+      }
+    } catch (e) {
+      print('❌ Error fetching route: $e');
       return [start, end];
     }
   }
