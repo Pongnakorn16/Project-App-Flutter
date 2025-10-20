@@ -877,11 +877,13 @@ class _ProfilePageState extends State<ProfilePage> {
                     var model = {
                       "cus_id": userId,
                       "address": newAddressCtl.text,
-                      "detail": newDetailCtl.text
+                      "detail": newDetailCtl.text,
+                      "coordinate":
+                          "${pickedLocation!.latitude},${pickedLocation!.longitude}",
                     };
 
                     var response = await http.post(
-                      Uri.parse("$url/db/add_cusAdd"),
+                      Uri.parse("$url/db/add_cusAllAdd"),
                       headers: {
                         "Content-Type": "application/json; charset=utf-8"
                       },

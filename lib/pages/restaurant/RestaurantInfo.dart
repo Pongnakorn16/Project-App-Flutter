@@ -291,8 +291,27 @@ class _HomePageState extends State<RestaurantinfoPage> {
 
     // ถ้าไม่มีพิกัดลูกค้า
     if (topAdd.isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(strokeWidth: 2),
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "ยังไม่มีที่อยู่ลูกค้า กรุณาเพิ่มที่อยู่ก่อนในหน้า Profile",
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () {
+                // ไปหน้าเพิ่มที่อยู่
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => CustomerHomePage()));
+              },
+              child: const Text("กลับหน้า Home"),
+            ),
+          ],
+        ),
       );
     }
 
