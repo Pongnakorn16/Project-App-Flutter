@@ -138,96 +138,24 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
                                   ),
 
                                   // ปุ่มทางขวา
-                                  if ((order.ordStatus ?? -1) == 0)
-                                    Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        SizedBox(
-                                          width: 100,
-                                          child: ElevatedButton(
-                                            onPressed: () {
-                                              updateOrderStatus(
-                                                  order.ordId.toString(),
-                                                  1); // กำลังเตรียมอาหาร → 1
-                                            },
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.green,
-                                              padding: EdgeInsets.symmetric(
-                                                  vertical: 10),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(20),
-                                              ),
-                                            ),
-                                            child: Text(
-                                              "รับออเดอร์",
-                                              style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 12),
-                                            ),
-                                          ),
+                                  // แทนที่โค้ดปุ่มทั้งหมด
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.end, // จัดฝั่งขวา
+                                    children: [
+                                      Text(
+                                        order.ordRidIncome != null
+                                            ? "รายได้ไรเดอร์: ${order.ordRidIncome} ฿"
+                                            : "รายได้ไรเดอร์: -",
+                                        style: TextStyle(
+                                          color: Colors.black87,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
                                         ),
-                                        SizedBox(height: 6),
-                                        SizedBox(
-                                          width: 100,
-                                          child: ElevatedButton(
-                                            onPressed: () {
-                                              updateOrderStatus(
-                                                  order.ordId.toString(),
-                                                  -2); // ปฏิเสธ → -2
-                                            },
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.red,
-                                              padding: EdgeInsets.symmetric(
-                                                  vertical: 8),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(20),
-                                              ),
-                                            ),
-                                            child: Text(
-                                              "ปฏิเสธ",
-                                              style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 12),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  else if ((order.ordStatus ?? -1) == 1)
-                                    Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        SizedBox(height: 30),
-                                        SizedBox(
-                                          width: 100,
-                                          child: ElevatedButton(
-                                            onPressed: () {
-                                              updateOrderStatus(
-                                                  order.ordId.toString(),
-                                                  2); // กำลังส่ง → 2
-                                            },
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor:
-                                                  Colors.deepPurple,
-                                              padding: EdgeInsets.symmetric(
-                                                  vertical: 15),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(20),
-                                              ),
-                                            ),
-                                            child: Text(
-                                              "จัดส่ง",
-                                              style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 12),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    )
+                                      ),
+                                    ],
+                                  )
                                 ],
                               ),
                             ),

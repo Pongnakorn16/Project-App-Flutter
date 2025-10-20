@@ -713,12 +713,6 @@ class _HomePageState extends State<RestaurantHomePage> {
 
                                               // เปิด popup ใหม่ เพื่อ refresh ข้อมูล
                                               POP_UPCaterogy();
-
-                                              Fluttertoast.showToast(
-                                                msg: 'ลบหมวดหมู่เรียบร้อยแล้ว',
-                                                backgroundColor: Colors.green,
-                                                textColor: Colors.white,
-                                              );
                                             },
                                             child: const Text('ตกลง'),
                                           ),
@@ -1446,7 +1440,7 @@ class _HomePageState extends State<RestaurantHomePage> {
       } else {
         // handle error กรณี response ไม่ใช่ 200
         Fluttertoast.showToast(
-          msg: "เกิดข้อผิดพลาดจาก server",
+          msg: "ไม่สามารถลบหมวดหมู่ที่มีการใช้งานอยู่ได้",
           backgroundColor: Colors.red,
           textColor: Colors.white,
         );

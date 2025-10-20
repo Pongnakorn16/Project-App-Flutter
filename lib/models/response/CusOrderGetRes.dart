@@ -18,6 +18,12 @@ class CusOrderGetResponse {
   int ordStatus;
   List<dynamic> orlOrderDetail;
 
+  // ฟิลด์ใหม่จาก JSON
+  int? resReviewStatus;
+  int? ridReviewStatus;
+  int? resReportStatus;
+  int? ridReportStatus;
+
   CusOrderGetResponse({
     required this.ordId,
     required this.cusId,
@@ -31,6 +37,10 @@ class CusOrderGetResponse {
     required this.totalOrderPrice,
     required this.ordStatus,
     required this.orlOrderDetail,
+    this.resReviewStatus,
+    this.ridReviewStatus,
+    this.resReportStatus,
+    this.ridReportStatus,
   });
 
   factory CusOrderGetResponse.fromJson(Map<String, dynamic> json) =>
@@ -55,5 +65,9 @@ class CusOrderGetResponse {
         orlOrderDetail: json['orl_order_detail'] != null
             ? List<dynamic>.from(jsonDecode(json['orl_order_detail']))
             : [],
+        resReviewStatus: json['res_review_status'],
+        ridReviewStatus: json['rid_review_status'],
+        resReportStatus: json['res_report_status'],
+        ridReportStatus: json['rid_report_status'],
       );
 }
