@@ -28,25 +28,14 @@ class _SplashPageState extends State<SplashPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor:
-          Color.fromARGB(255, 251, 238, 165), // เปลี่ยนเป็นสีพื้นหลังที่ต้องการ
+          Color.fromARGB(255, 86, 13, 94), // เปลี่ยนเป็นสีพื้นหลังที่ต้องการ
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 400,
-              height: 250,
-              child: Image.network(
-                'https://cdn-icons-png.flaticon.com/512/2203/2203145.png', // กำหนดการจัดตำแหน่งของรูปภาพ
-              ),
-            ),
-            SizedBox(height: 10), // เพิ่มช่องว่างระหว่างรูปภาพกับข้อความ
-            Text(
-              'PARCELPRO', // ข้อความที่จะแสดง
-              style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black),
+            Image.asset(
+              'assets/images/BG_splash.png', // ลิงค์ของรูปพื้นหลัง
+              fit: BoxFit.cover,
             ),
           ],
         ),

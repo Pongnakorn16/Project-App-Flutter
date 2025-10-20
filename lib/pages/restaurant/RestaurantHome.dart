@@ -73,7 +73,9 @@ class _HomePageState extends State<RestaurantHomePage> {
                 ),
               ),
               TextSpan(
-                text: _restaurantInfo.first.res_name,
+                text: _restaurantInfo.isEmpty
+                    ? 'กำลังโหลด...'
+                    : _restaurantInfo.first.res_name,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Color.fromARGB(255, 241, 199, 12),

@@ -6,9 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:http/http.dart' as http;
-import 'package:mobile_miniproject_app/pages/rider/RiderConfirm.dart';
 
 class CusMapPage extends StatefulWidget {
   final int ord_id;
@@ -19,14 +17,13 @@ class CusMapPage extends StatefulWidget {
 }
 
 class _CusMapPageState extends State<CusMapPage> {
-  StreamSubscription<Position>? _positionStream;
   StreamSubscription<DocumentSnapshot>? _firebaseStream;
   LatLng? riderPosition;
   LatLng? cusPosition;
   bool isLoading = true;
   final MapController mapController = MapController();
   List<LatLng> routePoints = [];
-  bool isNearCustomer = false;
+  double? distanceToCustomer;
 
   @override
   void initState() {
@@ -36,54 +33,51 @@ class _CusMapPageState extends State<CusMapPage> {
 
   @override
   void dispose() {
-    _positionStream?.cancel();
     _firebaseStream?.cancel();
     super.dispose();
   }
 
-  // ✅ ฟังการเปลี่ยนแปลงของ Rider_coordinate จาก Firebase
+  // ✅ ฟังการเปลี่ยนแปลงของ Rider_coordinate จาก Firebase (ลูกค้าดูอย่างเดียว ไม่ได้ update)
   void _listenToFirebaseChanges() {
-    print("🔥 Starting Firebase listener...");
+    print("🔥 [Customer] Starting Firebase listener...");
     _firebaseStream = FirebaseFirestore.instance
         .collection('BP_Order_detail')
         .doc('order${widget.ord_id}')
         .snapshots()
         .listen((snapshot) {
-      print("🔥 Firebase snapshot received");
+      print("🔥 [Customer] Firebase snapshot received");
       if (snapshot.exists) {
         var data = snapshot.data()!;
         String riderCoord = data['Rider_coordinate'] ?? '';
-        print("🔥 Rider_coordinate from Firebase: $riderCoord");
+        print("🔥 [Customer] Rider_coordinate from Firebase: $riderCoord");
 
         if (riderCoord.isNotEmpty) {
           LatLng? newPos = _parseCoordinates(riderCoord);
 
           if (newPos != null) {
             print(
-                "🔥 New position parsed: ${newPos.latitude}, ${newPos.longitude}");
-            print(
-                "🔥 Current position: ${riderPosition?.latitude}, ${riderPosition?.longitude}");
+                "🔥 [Customer] New rider position: ${newPos.latitude}, ${newPos.longitude}");
 
             // ✅ คำนวณระยะทางกับลูกค้า
-            bool nearCustomer = false;
+            double? distance;
             if (cusPosition != null) {
-              double distanceInMeters = Geolocator.distanceBetween(
+              distance = Geolocator.distanceBetween(
                 newPos.latitude,
                 newPos.longitude,
                 cusPosition!.latitude,
                 cusPosition!.longitude,
               );
-              nearCustomer = distanceInMeters <= 50;
-              print("🔥 Distance to customer: ${distanceInMeters}m");
+              print(
+                  "🔥 [Customer] Distance to customer: ${distance.toStringAsFixed(2)}m");
             }
 
             setState(() {
               riderPosition = newPos;
-              isNearCustomer = nearCustomer;
+              distanceToCustomer = distance;
             });
-            print("🔥 UI Updated!");
+            print("🔥 [Customer] UI Updated!");
 
-            // เคลื่อนกล้องตามตำแหน่งใหม่
+            // เคลื่อนกล้องตามตำแหน่งไรเดอร์
             mapController.move(newPos, mapController.camera.zoom);
 
             // รีคำนวณเส้นทาง
@@ -93,7 +87,7 @@ class _CusMapPageState extends State<CusMapPage> {
                   setState(() {
                     routePoints = newRoute;
                   });
-                  print("🔥 Route updated!");
+                  print("🔥 [Customer] Route updated!");
                 }
               });
             }
@@ -103,97 +97,10 @@ class _CusMapPageState extends State<CusMapPage> {
     });
   }
 
-  // ✅ เริ่มติดตามตำแหน่งไรเดอร์ด้วย GPS
-  Future<void> startRiderMovement() async {
-    print("📍 Starting GPS tracking...");
-
-    // ตรวจสอบการอนุญาตตำแหน่ง
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      Fluttertoast.showToast(msg: "กรุณาเปิด GPS ก่อนใช้งาน");
-      return;
-    }
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        Fluttertoast.showToast(msg: "ไม่ได้รับอนุญาตให้เข้าถึงตำแหน่ง");
-        return;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      Fluttertoast.showToast(msg: "การเข้าถึงตำแหน่งถูกปฏิเสธถาวร");
-      return;
-    }
-
-    // ✅ เริ่มติดตามตำแหน่ง GPS
-    _positionStream = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 5, // ลดเหลือ 5 เมตร เพื่อให้อัปเดตบ่อยขึ้น
-      ),
-    ).listen((Position position) async {
-      print("📍 GPS Update: ${position.latitude}, ${position.longitude}");
-
-      LatLng newPosition = LatLng(position.latitude, position.longitude);
-
-      // ✅ คำนวณระยะทางกับลูกค้า
-      bool nearCustomer = false;
-      if (cusPosition != null) {
-        double distanceInMeters = Geolocator.distanceBetween(
-          newPosition.latitude,
-          newPosition.longitude,
-          cusPosition!.latitude,
-          cusPosition!.longitude,
-        );
-        nearCustomer = distanceInMeters <= 50;
-        print("📍 Distance to customer: ${distanceInMeters}m");
-      }
-
-      // ✅ อัปเดต UI
-      setState(() {
-        riderPosition = newPosition;
-        isNearCustomer = nearCustomer;
-      });
-
-      // ✅ เคลื่อนกล้องตามตำแหน่งไรเดอร์
-      mapController.move(riderPosition!, mapController.camera.zoom);
-
-      // ✅ อัปเดตตำแหน่งไปยัง Firebase
-      try {
-        await FirebaseFirestore.instance
-            .collection('BP_Order_detail')
-            .doc('order${widget.ord_id}')
-            .update({
-          'Rider_coordinate': '${position.latitude},${position.longitude}',
-        });
-        print("✅ Firebase updated successfully");
-      } catch (e) {
-        print("❌ Error updating Firebase: $e");
-      }
-
-      // ✅ คำนวณเส้นทางใหม่
-      if (cusPosition != null) {
-        try {
-          final newRoute = await _getRouteFromORS(riderPosition!, cusPosition!);
-          if (mounted) {
-            setState(() {
-              routePoints = newRoute;
-            });
-          }
-        } catch (e) {
-          print('❌ Routing update failed: $e');
-        }
-      }
-    });
-  }
-
   // ✅ เริ่มต้นแผนที่
   Future<void> _initMap() async {
     try {
-      print("🚀 Initializing map...");
+      print("🚀 [Customer] Initializing map...");
 
       var snapshot = await FirebaseFirestore.instance
           .collection('BP_Order_detail')
@@ -206,60 +113,76 @@ class _CusMapPageState extends State<CusMapPage> {
         // ดึงพิกัดลูกค้า
         String cusCoordinate = data['Cus_coordinate'] ?? '';
         cusPosition = _parseCoordinates(cusCoordinate);
-        print("🏠 Customer position: $cusPosition");
+        print("🏠 [Customer] Customer position: $cusPosition");
 
-        // ดึงพิกัดไรเดอร์ (ถ้ามี)
+        // ดึงพิกัดไรเดอร์
         String riderCoordinate = data['Rider_coordinate'] ?? '';
         if (riderCoordinate.isNotEmpty) {
           riderPosition = _parseCoordinates(riderCoordinate);
-          print("🏍️ Initial rider position: $riderPosition");
+          print("🏍️ [Customer] Initial rider position: $riderPosition");
         }
       }
 
-      // ถ้ายังไม่มีตำแหน่งไรเดอร์ ใช้ตำแหน่งปัจจุบัน
-      if (riderPosition == null) {
-        Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        );
-        riderPosition = LatLng(position.latitude, position.longitude);
-        print("📍 Current GPS position: $riderPosition");
-
-        // บันทึกตำแหน่งเริ่มต้นลง Firebase
-        await FirebaseFirestore.instance
-            .collection('BP_Order_detail')
-            .doc('order${widget.ord_id}')
-            .update({
-          'Rider_coordinate': '${position.latitude},${position.longitude}',
-        });
+      // ถ้ายังไม่มีตำแหน่งไรเดอร์ ให้แสดง error
+      if (riderPosition == null || cusPosition == null) {
+        setState(() => isLoading = false);
+        Fluttertoast.showToast(msg: "ไม่พบข้อมูลตำแหน่ง");
+        return;
       }
 
       // คำนวณเส้นทาง
       if (riderPosition != null && cusPosition != null) {
         routePoints = await _getRouteFromORS(riderPosition!, cusPosition!);
-        mapController.move(riderPosition!, 13);
 
-        // เช็คระยะทางเริ่มต้น
-        double distanceInMeters = Geolocator.distanceBetween(
+        // เซ็ตกล้องให้เห็นทั้งไรเดอร์และลูกค้า
+        _fitBounds();
+
+        // คำนวณระยะทางเริ่มต้น
+        distanceToCustomer = Geolocator.distanceBetween(
           riderPosition!.latitude,
           riderPosition!.longitude,
           cusPosition!.latitude,
           cusPosition!.longitude,
         );
-        isNearCustomer = distanceInMeters <= 50;
-        print("📏 Initial distance: ${distanceInMeters}m");
+        print(
+            "📏 [Customer] Initial distance: ${distanceToCustomer!.toStringAsFixed(2)}m");
       }
 
       setState(() => isLoading = false);
 
-      // ✅ เริ่มทั้ง GPS tracking และ Firebase listener
-      await startRiderMovement();
+      // ✅ เริ่มฟัง Firebase เท่านั้น (ไม่มี GPS tracking)
       _listenToFirebaseChanges();
 
-      print("✅ Map initialized successfully!");
+      print("✅ [Customer] Map initialized successfully!");
     } catch (e) {
-      print("❌ Error initializing map: $e");
+      print("❌ [Customer] Error initializing map: $e");
       Fluttertoast.showToast(msg: "เกิดข้อผิดพลาด: $e");
       setState(() => isLoading = false);
+    }
+  }
+
+  // ✅ ปรับมุมกล้องให้เห็นทั้งไรเดอร์และลูกค้า
+  void _fitBounds() {
+    if (riderPosition != null && cusPosition != null) {
+      double minLat = riderPosition!.latitude < cusPosition!.latitude
+          ? riderPosition!.latitude
+          : cusPosition!.latitude;
+      double maxLat = riderPosition!.latitude > cusPosition!.latitude
+          ? riderPosition!.latitude
+          : cusPosition!.latitude;
+      double minLng = riderPosition!.longitude < cusPosition!.longitude
+          ? riderPosition!.longitude
+          : cusPosition!.longitude;
+      double maxLng = riderPosition!.longitude > cusPosition!.longitude
+          ? riderPosition!.longitude
+          : cusPosition!.longitude;
+
+      LatLng center = LatLng(
+        (minLat + maxLat) / 2,
+        (minLng + maxLng) / 2,
+      );
+
+      mapController.move(center, 13);
     }
   }
 
@@ -283,13 +206,33 @@ class _CusMapPageState extends State<CusMapPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("แผนที่นำทางไปยังลูกค้า"),
-        automaticallyImplyLeading: false,
+        title: const Text("ติดตามไรเดอร์"),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : (riderPosition == null || cusPosition == null)
-              ? const Center(child: Text("ไม่พบข้อมูลพิกัด"))
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.location_off,
+                          size: 64, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      const Text("ไม่พบข้อมูลตำแหน่งไรเดอร์"),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text("กลับ"),
+                      ),
+                    ],
+                  ),
+                )
               : Stack(
                   children: [
                     FlutterMap(
@@ -340,72 +283,86 @@ class _CusMapPageState extends State<CusMapPage> {
                         ),
                       ],
                     ),
-                    // ✅ แสดงปุ่มเมื่อใกล้ลูกค้า
-                    if (isNearCustomer)
-                      Positioned(
-                        bottom: 20,
-                        left: 20,
-                        right: 20,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            _positionStream?.cancel();
-                            _firebaseStream?.cancel();
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    RiderConfirmPage(ord_id: widget.ord_id),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurple,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 16, horizontal: 24),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 4,
-                          ),
-                          child: const Text(
-                            "ยืนยันการส่งอาหารให้ลูกค้า",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
 
-                    // ✅ Debug info (ลบออกได้เมื่อทดสอบเสร็จ)
+                    // ✅ แสดงระยะทางด้านบน
                     Positioned(
-                      top: 10,
-                      left: 10,
+                      top: 16,
+                      left: 16,
+                      right: 16,
                       child: Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Rider: ${riderPosition?.latitude.toStringAsFixed(6)}, ${riderPosition?.longitude.toStringAsFixed(6)}",
-                              style: const TextStyle(fontSize: 10),
-                            ),
-                            Text(
-                              "Near: $isNearCustomer",
-                              style: const TextStyle(fontSize: 10),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
                             ),
                           ],
                         ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.motorcycle,
+                                    color: Colors.blue),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  "ไรเดอร์กำลังมาส่งอาหาร",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            if (distanceToCustomer != null)
+                              Row(
+                                children: [
+                                  const Icon(Icons.location_on,
+                                      color: Colors.red, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "ห่างจากคุณ ${_formatDistance(distanceToCustomer!)}",
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // ✅ ปุ่มกลับไปกลางแผนที่
+                    Positioned(
+                      bottom: 80,
+                      right: 16,
+                      child: FloatingActionButton(
+                        heroTag: "recenter",
+                        onPressed: _fitBounds,
+                        backgroundColor: Colors.white,
+                        child: const Icon(Icons.center_focus_strong,
+                            color: Colors.blue),
                       ),
                     ),
                   ],
                 ),
     );
+  }
+
+  // ✅ แปลงระยะทางให้อ่านง่าย
+  String _formatDistance(double meters) {
+    if (meters < 1000) {
+      return "${meters.toStringAsFixed(0)} เมตร";
+    } else {
+      return "${(meters / 1000).toStringAsFixed(2)} กิโลเมตร";
+    }
   }
 
   // ดึงเส้นทางจาก OpenRouteService API

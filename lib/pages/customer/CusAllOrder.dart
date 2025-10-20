@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusOrderGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
+import 'package:mobile_miniproject_app/pages/customer/CusMap.dart';
 import 'package:mobile_miniproject_app/pages/customer/CusReview.dart';
 import 'package:mobile_miniproject_app/pages/customer/Order.dart';
 import 'package:mobile_miniproject_app/shared/firebase_message_service.dart';
@@ -80,7 +81,18 @@ class _CusallorderPageState extends State<CusallorderPage> {
 
                       return GestureDetector(
                         onTap: () {
-                          if (order.ordStatus < 3) {
+                          if (order.ordStatus == 2) {
+                            // ไปหน้าติดตามไรเดอร์
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CusMapPage(
+                                  ord_id: order.ordId,
+                                ),
+                              ),
+                            );
+                          } else if (order.ordStatus < 2) {
+                            // สถานะ 0 หรือ 1 ไปดูรายละเอียดออเดอร์ตามเดิม
                             Navigator.push(
                               context,
                               MaterialPageRoute(
