@@ -10,7 +10,7 @@ ResInfoResponse ResInfoResponseFromJson(String str) =>
 class ResInfoResponse {
   int res_id;
   String res_email;
-  int res_password;
+  String res_password;
   String res_phone;
   String res_name;
   String res_image;
@@ -49,7 +49,7 @@ class ResInfoResponse {
     return ResInfoResponse(
       res_id: json['res_id'] ?? 0,
       res_email: json['res_email'] ?? '',
-      res_password: json['res_password'] ?? 0,
+      res_password: json['res_password'] ?? '',
       res_phone: json['res_phone'] ?? '',
       res_name: json['res_name'] ?? '',
       res_image: json['res_image'] ?? '',

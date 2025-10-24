@@ -246,7 +246,7 @@ class _ProfilePageState extends State<RiderProfilePage> {
                                 ),
                                 prefixIcon: Icon(Icons.lock),
                                 hintText: rider_Info.rid_password.isNotEmpty
-                                    ? '' // ถ้ามี password ก็ไม่ต้องแสดง hint
+                                    ? 'กรอก password ใหม่ถ้าต้องการเปลี่ยน'
                                     : 'เข้าสู่ระบบด้วย Google แก้ไขไม่ได้',
                               ),
                             ),
@@ -265,7 +265,7 @@ class _ProfilePageState extends State<RiderProfilePage> {
                                 ),
                                 prefixIcon: Icon(Icons.lock),
                                 hintText: rider_Info.rid_password.isNotEmpty
-                                    ? rider_Info.rid_password
+                                    ? 'กรอก password ใหม่อีกครั้ง'
                                     : 'เข้าสู่ระบบด้วย Google แก้ไขไม่ได้', // ทำให้ hintText ว่างไปเลย
                               ),
                             ),
@@ -311,18 +311,21 @@ class _ProfilePageState extends State<RiderProfilePage> {
                                   children: [
                                     FilledButton(
                                       onPressed: () {
-                                        if (old_img == rider_Info.rid_image &&
-                                            phoneCtl.text ==
-                                                rider_Info.rid_phone &&
-                                            nameCtl.text ==
-                                                rider_Info.rid_name &&
-                                            passwordCtl.text ==
-                                                rider_Info.rid_password &&
-                                            conPassCtl.text ==
-                                                rider_Info.rid_password &&
-                                            licenseCtl.text ==
-                                                rider_Info.rid_license &&
-                                            selectedCoordinate == null) {
+                                        // ตรวจสอบว่ามีการแก้ไขอะไรบ้าง
+                                        bool hasChanged = old_img !=
+                                                rider_Info.rid_image ||
+                                            phoneCtl.text !=
+                                                rider_Info.rid_phone ||
+                                            nameCtl.text !=
+                                                rider_Info.rid_name ||
+                                            passwordCtl.text
+                                                .trim()
+                                                .isNotEmpty || // ถ้ามี password ใหม่
+                                            licenseCtl.text !=
+                                                rider_Info.rid_license ||
+                                            selectedCoordinate != null;
+
+                                        if (!hasChanged) {
                                           Fluttertoast.showToast(
                                             msg: "กรุณาแก้ไขข้อมูลก่อนกดบันทึก",
                                             toastLength: Toast.LENGTH_SHORT,
@@ -330,8 +333,7 @@ class _ProfilePageState extends State<RiderProfilePage> {
                                             timeInSecForIosWeb: 1,
                                             backgroundColor: Color.fromARGB(
                                                 255, 255, 247, 0),
-                                            textColor: const Color.fromARGB(
-                                                255, 0, 0, 0),
+                                            textColor: Colors.black,
                                             fontSize: 15.0,
                                           );
                                         } else {
@@ -339,23 +341,19 @@ class _ProfilePageState extends State<RiderProfilePage> {
                                         }
                                       },
                                       style: FilledButton.styleFrom(
-                                        backgroundColor: Colors
-                                            .green, // เปลี่ยนสีพื้นหลังของปุ่ม
+                                        backgroundColor: Colors.green,
                                         padding: EdgeInsets.symmetric(
-                                            vertical: 10.0,
-                                            horizontal:
-                                                35.0), // กำหนดขนาดของปุ่ม
+                                            vertical: 10.0, horizontal: 35.0),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                              30.0), // กำหนดรูปแบบมุมปุ่ม
+                                          borderRadius:
+                                              BorderRadius.circular(30.0),
                                         ),
                                       ),
                                       child: Text(
                                         "Save",
                                         style: TextStyle(
-                                          color:
-                                              Colors.white, // เปลี่ยนสีตัวอักษร
-                                          fontSize: 18.0, // ขนาดตัวอักษร
+                                          color: Colors.white,
+                                          fontSize: 18.0,
                                         ),
                                       ),
                                     ),
@@ -511,8 +509,6 @@ class _ProfilePageState extends State<RiderProfilePage> {
           if (rider_Info != null) {
             phoneCtl.text = rider_Info.rid_phone;
             nameCtl.text = rider_Info.rid_name;
-            passwordCtl.text = rider_Info.rid_password;
-            conPassCtl.text = rider_Info.rid_password;
             addressCtl.text = rider_Info.rid_address;
             licenseCtl.text = rider_Info.rid_license;
             old_img = rider_Info.rid_image;
@@ -565,22 +561,27 @@ class _ProfilePageState extends State<RiderProfilePage> {
       }
     }
 
+    if (phoneCtl.text.length != 10) {
+      Fluttertoast.showToast(
+        msg: "เบอร์โทรศัพท์ต้องมี 10 ตัวเลข",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Color.fromARGB(255, 255, 0, 0),
+        textColor: Colors.white,
+        fontSize: 15.0,
+      );
+      return;
+    }
+
     if (nameCtl.text.isEmpty) {
       nameCtl.text = rider_Info.rid_name;
     }
 
-    if (passwordCtl.text.isEmpty) {
-      if (rider_Info.rid_password.isEmpty) {
-        passwordCtl.text = "";
-      }
-      passwordCtl.text = rider_Info.rid_password;
-    }
-
-    if (conPassCtl.text.isEmpty) {
-      if (rider_Info.rid_password.isEmpty) {
-        conPassCtl.text = "";
-      }
-      conPassCtl.text = rider_Info.rid_password; // กำหนดให้ตรงกับ password
+    String passwordToSave = "";
+    if (passwordCtl.text.trim().isNotEmpty) {
+      passwordToSave =
+          passwordCtl.text; // ส่งเฉพาะ password ใหม่ไปให้ backend hash
     }
 
     if (addressCtl.text.isEmpty) {
@@ -673,7 +674,7 @@ class _ProfilePageState extends State<RiderProfilePage> {
       var responseBody = jsonDecode(response.body);
       setState(() {
         Fluttertoast.showToast(
-          msg: "หมายเลขโทรศัพท์นี้เป็นสมาชิกแล้ว!!!",
+          msg: responseBody['error'] ?? "เกิดข้อผิดพลาด",
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.CENTER,
           timeInSecForIosWeb: 1,

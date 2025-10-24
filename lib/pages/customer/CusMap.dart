@@ -17,13 +17,16 @@ class CusMapPage extends StatefulWidget {
 }
 
 class _CusMapPageState extends State<CusMapPage> {
-  StreamSubscription<DocumentSnapshot>? _firebaseStream;
+  StreamSubscription<DocumentSnapshot>? _coordinateStream;
   LatLng? riderPosition;
   LatLng? cusPosition;
   bool isLoading = true;
   final MapController mapController = MapController();
   List<LatLng> routePoints = [];
   double? distanceToCustomer;
+
+  // 🔥 ป้องกันการอัปเดต UI ซ้ำซ้อน
+  bool _isUpdatingFromFirebase = false;
 
   @override
   void initState() {
@@ -33,66 +36,94 @@ class _CusMapPageState extends State<CusMapPage> {
 
   @override
   void dispose() {
-    _firebaseStream?.cancel();
+    _coordinateStream?.cancel();
     super.dispose();
   }
 
-  // ✅ ฟังการเปลี่ยนแปลงของ Rider_coordinate จาก Firebase (ลูกค้าดูอย่างเดียว ไม่ได้ update)
-  void _listenToFirebaseChanges() {
+  // ✅ ฟังการเปลี่ยนแปลงของ Rider_coordinate จาก Firebase (ลูกค้าดูอย่างเดียว)
+  void _listenToCoordinateChanges() {
     print("🔥 [Customer] Starting Firebase listener...");
-    _firebaseStream = FirebaseFirestore.instance
+    _coordinateStream = FirebaseFirestore.instance
         .collection('BP_Order_detail')
         .doc('order${widget.ord_id}')
         .snapshots()
         .listen((snapshot) {
-      print("🔥 [Customer] Firebase snapshot received");
-      if (snapshot.exists) {
-        var data = snapshot.data()!;
-        String riderCoord = data['Rider_coordinate'] ?? '';
-        print("🔥 [Customer] Rider_coordinate from Firebase: $riderCoord");
+      print("📡 [Customer] Firebase snapshot received");
 
-        if (riderCoord.isNotEmpty) {
-          LatLng? newPos = _parseCoordinates(riderCoord);
+      if (!snapshot.exists || _isUpdatingFromFirebase) {
+        print("⏭️ [Customer] Skipping update (not exists or already updating)");
+        return;
+      }
 
-          if (newPos != null) {
-            print(
-                "🔥 [Customer] New rider position: ${newPos.latitude}, ${newPos.longitude}");
+      var data = snapshot.data()!;
+      String riderCoord = data['Rider_coordinate'] ?? '';
+      print("📡 [Customer] Rider_coordinate from Firebase: $riderCoord");
 
-            // ✅ คำนวณระยะทางกับลูกค้า
-            double? distance;
-            if (cusPosition != null) {
-              distance = Geolocator.distanceBetween(
-                newPos.latitude,
-                newPos.longitude,
-                cusPosition!.latitude,
-                cusPosition!.longitude,
-              );
-              print(
-                  "🔥 [Customer] Distance to customer: ${distance.toStringAsFixed(2)}m");
-            }
+      if (riderCoord.isEmpty) return;
 
-            setState(() {
-              riderPosition = newPos;
-              distanceToCustomer = distance;
-            });
-            print("🔥 [Customer] UI Updated!");
+      LatLng? newPos = _parseCoordinates(riderCoord);
+      if (newPos == null) return;
 
-            // เคลื่อนกล้องตามตำแหน่งไรเดอร์
-            mapController.move(newPos, mapController.camera.zoom);
+      // ตรวจสอบว่าตำแหน่งเปลี่ยนแปลงจริงหรือไม่
+      if (riderPosition != null) {
+        double distance = Geolocator.distanceBetween(
+          riderPosition!.latitude,
+          riderPosition!.longitude,
+          newPos.latitude,
+          newPos.longitude,
+        );
 
-            // รีคำนวณเส้นทาง
-            if (cusPosition != null) {
-              _getRouteFromORS(newPos, cusPosition!).then((newRoute) {
-                if (mounted) {
-                  setState(() {
-                    routePoints = newRoute;
-                  });
-                  print("🔥 [Customer] Route updated!");
-                }
-              });
-            }
-          }
+        if (distance < 1) {
+          print(
+              "⏭️ [Customer] Position change too small ($distance m), skipping");
+          return;
         }
+        print("✅ [Customer] Position changed by $distance meters");
+      }
+
+      print("🔄 [Customer] Updating UI from Firebase...");
+      _isUpdatingFromFirebase = true;
+
+      // ✅ คำนวณระยะทางกับลูกค้า
+      double? distanceToCustomerValue;
+      if (cusPosition != null) {
+        distanceToCustomerValue = Geolocator.distanceBetween(
+          newPos.latitude,
+          newPos.longitude,
+          cusPosition!.latitude,
+          cusPosition!.longitude,
+        );
+        print(
+            "📏 [Customer] Distance: ${distanceToCustomerValue.toStringAsFixed(2)}m");
+      }
+
+      // ✅ อัปเดต UI
+      setState(() {
+        riderPosition = newPos;
+        distanceToCustomer = distanceToCustomerValue;
+      });
+
+      // ✅ เคลื่อนกล้องตามตำแหน่งไรเดอร์ (smooth animation)
+      if (mounted) {
+        mapController.move(newPos, mapController.camera.zoom);
+      }
+
+      // ✅ รีคำนวณเส้นทาง
+      if (cusPosition != null) {
+        _getRouteFromORS(newPos, cusPosition!).then((newRoute) {
+          if (mounted) {
+            setState(() {
+              routePoints = newRoute;
+            });
+            print("✅ [Customer] Route updated from Firebase!");
+          }
+          _isUpdatingFromFirebase = false;
+        }).catchError((e) {
+          print("❌ [Customer] Error updating route: $e");
+          _isUpdatingFromFirebase = false;
+        });
+      } else {
+        _isUpdatingFromFirebase = false;
       }
     });
   }
@@ -150,8 +181,8 @@ class _CusMapPageState extends State<CusMapPage> {
 
       setState(() => isLoading = false);
 
-      // ✅ เริ่มฟัง Firebase เท่านั้น (ไม่มี GPS tracking)
-      _listenToFirebaseChanges();
+      // ✅ เริ่มฟัง Firebase เท่านั้น (ลูกค้าไม่มี GPS tracking)
+      _listenToCoordinateChanges();
 
       print("✅ [Customer] Map initialized successfully!");
     } catch (e) {
@@ -182,7 +213,21 @@ class _CusMapPageState extends State<CusMapPage> {
         (minLng + maxLng) / 2,
       );
 
-      mapController.move(center, 13);
+      // คำนวณ zoom level ให้เหมาะสม
+      double latDiff = maxLat - minLat;
+      double lngDiff = maxLng - minLng;
+      double maxDiff = latDiff > lngDiff ? latDiff : lngDiff;
+
+      double zoom = 13.0;
+      if (maxDiff > 0.1) {
+        zoom = 11.0;
+      } else if (maxDiff > 0.05) {
+        zoom = 12.0;
+      } else if (maxDiff < 0.01) {
+        zoom = 14.0;
+      }
+
+      mapController.move(center, zoom);
     }
   }
 
@@ -197,7 +242,7 @@ class _CusMapPageState extends State<CusMapPage> {
         );
       }
     } catch (e) {
-      print('❌ แปลงพิกัดผิดพลาด: $e');
+      print('❌ [Customer] แปลงพิกัดผิดพลาด: $e');
     }
     return null;
   }
@@ -248,24 +293,38 @@ class _CusMapPageState extends State<CusMapPage> {
                         ),
                         MarkerLayer(
                           markers: [
+                            // ไรเดอร์
                             Marker(
                               point: riderPosition!,
                               width: 60,
                               height: 60,
-                              child: const Icon(
-                                Icons.motorcycle,
-                                color: Colors.blue,
-                                size: 40,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(0.3),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.motorcycle,
+                                  color: Colors.blue,
+                                  size: 40,
+                                ),
                               ),
                             ),
+                            // บ้านลูกค้า
                             Marker(
                               point: cusPosition!,
                               width: 60,
                               height: 60,
-                              child: const Icon(
-                                Icons.home,
-                                color: Colors.red,
-                                size: 40,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.3),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.home,
+                                  color: Colors.red,
+                                  size: 40,
+                                ),
                               ),
                             ),
                           ],
@@ -284,7 +343,7 @@ class _CusMapPageState extends State<CusMapPage> {
                       ],
                     ),
 
-                    // ✅ แสดงระยะทางด้านบน
+                    // ✅ แสดงข้อมูลไรเดอร์ด้านบน
                     Positioned(
                       top: 16,
                       left: 16,
@@ -293,47 +352,88 @@ class _CusMapPageState extends State<CusMapPage> {
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.1),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.motorcycle,
-                                    color: Colors.blue),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  "ไรเดอร์กำลังมาส่งอาหาร",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.motorcycle,
+                                    color: Colors.blue,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: const [
+                                      Text(
+                                        "ไรเดอร์กำลังมาส่งอาหาร",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      SizedBox(height: 2),
+                                      Text(
+                                        "กำลังอัปเดตตำแหน่งแบบเรียลไทม์",
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            if (distanceToCustomer != null)
+                            if (distanceToCustomer != null) ...[
+                              const Divider(height: 24),
                               Row(
                                 children: [
-                                  const Icon(Icons.location_on,
-                                      color: Colors.red, size: 20),
+                                  Icon(
+                                    Icons.location_on,
+                                    color:
+                                        _getDistanceColor(distanceToCustomer!),
+                                    size: 20,
+                                  ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    "ห่างจากคุณ ${_formatDistance(distanceToCustomer!)}",
+                                    "ห่างจากคุณ ",
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: Colors.grey,
                                     ),
                                   ),
+                                  Text(
+                                    _formatDistance(distanceToCustomer!),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: _getDistanceColor(
+                                          distanceToCustomer!),
+                                    ),
+                                  ),
                                 ],
                               ),
+                            ],
                           ],
                         ),
                       ),
@@ -347,8 +447,43 @@ class _CusMapPageState extends State<CusMapPage> {
                         heroTag: "recenter",
                         onPressed: _fitBounds,
                         backgroundColor: Colors.white,
+                        elevation: 4,
                         child: const Icon(Icons.center_focus_strong,
                             color: Colors.blue),
+                      ),
+                    ),
+
+                    // ✅ Debug info (สามารถซ่อนได้เมื่อใช้งานจริง)
+                    Positioned(
+                      bottom: 16,
+                      left: 16,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "📡 Firebase Listener Only",
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Rider: ${riderPosition?.latitude.toStringAsFixed(6)}, ${riderPosition?.longitude.toStringAsFixed(6)}",
+                              style: const TextStyle(
+                                fontSize: 9,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -356,12 +491,23 @@ class _CusMapPageState extends State<CusMapPage> {
     );
   }
 
+  // ✅ เปลี่ยนสีตามระยะทาง
+  Color _getDistanceColor(double meters) {
+    if (meters <= 100) {
+      return Colors.green;
+    } else if (meters <= 500) {
+      return Colors.orange;
+    } else {
+      return Colors.red;
+    }
+  }
+
   // ✅ แปลงระยะทางให้อ่านง่าย
   String _formatDistance(double meters) {
     if (meters < 1000) {
       return "${meters.toStringAsFixed(0)} เมตร";
     } else {
-      return "${(meters / 1000).toStringAsFixed(2)} กิโลเมตร";
+      return "${(meters / 1000).toStringAsFixed(2)} กม.";
     }
   }
 
@@ -382,11 +528,11 @@ class _CusMapPageState extends State<CusMapPage> {
             .map((c) => LatLng(c[1].toDouble(), c[0].toDouble()))
             .toList();
       } else {
-        print('❌ Routing API Error: ${response.statusCode}');
+        print('❌ [Customer] Routing API Error: ${response.statusCode}');
         return [start, end];
       }
     } catch (e) {
-      print('❌ Error fetching route: $e');
+      print('❌ [Customer] Error fetching route: $e');
       return [start, end];
     }
   }

@@ -246,7 +246,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 prefixIcon: Icon(Icons.lock),
                                 hintText: cus_Info.cus_password.isNotEmpty
-                                    ? ''
+                                    ? 'กรอก password ใหม่ถ้าต้องการเปลี่ยน'
                                     : 'เข้าสู่ระบบด้วย Google แก้ไขไม่ได้',
                               ),
                             ),
@@ -264,7 +264,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 prefixIcon: Icon(Icons.lock),
                                 hintText: cus_Info.cus_password.isNotEmpty
-                                    ? cus_Info.cus_password
+                                    ? 'กรอก password ใหม่อีกครั้ง'
                                     : 'เข้าสู่ระบบด้วย Google แก้ไขไม่ได้',
                               ),
                             ),
@@ -560,19 +560,22 @@ class _ProfilePageState extends State<ProfilePage> {
                                   children: [
                                     FilledButton(
                                       onPressed: () {
-                                        if (old_img == cus_Info.cus_image &&
-                                            phoneCtl.text ==
-                                                cus_Info.cus_phone &&
-                                            nameCtl.text == cus_Info.cus_name &&
-                                            passwordCtl.text ==
-                                                cus_Info.cus_password &&
-                                            conPassCtl.text ==
-                                                cus_Info.cus_password &&
-                                            addressCtl.text ==
+                                        // ตรวจสอบว่ามีการแก้ไขอะไรบ้าง
+                                        bool hasChanged = old_img !=
+                                                cus_Info.cus_image ||
+                                            phoneCtl.text !=
+                                                cus_Info.cus_phone ||
+                                            nameCtl.text != cus_Info.cus_name ||
+                                            passwordCtl.text
+                                                .trim()
+                                                .isNotEmpty || // ถ้ามี password ใหม่
+                                            addressCtl.text !=
                                                 context
                                                     .read<ShareData>()
-                                                    .cus_selected_add &&
-                                            selectedCoordinate == null) {
+                                                    .cus_selected_add ||
+                                            selectedCoordinate != null;
+
+                                        if (!hasChanged) {
                                           Fluttertoast.showToast(
                                             msg: "กรุณาแก้ไขข้อมูลก่อนกดบันทึก",
                                             toastLength: Toast.LENGTH_SHORT,
@@ -580,8 +583,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                             timeInSecForIosWeb: 1,
                                             backgroundColor: Color.fromARGB(
                                                 255, 255, 247, 0),
-                                            textColor: const Color.fromARGB(
-                                                255, 0, 0, 0),
+                                            textColor: Colors.black,
                                             fontSize: 15.0,
                                           );
                                         } else {
@@ -1144,8 +1146,6 @@ class _ProfilePageState extends State<ProfilePage> {
           if (cus_Info != null) {
             phoneCtl.text = cus_Info.cus_phone;
             nameCtl.text = cus_Info.cus_name;
-            passwordCtl.text = cus_Info.cus_password;
-            conPassCtl.text = cus_Info.cus_password;
             old_img = cus_Info.cus_image;
 
             log("CUS_Info : " + cus_Info.toString());
@@ -1197,18 +1197,27 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     }
 
+    if (phoneCtl.text.length != 10) {
+      Fluttertoast.showToast(
+        msg: "เบอร์โทรศัพท์ต้องมี 10 ตัวเลข",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Color.fromARGB(255, 255, 0, 0),
+        textColor: Colors.white,
+        fontSize: 15.0,
+      );
+      return;
+    }
+
     if (nameCtl.text.isEmpty) {
       nameCtl.text = cus_Info.cus_name;
     }
 
-    if (passwordCtl.text.isEmpty) {
-      passwordCtl.text =
-          cus_Info.cus_password.isEmpty ? "" : cus_Info.cus_password;
-    }
-
-    if (conPassCtl.text.isEmpty) {
-      conPassCtl.text =
-          cus_Info.cus_password.isEmpty ? "" : cus_Info.cus_password;
+    String passwordToSave = "";
+    if (passwordCtl.text.trim().isNotEmpty) {
+      passwordToSave =
+          passwordCtl.text; // ส่งเฉพาะ password ใหม่ไปให้ backend hash
     }
 
     if (addressCtl.text.isEmpty) {

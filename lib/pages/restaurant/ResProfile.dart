@@ -240,7 +240,7 @@ class _HomePageState extends State<ResProfilePage> {
                               obscureText: true,
                               controller: passwordCtl,
                               enabled: res_Info.res_password
-                                  .isNotEmpty, // ถ้า password ว่าง จะ disable field
+                                  .isNotEmpty, // ถ้า login ด้วย Google → disable
                               decoration: InputDecoration(
                                 filled: true,
                                 fillColor: Color.fromARGB(255, 228, 225, 225),
@@ -250,7 +250,7 @@ class _HomePageState extends State<ResProfilePage> {
                                 ),
                                 prefixIcon: Icon(Icons.lock),
                                 hintText: res_Info.res_password.isNotEmpty
-                                    ? '' // ถ้ามี password ก็ไม่ต้องแสดง hint
+                                    ? 'กรอก password ใหม่ถ้าต้องการเปลี่ยน'
                                     : 'เข้าสู่ระบบด้วย Google แก้ไขไม่ได้',
                               ),
                             ),
@@ -269,8 +269,9 @@ class _HomePageState extends State<ResProfilePage> {
                                 ),
                                 prefixIcon: Icon(Icons.lock),
                                 hintText: res_Info.res_password.isNotEmpty
-                                    ? ''
-                                    : 'เข้าสู่ระบบด้วย Google แก้ไขไม่ได้', // ทำให้ hintText ว่างไปเลย
+                                    ? 'กรอก password ใหม่อีกครั้ง'
+                                    : 'เข้าสู่ระบบด้วย Google แก้ไขไม่ได้',
+                                // ทำให้ hintText ว่างไปเลย
                               ),
                             ),
 
@@ -408,25 +409,28 @@ class _HomePageState extends State<ResProfilePage> {
                                   children: [
                                     FilledButton(
                                       onPressed: () {
-                                        if (old_image == res_Info.res_image &&
-                                            phoneCtl.text ==
-                                                res_Info.res_phone &&
-                                            nameCtl.text == res_Info.res_name &&
-                                            passwordCtl.text ==
-                                                res_Info.res_password &&
-                                            conPassCtl.text ==
-                                                res_Info.res_password &&
-                                            desCtl.text ==
-                                                res_Info.res_description &&
-                                            opentimeCtl.text ==
-                                                res_Info.res_opening_time &&
-                                            closetimeCtl.text ==
-                                                res_Info.res_closing_time &&
-                                            addressCtl.text ==
+                                        // ตรวจสอบว่ามีการแก้ไขอะไรบ้าง
+                                        bool hasChanged = old_image !=
+                                                res_Info.res_image ||
+                                            phoneCtl.text !=
+                                                res_Info.res_phone ||
+                                            nameCtl.text != res_Info.res_name ||
+                                            passwordCtl.text
+                                                .trim()
+                                                .isNotEmpty || // ถ้ามี password ใหม่
+                                            desCtl.text !=
+                                                res_Info.res_description ||
+                                            opentimeCtl.text !=
+                                                res_Info.res_opening_time ||
+                                            closetimeCtl.text !=
+                                                res_Info.res_closing_time ||
+                                            addressCtl.text !=
                                                 context
                                                     .read<ShareData>()
-                                                    .res_selected_add &&
-                                            selectedCoordinate == null) {
+                                                    .res_selected_add ||
+                                            selectedCoordinate != null;
+
+                                        if (!hasChanged) {
                                           Fluttertoast.showToast(
                                             msg: "กรุณาแก้ไขข้อมูลก่อนกดบันทึก",
                                             toastLength: Toast.LENGTH_SHORT,
@@ -434,8 +438,7 @@ class _HomePageState extends State<ResProfilePage> {
                                             timeInSecForIosWeb: 1,
                                             backgroundColor: Color.fromARGB(
                                                 255, 255, 247, 0),
-                                            textColor: const Color.fromARGB(
-                                                255, 0, 0, 0),
+                                            textColor: Colors.black,
                                             fontSize: 15.0,
                                           );
                                         } else {
@@ -843,8 +846,6 @@ class _HomePageState extends State<ResProfilePage> {
           if (res_Info != null) {
             phoneCtl.text = res_Info.res_phone;
             nameCtl.text = res_Info.res_name;
-            passwordCtl.text = res_Info.res_password;
-            conPassCtl.text = res_Info.res_password;
             desCtl.text = res_Info.res_description;
             opentimeCtl.text = res_Info.res_opening_time;
             closetimeCtl.text = res_Info.res_closing_time;
@@ -901,16 +902,27 @@ class _HomePageState extends State<ResProfilePage> {
       }
     }
 
+    if (phoneCtl.text.length != 10) {
+      Fluttertoast.showToast(
+        msg: "เบอร์โทรศัพท์ต้องมี 10 ตัวเลข",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Color.fromARGB(255, 255, 0, 0),
+        textColor: Colors.white,
+        fontSize: 15.0,
+      );
+      return;
+    }
+
     if (nameCtl.text.isEmpty) {
       nameCtl.text = res_Info.res_name;
     }
 
-    if (passwordCtl.text.isEmpty) {
-      passwordCtl.text = res_Info.res_password;
-    }
-
-    if (conPassCtl.text.isEmpty) {
-      conPassCtl.text = res_Info.res_password;
+    String passwordToSave = "";
+    if (passwordCtl.text.trim().isNotEmpty) {
+      passwordToSave =
+          passwordCtl.text; // ส่งเฉพาะ password ใหม่ไปให้ backend hash
     }
 
     if (addressCtl.text.isEmpty) {
@@ -974,14 +986,9 @@ class _HomePageState extends State<ResProfilePage> {
     // สร้าง model สำหรับส่งข้อมูล
     var model = ResProEditPostRequest(
       res_id: res_Info.res_id,
-      res_phone: phoneCtl.text == res_Info.res_phone
-          ? res_Info.res_phone
-          : phoneCtl.text,
-      res_name:
-          nameCtl.text == res_Info.res_name ? res_Info.res_name : nameCtl.text,
-      res_password: passwordCtl.text == res_Info.res_password
-          ? res_Info.res_password
-          : passwordCtl.text,
+      res_phone: phoneCtl.text.isEmpty ? res_Info.res_phone : phoneCtl.text,
+      res_name: nameCtl.text.isEmpty ? res_Info.res_name : nameCtl.text,
+      res_password: passwordToSave, // ส่งค่าใหม่หรือเดิมไป backend
       res_image: res_Info.res_image,
       res_description: desCtl.text,
       res_opening_time: opentimeCtl.text,

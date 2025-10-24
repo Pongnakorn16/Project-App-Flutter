@@ -350,6 +350,19 @@ class _RegisterCustomerState extends State<RegisterRider> {
       return;
     }
 
+    if (phoneCtl.text.length != 10) {
+      Fluttertoast.showToast(
+        msg: "เบอร์โทรศัพท์ต้องมี 10 ตัวเลข",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Color.fromARGB(255, 255, 0, 0),
+        textColor: Colors.white,
+        fontSize: 15.0,
+      );
+      return;
+    }
+
     if (!RegExp(r'^[0-9]+$').hasMatch(phoneCtl.text)) {
       Fluttertoast.showToast(
         msg: "เบอร์โทรศัพท์ต้องเป็นตัวเลขเท่านั้น",
@@ -395,18 +408,17 @@ class _RegisterCustomerState extends State<RegisterRider> {
             builder: (context) => const LoginPage(),
           ));
     } else {
-      // ถ้า status code ไม่ใช่ 200 ให้ดึงข้อความจาก response body
       var responseBody = jsonDecode(Value.body);
       setState(() {
         Fluttertoast.showToast(
-            msg: "อีเมลนี้เป็นสมาชิกแล้ว!!!",
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.CENTER,
-            timeInSecForIosWeb: 1,
-            // backgroundColor: Color.fromARGB(120, 0, 0, 0),
-            backgroundColor: Color.fromARGB(255, 255, 0, 0),
-            textColor: Colors.white,
-            fontSize: 15.0);
+          msg: responseBody['error'] ?? "เกิดข้อผิดพลาด",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Color.fromARGB(255, 255, 0, 0),
+          textColor: Colors.white,
+          fontSize: 15.0,
+        );
       });
       log(responseBody['error']);
     }
