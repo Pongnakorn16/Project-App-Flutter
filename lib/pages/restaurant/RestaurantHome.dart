@@ -17,6 +17,7 @@ import 'package:mobile_miniproject_app/pages/restaurant/AddMenu.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/EditMenu.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/EditOption.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/ResAllOrder.dart';
+import 'package:mobile_miniproject_app/pages/restaurant/ResIncomeSummary.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/ResProfile.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
@@ -99,6 +100,7 @@ class _HomePageState extends State<RestaurantHomePage> {
         children: [
           buildRestaurantHomeBody(), // หน้าหลักร้าน (ย้าย body เดิมมาใส่ในฟังก์ชันนี้)
           ResAllOrderPage(), // หน้ารับออเดอร์
+          ResIncomeSummaryPage(), // หน้ารายได้
           ResProfilePage(onClose: () {}, selectedIndex: 2), // โปรไฟล์
         ],
       ),
@@ -557,10 +559,12 @@ class _HomePageState extends State<RestaurantHomePage> {
             const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         unselectedLabelStyle: const TextStyle(fontSize: 10),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'หน้าหลัก'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.receipt_long), label: 'Order'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+              icon: Icon(Icons.receipt_long), label: 'ออเดอร์'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.data_thresholding_outlined), label: 'รายได้'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'โปรไฟล์'),
         ],
       ),
     );

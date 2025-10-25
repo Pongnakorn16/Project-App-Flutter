@@ -380,10 +380,10 @@ class _HomePageState extends State<CustomerHomePage> with RouteAware {
             const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         unselectedLabelStyle: const TextStyle(fontSize: 10),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'หน้าหลัก'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.receipt_long), label: 'Order'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+              icon: Icon(Icons.receipt_long), label: 'ออเดอร์'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'โปรไฟล์'),
         ],
       ),
     );
