@@ -50,6 +50,7 @@ dependencies:
   latlong2: ^0.9.1
   another_flushbar: ^1.10.24
   easy_debounce: ^2.0.3
+  fl_chart: ^0.66.0
 
   # Firebase
   firebase_core: ^3.5.0

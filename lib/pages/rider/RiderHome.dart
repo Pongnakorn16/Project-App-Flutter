@@ -19,6 +19,7 @@ import 'package:mobile_miniproject_app/pages/customer/Order.dart';
 import 'package:mobile_miniproject_app/pages/login/login.dart';
 import 'package:mobile_miniproject_app/pages/restaurant/ResOrder.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderHistory.dart';
+import 'package:mobile_miniproject_app/pages/rider/RiderIncomeSummary.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderMapToRes.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderOrder.dart';
 import 'package:mobile_miniproject_app/pages/rider/RiderProfile.dart';
@@ -421,6 +422,7 @@ class _RiderHomePageState extends State<RiderHomePage>
         children: [
           _buildOrderPage(),
           RiderHistoryPage(),
+          RiderIncomeSummaryPage(),
           RiderProfilePage(),
         ],
       ),
@@ -433,15 +435,17 @@ class _RiderHomePageState extends State<RiderHomePage>
         items: const [
           BottomNavigationBarItem(
             icon: Icon(FontAwesomeIcons.motorcycle),
-            label: 'Home',
+            label: 'หน้าหลัก',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.receipt_long),
-            label: 'History',
+            label: 'ประวัติรับงาน',
           ),
           BottomNavigationBarItem(
+              icon: Icon(Icons.data_thresholding_outlined), label: 'รายได้'),
+          BottomNavigationBarItem(
             icon: Icon(Icons.person),
-            label: 'Profile',
+            label: 'โปรไฟล์',
           ),
         ],
       ),

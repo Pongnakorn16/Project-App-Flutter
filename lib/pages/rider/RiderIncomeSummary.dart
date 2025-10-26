@@ -17,14 +17,14 @@ import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-class ResIncomeSummaryPage extends StatefulWidget {
-  const ResIncomeSummaryPage({super.key});
+class RiderIncomeSummaryPage extends StatefulWidget {
+  const RiderIncomeSummaryPage({super.key});
 
   @override
-  State<ResIncomeSummaryPage> createState() => _ResIncomeSummaryPageState();
+  State<RiderIncomeSummaryPage> createState() => _RiderIncomeSummaryPageState();
 }
 
-class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
+class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
   // --- state data ---
   String url = '';
   bool isLoading = true;
@@ -66,20 +66,20 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
     });
 
     try {
-      int res_id = context.read<ShareData>().user_info_send.uid;
-      final res_ResInfo =
-          await http.get(Uri.parse("$url/db/loadResOrder/$res_id"));
+      int rid_id = context.read<ShareData>().user_info_send.uid;
+      final res_RidInfo =
+          await http.get(Uri.parse("$url/db/loadRidHisOrder/$rid_id"));
 
-      if (res_ResInfo.statusCode == 200) {
+      if (res_RidInfo.statusCode == 200) {
         final List<CusOrderGetResponse> list =
-            (json.decode(res_ResInfo.body) as List)
+            (json.decode(res_RidInfo.body) as List)
                 .map((e) => CusOrderGetResponse.fromJson(e))
                 .toList();
 
         ordersList.clear();
         ordersList = list;
       } else {
-        log('LoadAllOrder: non-200 -> ${res_ResInfo.statusCode}');
+        log('LoadAllOrder: non-200 -> ${res_RidInfo.statusCode}');
       }
     } catch (e) {
       log('เกิดข้อผิดพลาดในการโหลดคำสั่งซื้อ: $e');
@@ -92,7 +92,7 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
   }
 
   void _applyFilter() {
-    DateTime now = DateTime.now();
+    DateTime now = DateTime.now().toUtc();
     DateTime start;
 
     if (selectedFilterIndex == 0) {
@@ -108,14 +108,15 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
     }
 
     final List<CusOrderGetResponse> result = ordersList.where((o) {
-      if (o.ordResIncome == null) return false;
-      DateTime dt = o.ordDate.toLocal();
+      // เปลี่ยนจาก ordResIncome เป็น ordRidIncome สำหรับไรเดอร์
+      if (o.ordRidIncome == null) return false;
+      DateTime dt = o.ordDate.toUtc();
       return !dt.isBefore(start) && !dt.isAfter(now);
     }).toList();
 
     double sum = 0.0;
     for (var o in result) {
-      sum += (o.ordResIncome ?? 0.0);
+      sum += (o.ordRidIncome ?? 0.0);
     }
 
     // คำนวณข้อมูลกราฟ
@@ -132,7 +133,7 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
 
     if (selectedFilterIndex == 0) {
       // รายสัปดาห์ - แสดงวันที่และชื่อวัน
-      DateTime now = DateTime.now();
+      DateTime now = DateTime.now().toUtc();
       for (int i = 6; i >= 0; i--) {
         DateTime day =
             DateTime(now.year, now.month, now.day).subtract(Duration(days: i));
@@ -142,15 +143,15 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
       }
 
       for (var order in orders) {
-        DateTime dt = order.ordDate.toLocal();
+        DateTime dt = order.ordDate.toUtc();
         DateTime day = DateTime(dt.year, dt.month, dt.day);
         String dayName = _getThaiDayName(day.weekday);
         String label = '${day.day}\n$dayName';
-        data[label] = (data[label] ?? 0.0) + (order.ordResIncome ?? 0.0);
+        data[label] = (data[label] ?? 0.0) + (order.ordRidIncome ?? 0.0);
       }
     } else if (selectedFilterIndex == 1) {
       // รายเดือน - แสดงชื่อเดือนภาษาไทย
-      DateTime now = DateTime.now();
+      DateTime now = DateTime.now().toUtc();
       for (int i = 11; i >= 0; i--) {
         DateTime month = DateTime(now.year, now.month - i, 1);
         String label = _getThaiMonthName(month.month);
@@ -158,13 +159,13 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
       }
 
       for (var order in orders) {
-        DateTime dt = order.ordDate.toLocal();
+        DateTime dt = order.ordDate.toUtc();
         String label = _getThaiMonthName(dt.month);
-        data[label] = (data[label] ?? 0.0) + (order.ordResIncome ?? 0.0);
+        data[label] = (data[label] ?? 0.0) + (order.ordRidIncome ?? 0.0);
       }
     } else {
       // รายปี - แสดงเลขปี
-      DateTime now = DateTime.now();
+      DateTime now = DateTime.now().toUtc();
       for (int i = 4; i >= 0; i--) {
         int year = now.year - i;
         String label = '${year + 543}'; // แปลงเป็น พ.ศ.
@@ -174,7 +175,7 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
       for (var order in orders) {
         DateTime dt = order.ordDate.toLocal();
         String label = '${dt.year + 543}';
-        data[label] = (data[label] ?? 0.0) + (order.ordResIncome ?? 0.0);
+        data[label] = (data[label] ?? 0.0) + (order.ordRidIncome ?? 0.0);
       }
     }
 
@@ -243,7 +244,7 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
 
   String _fmtDate(DateTime dt) {
     try {
-      return _dateFmt.format(dt.toLocal());
+      return _dateFmt.format(dt.toUtc());
     } catch (e) {
       return dt.toString();
     }
@@ -354,7 +355,7 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
                 BarChartRodData(
                   toY: value,
                   gradient: LinearGradient(
-                    colors: [Color(0xFF8E43E7), Color(0xFFFF6FB5)],
+                    colors: [Color(0xFF4CAF50), Color(0xFF8BC34A)],
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
                   ),
@@ -378,7 +379,7 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.black87,
-        title: Text('สรุปรายได้ร้าน',
+        title: Text('สรุปรายได้ไรเดอร์',
             style: TextStyle(fontWeight: FontWeight.bold)),
         automaticallyImplyLeading: false,
       ),
@@ -425,8 +426,8 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
                                 gradient: sel
                                     ? LinearGradient(
                                         colors: [
-                                          Color(0xFF8E43E7),
-                                          Color(0xFFFF6FB5)
+                                          Color(0xFF4CAF50),
+                                          Color(0xFF8BC34A)
                                         ],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
@@ -437,7 +438,7 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
                                 boxShadow: sel
                                     ? [
                                         BoxShadow(
-                                          color: Colors.purple.withOpacity(0.2),
+                                          color: Colors.green.withOpacity(0.2),
                                           blurRadius: 8,
                                           offset: Offset(0, 4),
                                         ),
@@ -465,14 +466,14 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
                       padding: EdgeInsets.all(18),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Color(0xFF8E43E7), Color(0xFFFF6FB5)],
+                          colors: [Color(0xFF4CAF50), Color(0xFF8BC34A)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: Color(0xFF8E43E7).withOpacity(0.18),
+                            color: Color(0xFF4CAF50).withOpacity(0.18),
                             blurRadius: 12,
                             offset: Offset(0, 8),
                           ),
@@ -504,6 +505,7 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
                                     style: TextStyle(
                                         color: Colors.white70, fontSize: 13),
                                   ),
+                                  SizedBox(height: 6),
                                 ],
                               ),
                             ],
@@ -575,22 +577,11 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
                         itemCount: filteredOrders.length,
                         itemBuilder: (context, index) {
                           final order = filteredOrders[index];
-                          final ordIncome = order.ordResIncome ?? 0.0;
+                          final ordIncome = order.ordRidIncome ?? 0.0;
 
                           return GestureDetector(
                             onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ResOrderPage(
-                                    mergedMenus: order.orlOrderDetail,
-                                    deliveryFee: order.ordDevPrice,
-                                    order_id: order.ordId,
-                                    order_status: order.ordStatus,
-                                    previousPage: 'ResIncomeSummaryPage',
-                                  ),
-                                ),
-                              );
+                              // สามารถเพิ่ม navigation ไปหน้ารายละเอียดของไรเดอร์ได้
                             },
                             child: Card(
                               margin: EdgeInsets.symmetric(vertical: 8),
@@ -617,7 +608,7 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
                                                   fontSize: 12)),
                                           SizedBox(height: 6),
                                           Text(
-                                              'รวมรายการ: ${order.totalOrderPrice} บาท',
+                                              'ค่าส่ง: ${order.ordDevPrice} บาท',
                                               style: TextStyle(
                                                   fontSize: 13,
                                                   color: Colors.grey[800])),
@@ -638,18 +629,18 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
                                               horizontal: 8, vertical: 6),
                                           decoration: BoxDecoration(
                                             color:
-                                                Colors.pink.withOpacity(0.08),
+                                                Colors.green.withOpacity(0.08),
                                             borderRadius:
                                                 BorderRadius.circular(8),
                                             border: Border.all(
-                                                color: Colors.pink
+                                                color: Colors.green
                                                     .withOpacity(0.16)),
                                           ),
                                           child: Text(
                                             _statusLabel(order.ordStatus),
                                             style: TextStyle(
                                                 fontSize: 12,
-                                                color: Colors.pink.shade700),
+                                                color: Colors.green.shade700),
                                           ),
                                         ),
                                       ],
