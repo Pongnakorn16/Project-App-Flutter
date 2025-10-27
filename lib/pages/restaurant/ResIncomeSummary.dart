@@ -25,18 +25,17 @@ class ResIncomeSummaryPage extends StatefulWidget {
 }
 
 class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
-  // --- state data ---
   String url = '';
   bool isLoading = true;
   List<CusOrderGetResponse> ordersList = [];
   List<CusOrderGetResponse> filteredOrders = [];
   double totalIncome = 0.0;
 
-  // filter: 0 = สัปดาห์, 1 = เดือน, 2 = ปี
-  int selectedFilterIndex = 0;
-
-  // ข้อมูลสำหรับกราฟ
+  int selectedFilterIndex = 0; // 0=วัน, 1=เดือน, 2=ปี
   Map<String, double> chartData = {};
+
+  int selectedYear = DateTime.now().toUtc().year;
+  List<int> availableYears = [];
 
   final DateFormat _dateFmt = DateFormat('dd/MM/yyyy เวลา HH:mm น.');
   final NumberFormat _currencyFmt =
@@ -78,6 +77,8 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
 
         ordersList.clear();
         ordersList = list;
+
+        _generateAvailableYears();
       } else {
         log('LoadAllOrder: non-200 -> ${res_ResInfo.statusCode}');
       }
@@ -91,26 +92,22 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
     });
   }
 
-  void _applyFilter() {
-    DateTime now = DateTime.now();
-    DateTime start;
-
-    if (selectedFilterIndex == 0) {
-      // รายสัปดาห์ -> ย้อนหลัง 7 วัน
-      start =
-          DateTime(now.year, now.month, now.day).subtract(Duration(days: 6));
-    } else if (selectedFilterIndex == 1) {
-      // รายเดือน -> เริ่มต้นเดือนนี้
-      start = DateTime(now.year, now.month, 1);
-    } else {
-      // รายปี -> เริ่มต้นปีนี้
-      start = DateTime(now.year, 1, 1);
+  void _generateAvailableYears() {
+    Set<int> years = {};
+    for (var order in ordersList) {
+      if (order.ordResIncome != null && (order.ordStatus ?? -1) >= 2) {
+        years.add(order.ordDate.year);
+      }
     }
+    availableYears = years.toList()..sort((a, b) => b.compareTo(a));
+    if (availableYears.isNotEmpty && !availableYears.contains(selectedYear)) {
+      selectedYear = availableYears.first;
+    }
+  }
 
+  void _applyFilter() {
     final List<CusOrderGetResponse> result = ordersList.where((o) {
-      if (o.ordResIncome == null) return false;
-      DateTime dt = o.ordDate.toLocal();
-      return !dt.isBefore(start) && !dt.isAfter(now);
+      return o.ordResIncome != null && (o.ordStatus ?? -1) >= 2;
     }).toList();
 
     double sum = 0.0;
@@ -118,7 +115,6 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
       sum += (o.ordResIncome ?? 0.0);
     }
 
-    // คำนวณข้อมูลกราฟ
     _calculateChartData(result);
 
     setState(() {
@@ -131,72 +127,82 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
     Map<String, double> data = {};
 
     if (selectedFilterIndex == 0) {
-      // รายสัปดาห์ - แสดงวันที่และชื่อวัน
-      DateTime now = DateTime.now();
-      for (int i = 6; i >= 0; i--) {
-        DateTime day =
-            DateTime(now.year, now.month, now.day).subtract(Duration(days: i));
-        String dayName = _getThaiDayName(day.weekday);
-        String label = '${day.day}\n$dayName';
+      // --- รายวัน ---
+      // สร้าง list วันที่จาก order จริง
+      List<DateTime> allDays = orders
+          .map((e) => DateTime(e.ordDate.year, e.ordDate.month, e.ordDate.day))
+          .toSet()
+          .toList();
+      allDays.sort();
+
+      for (var day in allDays) {
+        String label = DateFormat('dd/MM/yyyy').format(day); // ใช้ dd/MM/yyyy
         data[label] = 0.0;
       }
 
       for (var order in orders) {
-        DateTime dt = order.ordDate.toLocal();
-        DateTime day = DateTime(dt.year, dt.month, dt.day);
-        String dayName = _getThaiDayName(day.weekday);
-        String label = '${day.day}\n$dayName';
+        DateTime day = DateTime(
+            order.ordDate.year, order.ordDate.month, order.ordDate.day);
+        String label = DateFormat('dd/MM/yyyy').format(day);
         data[label] = (data[label] ?? 0.0) + (order.ordResIncome ?? 0.0);
       }
     } else if (selectedFilterIndex == 1) {
-      // รายเดือน - แสดงชื่อเดือนภาษาไทย
-      DateTime now = DateTime.now();
-      for (int i = 11; i >= 0; i--) {
-        DateTime month = DateTime(now.year, now.month - i, 1);
-        String label = _getThaiMonthName(month.month);
-        data[label] = 0.0;
+      // --- รายเดือน ---
+      Map<String, double> temp = {};
+      for (var order in orders) {
+        String key = '${order.ordDate.month}-${order.ordDate.year}';
+        temp[key] = (temp[key] ?? 0.0) + (order.ordResIncome ?? 0.0);
       }
 
-      for (var order in orders) {
-        DateTime dt = order.ordDate.toLocal();
-        String label = _getThaiMonthName(dt.month);
-        data[label] = (data[label] ?? 0.0) + (order.ordResIncome ?? 0.0);
+      var sortedKeys = temp.keys.toList()
+        ..sort((a, b) {
+          final partsA = a.split('-').map(int.parse).toList();
+          final partsB = b.split('-').map(int.parse).toList();
+          int yearComp = partsA[1].compareTo(partsB[1]);
+          if (yearComp != 0) return yearComp;
+          return partsA[0].compareTo(partsB[0]);
+        });
+
+      for (var key in sortedKeys) {
+        final parts = key.split('-').map(int.parse).toList();
+        final month = parts[0];
+        final year = parts[1];
+        String label = '${_getThaiMonthName(month)} ${year + 543}';
+        data[label] = temp[key]!;
       }
     } else {
-      // รายปี - แสดงเลขปี
-      DateTime now = DateTime.now();
-      for (int i = 4; i >= 0; i--) {
-        int year = now.year - i;
-        String label = '${year + 543}'; // แปลงเป็น พ.ศ.
-        data[label] = 0.0;
-      }
-
-      for (var order in orders) {
-        DateTime dt = order.ordDate.toLocal();
-        String label = '${dt.year + 543}';
-        data[label] = (data[label] ?? 0.0) + (order.ordResIncome ?? 0.0);
+      // --- รายปี ---
+      Set<int> years = orders.map((e) => e.ordDate.year).toSet();
+      List<int> sortedYears = years.toList()..sort();
+      for (var year in sortedYears) {
+        String label = '${year + 543}';
+        data[label] = orders
+            .where((o) => o.ordDate.year == year)
+            .fold(0.0, (sum, o) => sum + (o.ordResIncome ?? 0.0));
       }
     }
 
-    chartData = data;
+    setState(() {
+      chartData = data;
+    });
   }
 
   String _getThaiDayName(int weekday) {
     switch (weekday) {
       case 1:
-        return 'จ.';
+        return 'จ.'; // Monday
       case 2:
-        return 'อ.';
+        return 'อ.'; // Tuesday
       case 3:
-        return 'พ.';
+        return 'พ.'; // Wednesday
       case 4:
-        return 'พฤ.';
+        return 'พฤ.'; // Thursday
       case 5:
-        return 'ศ.';
+        return 'ศ.'; // Friday
       case 6:
-        return 'ส.';
+        return 'ส.'; // Saturday
       case 7:
-        return 'อา.';
+        return 'อา.'; // Sunday
       default:
         return '';
     }
@@ -243,7 +249,7 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
 
   String _fmtDate(DateTime dt) {
     try {
-      return _dateFmt.format(dt.toLocal());
+      return _dateFmt.format(dt);
     } catch (e) {
       return dt.toString();
     }
@@ -267,7 +273,23 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
 
     List<String> labels = chartData.keys.toList();
     double maxY = chartData.values.reduce((a, b) => a > b ? a : b);
-    if (maxY == 0) maxY = 1000; // ป้องกันการหารด้วย 0
+    if (maxY == 0) maxY = 500;
+
+    double interval;
+    if (maxY <= 500) {
+      interval = 100;
+    } else if (maxY <= 1000) {
+      interval = 200;
+    } else if (maxY <= 5000) {
+      interval = 500;
+    } else if (maxY <= 10000) {
+      interval = 1000;
+    } else {
+      interval = (maxY / 5).ceilToDouble();
+      interval = (interval / 100).ceil() * 100;
+    }
+
+    maxY = (maxY / interval).ceil() * interval * 1.2;
 
     return Container(
       height: 250,
@@ -275,7 +297,8 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
       child: BarChart(
         BarChartData(
           alignment: BarChartAlignment.spaceAround,
-          maxY: maxY * 1.2,
+          maxY: maxY,
+          minY: 0,
           barTouchData: BarTouchData(
             enabled: true,
             touchTooltipData: BarTouchTooltipData(
@@ -304,9 +327,7 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
                       child: Text(
                         labels[index],
                         style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                        ),
+                            fontSize: 10, fontWeight: FontWeight.w500),
                         textAlign: TextAlign.center,
                       ),
                     );
@@ -320,11 +341,18 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 50,
+                interval: interval,
                 getTitlesWidget: (value, meta) {
-                  return Text(
-                    '${(value / 1000).toStringAsFixed(0)}k',
-                    style: TextStyle(fontSize: 10),
-                  );
+                  if (value == 0)
+                    return Text('0', style: TextStyle(fontSize: 10));
+                  if (value >= 1000) {
+                    return Text(
+                        '${(value / 1000).toStringAsFixed(value % 1000 == 0 ? 0 : 1)}k',
+                        style: TextStyle(fontSize: 10));
+                  } else {
+                    return Text('${value.toInt()}',
+                        style: TextStyle(fontSize: 10));
+                  }
                 },
               ),
             ),
@@ -335,19 +363,15 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
-            horizontalInterval: maxY / 5,
+            horizontalInterval: interval,
             getDrawingHorizontalLine: (value) {
               return FlLine(
-                color: Colors.grey.withOpacity(0.2),
-                strokeWidth: 1,
-              );
+                  color: Colors.grey.withOpacity(0.2), strokeWidth: 1);
             },
           ),
           barGroups: labels.asMap().entries.map((entry) {
             int index = entry.key;
-            String label = entry.value;
-            double value = chartData[label] ?? 0.0;
-
+            double value = chartData[entry.value] ?? 0.0;
             return BarChartGroupData(
               x: index,
               barRods: [
@@ -371,7 +395,7 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final List<String> filterLabels = ['รายสัปดาห์', 'รายเดือน', 'รายปี'];
+    final List<String> filterLabels = ['รายวัน', 'รายเดือน', 'รายปี'];
 
     return Scaffold(
       appBar: AppBar(
@@ -425,33 +449,31 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
                                 gradient: sel
                                     ? LinearGradient(
                                         colors: [
-                                          Color(0xFF8E43E7),
-                                          Color(0xFFFF6FB5)
-                                        ],
+                                            Color(0xFF8E43E7),
+                                            Color(0xFFFF6FB5)
+                                          ],
                                         begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      )
+                                        end: Alignment.bottomRight)
                                     : null,
                                 color: sel ? null : Colors.grey.shade100,
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: sel
                                     ? [
                                         BoxShadow(
-                                          color: Colors.purple.withOpacity(0.2),
-                                          blurRadius: 8,
-                                          offset: Offset(0, 4),
-                                        ),
+                                            color:
+                                                Colors.purple.withOpacity(0.2),
+                                            blurRadius: 8,
+                                            offset: Offset(0, 4))
                                       ]
                                     : [],
                               ),
-                              child: Text(
-                                label,
-                                style: TextStyle(
-                                  color: sel ? Colors.white : Colors.black87,
-                                  fontWeight:
-                                      sel ? FontWeight.bold : FontWeight.w500,
-                                ),
-                              ),
+                              child: Text(label,
+                                  style: TextStyle(
+                                      color:
+                                          sel ? Colors.white : Colors.black87,
+                                      fontWeight: sel
+                                          ? FontWeight.bold
+                                          : FontWeight.w500)),
                             );
                           }).toList(),
                         ),
@@ -465,17 +487,15 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
                       padding: EdgeInsets.all(18),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Color(0xFF8E43E7), Color(0xFFFF6FB5)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                            colors: [Color(0xFF8E43E7), Color(0xFFFF6FB5)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight),
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: Color(0xFF8E43E7).withOpacity(0.18),
-                            blurRadius: 12,
-                            offset: Offset(0, 8),
-                          ),
+                              color: Color(0xFF8E43E7).withOpacity(0.18),
+                              blurRadius: 12,
+                              offset: Offset(0, 8))
                         ],
                       ),
                       child: Column(
@@ -488,22 +508,17 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                _fmtCurrency(totalIncome),
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              Text(_fmtCurrency(totalIncome),
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold)),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  Text(
-                                    '${filteredOrders.length} รายการ',
-                                    style: TextStyle(
-                                        color: Colors.white70, fontSize: 13),
-                                  ),
+                                  Text('${filteredOrders.length} รายการ',
+                                      style: TextStyle(
+                                          color: Colors.white70, fontSize: 13)),
                                 ],
                               ),
                             ],
@@ -521,10 +536,9 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: Offset(0, 4),
-                          ),
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: Offset(0, 4))
                         ],
                       ),
                       child: Column(
@@ -555,9 +569,8 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
                         width: double.infinity,
                         padding: EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12)),
                         child: Column(
                           children: [
                             Icon(Icons.receipt_long,
@@ -578,110 +591,49 @@ class _ResIncomeSummaryPageState extends State<ResIncomeSummaryPage> {
                           final ordIncome = order.ordResIncome ?? 0.0;
 
                           return GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ResOrderPage(
-                                    mergedMenus: order.orlOrderDetail,
-                                    deliveryFee: order.ordDevPrice,
-                                    order_id: order.ordId,
-                                    order_status: order.ordStatus,
-                                    previousPage: 'ResIncomeSummaryPage',
+                            child: Container(
+                              margin: EdgeInsets.only(bottom: 12),
+                              padding: EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                        color: Colors.black.withOpacity(0.03),
+                                        blurRadius: 8,
+                                        offset: Offset(0, 4))
+                                  ]),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Order #${order.ordId}',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.w600)),
+                                      SizedBox(height: 4),
+                                      Text('${_fmtDate(order.ordDate)}',
+                                          style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontSize: 12)),
+                                    ],
                                   ),
-                                ),
-                              );
-                            },
-                            child: Card(
-                              margin: EdgeInsets.symmetric(vertical: 8),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                              elevation: 2,
-                              child: Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text('หมายเลขออเดอร์: ${order.ordId}',
-                                              style: TextStyle(
-                                                  fontWeight: FontWeight.bold)),
-                                          SizedBox(height: 6),
-                                          Text(_fmtDate(order.ordDate),
-                                              style: TextStyle(
-                                                  color: Colors.grey[600],
-                                                  fontSize: 12)),
-                                          SizedBox(height: 6),
-                                          Text(
-                                              'รวมรายการ: ${order.totalOrderPrice} บาท',
-                                              style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: Colors.grey[800])),
-                                        ],
-                                      ),
-                                    ),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        Text(_fmtCurrency(ordIncome),
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 15)),
-                                        SizedBox(height: 6),
-                                        Container(
-                                          padding: EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 6),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                Colors.pink.withOpacity(0.08),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            border: Border.all(
-                                                color: Colors.pink
-                                                    .withOpacity(0.16)),
-                                          ),
-                                          child: Text(
-                                            _statusLabel(order.ordStatus),
-                                            style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.pink.shade700),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
+                                  Text(_fmtCurrency(ordIncome),
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w600)),
+                                ],
                               ),
                             ),
                           );
                         },
                       ),
-
-                    SizedBox(height: 30),
                   ],
                 ),
               ),
             ),
     );
-  }
-
-  String _statusLabel(int? ordStatus) {
-    switch (ordStatus ?? -1) {
-      case 0:
-        return 'รอร้านรับ';
-      case 1:
-        return 'ร้านรับแล้ว';
-      case 2:
-        return 'กำลังจัดส่ง';
-      case 3:
-        return 'ส่งถึงแล้ว';
-      default:
-        return 'ไม่ทราบสถานะ';
-    }
   }
 }

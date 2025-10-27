@@ -1,18 +1,11 @@
 import 'dart:convert';
 import 'dart:developer';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
-import 'package:mobile_miniproject_app/models/response/CusInfoGetRes.dart';
 import 'package:mobile_miniproject_app/models/response/CusOrderGetRes.dart';
-import 'package:mobile_miniproject_app/models/response/OptionGetRes.dart';
-import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
-import 'package:mobile_miniproject_app/pages/customer/Order.dart';
-import 'package:mobile_miniproject_app/pages/restaurant/ResOrder.dart';
-import 'package:mobile_miniproject_app/shared/firebase_message_service.dart';
 import 'package:mobile_miniproject_app/shared/share_data.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -25,18 +18,16 @@ class RiderIncomeSummaryPage extends StatefulWidget {
 }
 
 class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
-  // --- state data ---
   String url = '';
   bool isLoading = true;
   List<CusOrderGetResponse> ordersList = [];
   List<CusOrderGetResponse> filteredOrders = [];
   double totalIncome = 0.0;
 
-  // filter: 0 = สัปดาห์, 1 = เดือน, 2 = ปี
-  int selectedFilterIndex = 0;
-
-  // ข้อมูลสำหรับกราฟ
+  int selectedFilterIndex = 0; // 0=วัน, 1=เดือน, 2=ปี
   Map<String, double> chartData = {};
+  int selectedYear = DateTime.now().toUtc().year;
+  List<int> availableYears = [];
 
   final DateFormat _dateFmt = DateFormat('dd/MM/yyyy เวลา HH:mm น.');
   final NumberFormat _currencyFmt =
@@ -56,33 +47,31 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
       log('Cannot load config: $e');
     }
 
-    await LoadAllOrder(context);
+    await _loadAllOrders();
     _applyFilter();
   }
 
-  Future<void> LoadAllOrder(BuildContext context) async {
+  Future<void> _loadAllOrders() async {
     setState(() {
       isLoading = true;
     });
 
     try {
       int rid_id = context.read<ShareData>().user_info_send.uid;
-      final res_RidInfo =
-          await http.get(Uri.parse("$url/db/loadRidHisOrder/$rid_id"));
+      final res = await http.get(Uri.parse("$url/db/loadRidHisOrder/$rid_id"));
 
-      if (res_RidInfo.statusCode == 200) {
-        final List<CusOrderGetResponse> list =
-            (json.decode(res_RidInfo.body) as List)
-                .map((e) => CusOrderGetResponse.fromJson(e))
-                .toList();
+      if (res.statusCode == 200) {
+        final List<CusOrderGetResponse> list = (json.decode(res.body) as List)
+            .map((e) => CusOrderGetResponse.fromJson(e))
+            .toList();
 
-        ordersList.clear();
         ordersList = list;
+        _generateAvailableYears();
       } else {
-        log('LoadAllOrder: non-200 -> ${res_RidInfo.statusCode}');
+        log('LoadAllOrders: non-200 -> ${res.statusCode}');
       }
     } catch (e) {
-      log('เกิดข้อผิดพลาดในการโหลดคำสั่งซื้อ: $e');
+      log('Error loading orders: $e');
       Fluttertoast.showToast(msg: 'ไม่สามารถโหลดคำสั่งซื้อได้');
     }
 
@@ -91,40 +80,30 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
     });
   }
 
-  void _applyFilter() {
-    DateTime now = DateTime.now().toUtc();
-    DateTime start;
-
-    if (selectedFilterIndex == 0) {
-      // รายสัปดาห์ -> ย้อนหลัง 7 วัน
-      start =
-          DateTime(now.year, now.month, now.day).subtract(Duration(days: 6));
-    } else if (selectedFilterIndex == 1) {
-      // รายเดือน -> เริ่มต้นเดือนนี้
-      start = DateTime(now.year, now.month, 1);
-    } else {
-      // รายปี -> เริ่มต้นปีนี้
-      start = DateTime(now.year, 1, 1);
+  void _generateAvailableYears() {
+    Set<int> years = {};
+    for (var order in ordersList) {
+      if (order.ordRidIncome != null && (order.ordStatus ?? -1) >= 2) {
+        years.add(order.ordDate.year);
+      }
     }
+    availableYears = years.toList()..sort((a, b) => b.compareTo(a));
+    if (availableYears.isNotEmpty && !availableYears.contains(selectedYear)) {
+      selectedYear = availableYears.first;
+    }
+  }
 
+  void _applyFilter() {
     final List<CusOrderGetResponse> result = ordersList.where((o) {
-      // เปลี่ยนจาก ordResIncome เป็น ordRidIncome สำหรับไรเดอร์
-      if (o.ordRidIncome == null) return false;
-      DateTime dt = o.ordDate.toUtc();
-      return !dt.isBefore(start) && !dt.isAfter(now);
+      return o.ordRidIncome != null && (o.ordStatus ?? -1) >= 2;
     }).toList();
 
-    double sum = 0.0;
-    for (var o in result) {
-      sum += (o.ordRidIncome ?? 0.0);
-    }
+    totalIncome = result.fold(0.0, (sum, o) => sum + (o.ordRidIncome ?? 0.0));
 
-    // คำนวณข้อมูลกราฟ
     _calculateChartData(result);
 
     setState(() {
       filteredOrders = result;
-      totalIncome = sum;
     });
   }
 
@@ -132,75 +111,61 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
     Map<String, double> data = {};
 
     if (selectedFilterIndex == 0) {
-      // รายสัปดาห์ - แสดงวันที่และชื่อวัน
-      DateTime now = DateTime.now().toUtc();
-      for (int i = 6; i >= 0; i--) {
-        DateTime day =
-            DateTime(now.year, now.month, now.day).subtract(Duration(days: i));
-        String dayName = _getThaiDayName(day.weekday);
-        String label = '${day.day}\n$dayName';
+      // รายวัน
+      List<DateTime> allDays = orders
+          .map((e) => DateTime(e.ordDate.year, e.ordDate.month, e.ordDate.day))
+          .toSet()
+          .toList();
+      allDays.sort();
+
+      for (var day in allDays) {
+        String label = DateFormat('dd/MM/yyyy').format(day);
         data[label] = 0.0;
       }
 
       for (var order in orders) {
-        DateTime dt = order.ordDate.toUtc();
-        DateTime day = DateTime(dt.year, dt.month, dt.day);
-        String dayName = _getThaiDayName(day.weekday);
-        String label = '${day.day}\n$dayName';
+        DateTime day = DateTime(
+            order.ordDate.year, order.ordDate.month, order.ordDate.day);
+        String label = DateFormat('dd/MM/yyyy').format(day);
         data[label] = (data[label] ?? 0.0) + (order.ordRidIncome ?? 0.0);
       }
     } else if (selectedFilterIndex == 1) {
-      // รายเดือน - แสดงชื่อเดือนภาษาไทย
-      DateTime now = DateTime.now().toUtc();
-      for (int i = 11; i >= 0; i--) {
-        DateTime month = DateTime(now.year, now.month - i, 1);
-        String label = _getThaiMonthName(month.month);
-        data[label] = 0.0;
+      // รายเดือน
+      Map<String, double> temp = {};
+      for (var order in orders) {
+        String key = '${order.ordDate.month}-${order.ordDate.year}';
+        temp[key] = (temp[key] ?? 0.0) + (order.ordRidIncome ?? 0.0);
       }
 
-      for (var order in orders) {
-        DateTime dt = order.ordDate.toUtc();
-        String label = _getThaiMonthName(dt.month);
-        data[label] = (data[label] ?? 0.0) + (order.ordRidIncome ?? 0.0);
+      var sortedKeys = temp.keys.toList()
+        ..sort((a, b) {
+          final partsA = a.split('-').map(int.parse).toList();
+          final partsB = b.split('-').map(int.parse).toList();
+          int yearComp = partsA[1].compareTo(partsB[1]);
+          if (yearComp != 0) return yearComp;
+          return partsA[0].compareTo(partsB[0]);
+        });
+
+      for (var key in sortedKeys) {
+        final parts = key.split('-').map(int.parse).toList();
+        final month = parts[0];
+        final year = parts[1];
+        String label = '${_getThaiMonthName(month)} ${year + 543}';
+        data[label] = temp[key]!;
       }
     } else {
-      // รายปี - แสดงเลขปี
-      DateTime now = DateTime.now().toUtc();
-      for (int i = 4; i >= 0; i--) {
-        int year = now.year - i;
-        String label = '${year + 543}'; // แปลงเป็น พ.ศ.
-        data[label] = 0.0;
-      }
-
-      for (var order in orders) {
-        DateTime dt = order.ordDate.toLocal();
-        String label = '${dt.year + 543}';
-        data[label] = (data[label] ?? 0.0) + (order.ordRidIncome ?? 0.0);
+      // รายปี
+      Set<int> years = orders.map((e) => e.ordDate.year).toSet();
+      List<int> sortedYears = years.toList()..sort();
+      for (var year in sortedYears) {
+        String label = '${year + 543}';
+        data[label] = orders
+            .where((o) => o.ordDate.year == year)
+            .fold(0.0, (sum, o) => sum + (o.ordRidIncome ?? 0.0));
       }
     }
 
     chartData = data;
-  }
-
-  String _getThaiDayName(int weekday) {
-    switch (weekday) {
-      case 1:
-        return 'จ.';
-      case 2:
-        return 'อ.';
-      case 3:
-        return 'พ.';
-      case 4:
-        return 'พฤ.';
-      case 5:
-        return 'ศ.';
-      case 6:
-        return 'ส.';
-      case 7:
-        return 'อา.';
-      default:
-        return '';
-    }
   }
 
   String _getThaiMonthName(int month) {
@@ -244,14 +209,14 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
 
   String _fmtDate(DateTime dt) {
     try {
-      return _dateFmt.format(dt.toUtc());
+      return _dateFmt.format(dt);
     } catch (e) {
       return dt.toString();
     }
   }
 
   Future<void> _onRefresh() async {
-    await LoadAllOrder(context);
+    await _loadAllOrders();
     _applyFilter();
   }
 
@@ -268,103 +233,140 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
 
     List<String> labels = chartData.keys.toList();
     double maxY = chartData.values.reduce((a, b) => a > b ? a : b);
-    if (maxY == 0) maxY = 1000; // ป้องกันการหารด้วย 0
+    if (maxY == 0) maxY = 500;
 
-    return Container(
-      height: 250,
-      padding: EdgeInsets.all(16),
-      child: BarChart(
-        BarChartData(
-          alignment: BarChartAlignment.spaceAround,
-          maxY: maxY * 1.2,
-          barTouchData: BarTouchData(
-            enabled: true,
-            touchTooltipData: BarTouchTooltipData(
-              getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                return BarTooltipItem(
-                  _fmtCurrency(rod.toY),
-                  TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                );
-              },
-            ),
-          ),
-          titlesData: FlTitlesData(
-            show: true,
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, meta) {
-                  int index = value.toInt();
-                  if (index >= 0 && index < labels.length) {
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        labels[index],
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    );
-                  }
-                  return Text('');
-                },
-                reservedSize: 42,
-              ),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 50,
-                getTitlesWidget: (value, meta) {
-                  return Text(
-                    '${(value / 1000).toStringAsFixed(0)}k',
-                    style: TextStyle(fontSize: 10),
+    // interval กราฟซ้ายขวา
+    double interval = (maxY / 5).ceilToDouble();
+    maxY = interval * 6; // ให้มี space บนสุด
+
+    // กำหนดความกว้างทั้งหมดของกราฟตามจำนวนแท่ง
+    double chartWidth = labels.length * 50.0; // ปรับ 50 ได้ตามจำนวน
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Container(
+        width: chartWidth < MediaQuery.of(context).size.width
+            ? MediaQuery.of(context).size.width
+            : chartWidth,
+        height: 250,
+        padding: EdgeInsets.all(16),
+        child: BarChart(
+          BarChartData(
+            alignment: BarChartAlignment.spaceBetween,
+            maxY: maxY,
+            minY: 0,
+            barTouchData: BarTouchData(
+              enabled: true,
+              touchTooltipData: BarTouchTooltipData(
+                tooltipBgColor: Colors.green.shade700,
+                getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                  return BarTooltipItem(
+                    _fmtCurrency(rod.toY),
+                    TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   );
                 },
               ),
             ),
-            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          ),
-          borderData: FlBorderData(show: false),
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            horizontalInterval: maxY / 5,
-            getDrawingHorizontalLine: (value) {
-              return FlLine(
-                color: Colors.grey.withOpacity(0.2),
-                strokeWidth: 1,
-              );
-            },
-          ),
-          barGroups: labels.asMap().entries.map((entry) {
-            int index = entry.key;
-            String label = entry.value;
-            double value = chartData[label] ?? 0.0;
+            titlesData: FlTitlesData(
+              show: true,
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (value, meta) {
+                    int index = value.toInt();
+                    if (index >= 0 && index < labels.length) {
+                      String label = labels[index];
 
-            return BarChartGroupData(
-              x: index,
-              barRods: [
-                BarChartRodData(
-                  toY: value,
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF4CAF50), Color(0xFF8BC34A)],
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                  ),
-                  width: selectedFilterIndex == 0 ? 20 : 16,
-                  borderRadius: BorderRadius.circular(6),
+                      // แสดงสั้นตาม filter
+                      if (selectedFilterIndex == 0) {
+                        // รายวัน dd/MM
+                        try {
+                          DateTime dt = DateFormat('dd/MM/yyyy').parse(label);
+                          label = DateFormat('dd/MM').format(dt);
+                        } catch (_) {}
+                      } else if (selectedFilterIndex == 1) {
+                        // รายเดือน เช่น ม.ค.
+                        try {
+                          final parts = label.split(' ');
+                          label = parts[0]; // แค่เดือน
+                        } catch (_) {}
+                      } else {
+                        // รายปี
+                        label = label; // ปี
+                      }
+
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                              fontSize: 10, fontWeight: FontWeight.w500),
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    }
+                    return Text('');
+                  },
+                  reservedSize: 32,
                 ),
-              ],
-            );
-          }).toList(),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 50,
+                  interval: interval,
+                  getTitlesWidget: (value, meta) {
+                    if (value == 0)
+                      return Text('0', style: TextStyle(fontSize: 10));
+                    if (value >= 1000) {
+                      return Text(
+                          '${(value / 1000).toStringAsFixed(value % 1000 == 0 ? 0 : 1)}k',
+                          style: TextStyle(fontSize: 10));
+                    } else {
+                      return Text('${value.toInt()}',
+                          style: TextStyle(fontSize: 10));
+                    }
+                  },
+                ),
+              ),
+              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles:
+                  AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            ),
+            borderData: FlBorderData(show: false),
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              horizontalInterval: interval,
+              getDrawingHorizontalLine: (value) {
+                return FlLine(
+                    color: Colors.grey.withOpacity(0.2), strokeWidth: 1);
+              },
+            ),
+            barGroups: labels.asMap().entries.map((entry) {
+              int index = entry.key;
+              double value = chartData[entry.value] ?? 0.0;
+              return BarChartGroupData(
+                x: index,
+                barRods: [
+                  BarChartRodData(
+                    toY: value,
+                    width: 16,
+                    borderRadius: BorderRadius.circular(6),
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF00C853), Color(0xFFB9F6CA)],
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
         ),
       ),
     );
@@ -372,7 +374,7 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final List<String> filterLabels = ['รายสัปดาห์', 'รายเดือน', 'รายปี'];
+    final List<String> filterLabels = ['รายวัน', 'รายเดือน', 'รายปี'];
 
     return Scaffold(
       appBar: AppBar(
@@ -393,7 +395,7 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- Filter Toggle ---
+                    // Filter toggle
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -408,7 +410,6 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
                           ],
                           borderRadius: BorderRadius.circular(12),
                           borderWidth: 0,
-                          selectedBorderColor: Colors.transparent,
                           fillColor: Colors.transparent,
                           onPressed: (idx) {
                             setState(() {
@@ -426,33 +427,31 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
                                 gradient: sel
                                     ? LinearGradient(
                                         colors: [
-                                          Color(0xFF4CAF50),
-                                          Color(0xFF8BC34A)
-                                        ],
+                                            Color(0xFF8E43E7),
+                                            Color(0xFFFF6FB5)
+                                          ],
                                         begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      )
+                                        end: Alignment.bottomRight)
                                     : null,
                                 color: sel ? null : Colors.grey.shade100,
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: sel
                                     ? [
                                         BoxShadow(
-                                          color: Colors.green.withOpacity(0.2),
-                                          blurRadius: 8,
-                                          offset: Offset(0, 4),
-                                        ),
+                                            color:
+                                                Colors.purple.withOpacity(0.2),
+                                            blurRadius: 8,
+                                            offset: Offset(0, 4))
                                       ]
                                     : [],
                               ),
-                              child: Text(
-                                label,
-                                style: TextStyle(
-                                  color: sel ? Colors.white : Colors.black87,
-                                  fontWeight:
-                                      sel ? FontWeight.bold : FontWeight.w500,
-                                ),
-                              ),
+                              child: Text(label,
+                                  style: TextStyle(
+                                      color:
+                                          sel ? Colors.white : Colors.black87,
+                                      fontWeight: sel
+                                          ? FontWeight.bold
+                                          : FontWeight.w500)),
                             );
                           }).toList(),
                         ),
@@ -460,24 +459,16 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
                     ),
                     SizedBox(height: 16),
 
-                    // --- Total income card ---
+                    // Total Income Card
                     Container(
                       width: double.infinity,
                       padding: EdgeInsets.all(18),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Color(0xFF4CAF50), Color(0xFF8BC34A)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                            colors: [Color(0xFF8E43E7), Color(0xFFFF6FB5)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight),
                         borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0xFF4CAF50).withOpacity(0.18),
-                            blurRadius: 12,
-                            offset: Offset(0, 8),
-                          ),
-                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -489,23 +480,17 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                _fmtCurrency(totalIncome),
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              Text(_fmtCurrency(totalIncome),
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold)),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  Text(
-                                    '${filteredOrders.length} รายการ',
-                                    style: TextStyle(
-                                        color: Colors.white70, fontSize: 13),
-                                  ),
-                                  SizedBox(height: 6),
+                                  Text('${filteredOrders.length} รายการ',
+                                      style: TextStyle(
+                                          color: Colors.white70, fontSize: 13)),
                                 ],
                               ),
                             ],
@@ -516,17 +501,16 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
 
                     SizedBox(height: 18),
 
-                    // --- กราฟแท่ง ---
+                    // Chart
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: Offset(0, 4),
-                          ),
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: Offset(0, 4))
                         ],
                       ),
                       child: Column(
@@ -545,21 +529,19 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
 
                     SizedBox(height: 18),
 
-                    // --- List title ---
+                    // Order List
                     Text('รายการออเดอร์',
                         style: TextStyle(
                             fontSize: 16, fontWeight: FontWeight.w600)),
                     SizedBox(height: 8),
 
-                    // --- Order list ---
                     if (filteredOrders.isEmpty)
                       Container(
                         width: double.infinity,
                         padding: EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12)),
                         child: Column(
                           children: [
                             Icon(Icons.receipt_long,
@@ -580,99 +562,49 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
                           final ordIncome = order.ordRidIncome ?? 0.0;
 
                           return GestureDetector(
-                            onTap: () {
-                              // สามารถเพิ่ม navigation ไปหน้ารายละเอียดของไรเดอร์ได้
-                            },
-                            child: Card(
-                              margin: EdgeInsets.symmetric(vertical: 8),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                              elevation: 2,
-                              child: Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text('หมายเลขออเดอร์: ${order.ordId}',
-                                              style: TextStyle(
-                                                  fontWeight: FontWeight.bold)),
-                                          SizedBox(height: 6),
-                                          Text(_fmtDate(order.ordDate),
-                                              style: TextStyle(
-                                                  color: Colors.grey[600],
-                                                  fontSize: 12)),
-                                          SizedBox(height: 6),
-                                          Text(
-                                              'ค่าส่ง: ${order.ordDevPrice} บาท',
-                                              style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: Colors.grey[800])),
-                                        ],
-                                      ),
-                                    ),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        Text(_fmtCurrency(ordIncome),
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 15)),
-                                        SizedBox(height: 6),
-                                        Container(
-                                          padding: EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 6),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                Colors.green.withOpacity(0.08),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            border: Border.all(
-                                                color: Colors.green
-                                                    .withOpacity(0.16)),
-                                          ),
-                                          child: Text(
-                                            _statusLabel(order.ordStatus),
-                                            style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.green.shade700),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
+                            child: Container(
+                              margin: EdgeInsets.only(bottom: 12),
+                              padding: EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                        color: Colors.black.withOpacity(0.03),
+                                        blurRadius: 8,
+                                        offset: Offset(0, 4))
+                                  ]),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Order #${order.ordId}',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.w600)),
+                                      SizedBox(height: 4),
+                                      Text('${_fmtDate(order.ordDate)}',
+                                          style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontSize: 12)),
+                                    ],
+                                  ),
+                                  Text(_fmtCurrency(ordIncome),
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w600)),
+                                ],
                               ),
                             ),
                           );
                         },
                       ),
-
-                    SizedBox(height: 30),
                   ],
                 ),
               ),
             ),
     );
-  }
-
-  String _statusLabel(int? ordStatus) {
-    switch (ordStatus ?? -1) {
-      case 0:
-        return 'รอร้านรับ';
-      case 1:
-        return 'ร้านรับแล้ว';
-      case 2:
-        return 'กำลังจัดส่ง';
-      case 3:
-        return 'ส่งถึงแล้ว';
-      default:
-        return 'ไม่ทราบสถานะ';
-    }
   }
 }

@@ -20,6 +20,8 @@ class ShareData with ChangeNotifier {
   int Refund_balance = 0;
   String cus_selected_add = "";
   String res_selected_add = "";
+  String final_cus_add = "";
+
   late User_Info_Send user_info_send;
   late User_Info_Receive user_info_receive;
   late ResInfoResponse res_info;

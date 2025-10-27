@@ -147,26 +147,28 @@ class _RiderConfirmPageState extends State<RiderConfirmPage> {
                 ),
               const SizedBox(height: 30),
               ElevatedButton.icon(
-                onPressed: () async {
-                  try {
-                    await _confirmDelivery();
-                    await cal_RidShareRate(widget.ord_id,
-                        orders_info.first.totalOrderPrice.toDouble());
-                    await cal_AdminShareRate(widget.ord_id,
-                        orders_info.first.totalOrderPrice.toDouble());
+                onPressed: _uploadedImageUrl == null
+                    ? null // ถ้ายังไม่มีรูป ปุ่มจะกดไม่ได้
+                    : () async {
+                        try {
+                          await _confirmDelivery();
+                          await cal_RidShareRate(widget.ord_id,
+                              orders_info.first.totalOrderPrice.toDouble());
+                          await cal_AdminShareRate(widget.ord_id,
+                              orders_info.first.totalOrderPrice.toDouble());
 
-                    if (!mounted) return; // ป้องกัน widget ถูก unmounted
+                          if (!mounted) return; // ป้องกัน widget ถูก unmounted
 
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => RiderHomePage(),
-                      ),
-                    );
-                  } catch (e) {
-                    print("Error: $e");
-                  }
-                },
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => RiderHomePage(),
+                            ),
+                          );
+                        } catch (e) {
+                          print("Error: $e");
+                        }
+                      },
                 icon: const Icon(Icons.check_circle),
                 label: const Text("จัดส่งสำเร็จ"),
                 style: ElevatedButton.styleFrom(
@@ -199,11 +201,6 @@ class _RiderConfirmPageState extends State<RiderConfirmPage> {
   }
 
   Future<void> _confirmDelivery() async {
-    // if (_uploadedImageUrl == null) {
-    //   Fluttertoast.showToast(msg: "กรุณาถ่ายรูปก่อนยืนยันจัดส่ง");
-    //   return;
-    // }
-
     try {
       await FirebaseFirestore.instance
           .collection('BP_Order_detail')

@@ -550,10 +550,11 @@ class _RiderHomePageState extends State<RiderHomePage>
                             loadRestaurant(order.resId);
                           }
 
-                          DateTime orderDate = order.ordDate;
+                          DateTime orderDate =
+                              order.ordDate; // ไม่ต้อง toLocal()
                           String formattedDate =
                               DateFormat('dd/MM/yyyy เวลา HH:mm น.')
-                                  .format(orderDate.toLocal());
+                                  .format(orderDate);
 
                           double distance = 0.0;
                           String distanceText = "คำนวณระยะทาง...";

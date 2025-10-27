@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
@@ -21,6 +22,7 @@ class ResOrderPage extends StatefulWidget {
   final int deliveryFee;
   final int order_id;
   final int order_status;
+  final int cus_id;
   final String? previousPage;
 
   const ResOrderPage(
@@ -28,6 +30,7 @@ class ResOrderPage extends StatefulWidget {
       required this.mergedMenus,
       required this.deliveryFee,
       required this.order_id,
+      required this.cus_id,
       required this.order_status,
       this.previousPage})
       : super(key: key);
@@ -175,7 +178,7 @@ class _HomePageState extends State<ResOrderPage> {
       );
     }
 
-    final customerAdd = context.watch<ShareData>().customer_addresses;
+    final customerAdd = context.watch<ShareData>().final_cus_add;
 
     return Scaffold(
       appBar: AppBar(
@@ -231,7 +234,7 @@ class _HomePageState extends State<ResOrderPage> {
     );
   }
 
-  Widget buildAddressSection(List<CusAddressGetResponse> customerAdd) {
+  Widget buildAddressSection(String customerAdd) {
     final restaurantAddress = _address ?? "กำลังโหลดที่อยู่ร้าน...";
     return Card(
       elevation: 2,
@@ -272,7 +275,7 @@ class _HomePageState extends State<ResOrderPage> {
                           style: TextStyle(
                               fontSize: 16, fontWeight: FontWeight.bold)),
                       Text(customerAdd.isNotEmpty
-                          ? "${customerAdd[context.read<ShareData>().selected_address_index].ca_address} ${customerAdd[context.read<ShareData>().selected_address_index].ca_detail}"
+                          ? "${customerAdd}"
                           : "กำลังโหลดที่อยู่ลูกค้า..."),
                     ],
                   ),
@@ -361,25 +364,59 @@ class _HomePageState extends State<ResOrderPage> {
     );
   }
 
-  void LoadCusAdd() async {
-    int userId = context.read<ShareData>().user_info_send.uid;
+  Future<void> LoadCusAdd() async {
     try {
       context.read<ShareData>().customer_addresses = [];
-      final res_Add = await http.get(Uri.parse("$url/db/loadCusAdd/$userId"));
+      String? firebaseCoordinate;
+
+      // ✅ 1. โหลดพิกัดจาก Firebase ก่อน
+      final orderDoc = await FirebaseFirestore.instance
+          .collection('BP_Order_detail')
+          .doc('order${widget.order_id}')
+          .get();
+
+      if (orderDoc.exists) {
+        firebaseCoordinate = orderDoc.data()?['Cus_coordinate']?.toString();
+        print("✅ Firebase Cus_coordinate = $firebaseCoordinate");
+      }
+
+      // ✅ 2. โหลดที่อยู่ทั้งหมดจาก SQL
+      final res_Add =
+          await http.get(Uri.parse("$url/db/loadCusAdd/${widget.cus_id}"));
+
       if (res_Add.statusCode == 200) {
         final List<dynamic> jsonResponse = json.decode(res_Add.body);
         final List<CusAddressGetResponse> res_addList =
             jsonResponse.map((e) => CusAddressGetResponse.fromJson(e)).toList();
-        if (res_addList.isNotEmpty) {
-          context.read<ShareData>().customer_addresses = res_addList;
+
+        context.read<ShareData>().customer_addresses = res_addList;
+
+        // ✅ 3. เทียบพิกัดกับ SQL แล้วเลือก Address ที่ตรง
+        if (firebaseCoordinate != null) {
+          final matchedAddress = res_addList.firstWhere(
+            (item) => item.ca_coordinate.trim() == firebaseCoordinate!.trim(),
+            orElse: () => CusAddressGetResponse(
+                ca_id: 0,
+                ca_coordinate: firebaseCoordinate!,
+                ca_address: "ที่อยู่จากแผนที่",
+                ca_detail: ""),
+          );
+
+          // ✅ เก็บ address ที่เลือกเข้า ShareData
+          context.read<ShareData>().final_cus_add =
+              "${matchedAddress.ca_address}, ${matchedAddress.ca_detail}";
+
+          log(context.read<ShareData>().final_cus_add +
+              "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS");
         }
       }
     } catch (e) {
-      log("LoadCusHome Error: $e");
+      log("LoadCusAdd Error: $e");
       Fluttertoast.showToast(
-          msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
-          backgroundColor: Colors.red,
-          textColor: Colors.white);
+        msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
     } finally {
       setState(() {
         isLoading = false;

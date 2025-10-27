@@ -74,10 +74,10 @@ class _CusallorderPageState extends State<CusallorderPage> {
                       }
 
                       // แปลงวันเวลา
-                      DateTime orderDate = order.ordDate;
+                      DateTime orderDate = order.ordDate; // ไม่ต้อง toLocal()
                       String formattedDate =
                           DateFormat('dd/MM/yyyy เวลา HH:mm น.')
-                              .format(orderDate.toLocal());
+                              .format(orderDate);
 
                       return GestureDetector(
                         onTap: () {

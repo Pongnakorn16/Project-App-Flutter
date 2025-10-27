@@ -92,11 +92,10 @@ class _HomePageState extends State<ResAllOrderPage> {
                         loadCus(order.cusId);
                       }
 
-                      // แปลงวันเวลา
-                      DateTime orderDate = order.ordDate;
+                      DateTime orderDate = order.ordDate; // ไม่ต้อง toLocal()
                       String formattedDate =
                           DateFormat('dd/MM/yyyy เวลา HH:mm น.')
-                              .format(orderDate.toLocal());
+                              .format(orderDate);
 
                       return GestureDetector(
                           onTap: () {
@@ -108,6 +107,7 @@ class _HomePageState extends State<ResAllOrderPage> {
                                   deliveryFee: order.ordDevPrice,
                                   order_id: order.ordId,
                                   order_status: order.ordStatus,
+                                  cus_id: order.cusId,
                                   previousPage: 'ResOrderPage',
                                 ),
                               ),
