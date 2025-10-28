@@ -127,7 +127,7 @@ class _RegisterCustomerState extends State<RegisterRider> {
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 16),
-                                child: Text('ร้านอาหารt',
+                                child: Text('ร้านอาหาร',
                                     style: TextStyle(fontSize: 16)),
                               ),
                               Padding(
