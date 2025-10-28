@@ -26,6 +26,9 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
   int selectedMonth = DateTime.now().month; // สำหรับรายวัน
   int selectedYearForDay = DateTime.now().year; // สำหรับรายวัน
   int selectedYearForMonth = DateTime.now().year; // สำหรับรายเดือน
+  int? selectedDay; // สำหรับรายวัน
+  int? selectedMonthForDropdown; // สำหรับรายเดือน
+  int? selectedYearForDropdown; // สำหรับรายปี
 
   int selectedFilterIndex = 0; // 0=วัน, 1=เดือน, 2=ปี
   Map<String, double> chartData = {};
@@ -200,6 +203,91 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
     } else {
       return SizedBox(); // รายปีไม่ต้องเลือกอะไร
     }
+  }
+
+  Widget _buildOrderFilterDropdown() {
+    if (selectedFilterIndex == 0) {
+      // รายวัน
+      List<int> days = filteredOrders.map((o) => o.ordDate.day).toSet().toList()
+        ..sort();
+
+      // ป้องกัน selectedDay ไม่อยู่ใน items
+      if (!days.contains(selectedDay)) selectedDay = null;
+
+      return DropdownButton<int?>(
+        value: selectedDay,
+        items: [
+          DropdownMenuItem<int?>(value: null, child: Text('ทั้งหมด')),
+          ...days.map((d) => DropdownMenuItem<int?>(
+              value: d, child: Text("วันที่ " + d.toString()))),
+        ],
+        onChanged: (val) {
+          setState(() {
+            selectedDay = val;
+          });
+        },
+      );
+    } else if (selectedFilterIndex == 1) {
+      // รายเดือน
+      List<int> months =
+          filteredOrders.map((o) => o.ordDate.month).toSet().toList()..sort();
+
+      if (!months.contains(selectedMonthForDropdown))
+        selectedMonthForDropdown = null;
+
+      return DropdownButton<int?>(
+        value: selectedMonthForDropdown,
+        items: [
+          DropdownMenuItem<int?>(value: null, child: Text('ทั้งหมด')),
+          ...months.map((m) => DropdownMenuItem<int?>(
+              value: m, child: Text(_getThaiMonthName(m)))),
+        ],
+        onChanged: (val) {
+          setState(() {
+            selectedMonthForDropdown = val;
+          });
+        },
+      );
+    } else {
+      // รายปี
+      List<int> years =
+          filteredOrders.map((o) => o.ordDate.year).toSet().toList()..sort();
+
+      if (!years.contains(selectedYearForDropdown))
+        selectedYearForDropdown = null;
+
+      return DropdownButton<int?>(
+        value: selectedYearForDropdown,
+        items: [
+          DropdownMenuItem<int?>(value: null, child: Text('ทั้งหมด')),
+          ...years.map((y) => DropdownMenuItem<int?>(
+              value: y, child: Text("ปี " + (y + 543).toString()))),
+        ],
+        onChanged: (val) {
+          setState(() {
+            selectedYearForDropdown = val;
+          });
+        },
+      );
+    }
+  }
+
+// 3️⃣ กรองออเดอร์ตาม dropdown
+  List<CusOrderGetResponse> get displayedOrders {
+    List<CusOrderGetResponse> list = filteredOrders;
+
+    if (selectedFilterIndex == 0 && selectedDay != null) {
+      list = list.where((o) => o.ordDate.day == selectedDay).toList();
+    } else if (selectedFilterIndex == 1 && selectedMonthForDropdown != null) {
+      list = list
+          .where((o) => o.ordDate.month == selectedMonthForDropdown)
+          .toList();
+    } else if (selectedFilterIndex == 2 && selectedYearForDropdown != null) {
+      list =
+          list.where((o) => o.ordDate.year == selectedYearForDropdown).toList();
+    }
+
+    return list;
   }
 
   void _calculateChartData(List<CusOrderGetResponse> orders) {
@@ -646,12 +734,20 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
                     SizedBox(height: 18),
 
                     // Order List
-                    Text('รายการออเดอร์',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('รายการออเดอร์',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w600)),
+                        _buildOrderFilterDropdown(), // Dropdown ตัวกรองอยู่ข้างบน
+                      ],
+                    ),
+
                     SizedBox(height: 8),
 
-                    if (filteredOrders.isEmpty)
+// ListView แสดงออเดอร์
+                    if (displayedOrders.isEmpty)
                       Container(
                         width: double.infinity,
                         padding: EdgeInsets.all(18),
@@ -672,9 +768,9 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
                       ListView.builder(
                         shrinkWrap: true,
                         physics: NeverScrollableScrollPhysics(),
-                        itemCount: filteredOrders.length,
+                        itemCount: displayedOrders.length,
                         itemBuilder: (context, index) {
-                          final order = filteredOrders[index];
+                          final order = displayedOrders[index];
                           final ordIncome = order.ordRidIncome ?? 0.0;
 
                           return GestureDetector(

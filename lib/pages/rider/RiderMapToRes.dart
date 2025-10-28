@@ -176,7 +176,6 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
       // 4️⃣ เริ่มติดตามตำแหน่งจาก GPS และอัปเดต Firebase
       _startTracking();
     } catch (e) {
-      Fluttertoast.showToast(msg: "เกิดข้อผิดพลาด: $e");
       setState(() => isLoading = false);
     }
   }
@@ -197,7 +196,6 @@ class _RiderMapToResPageState extends State<RiderMapToResPage> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        Fluttertoast.showToast(msg: "ไม่ได้รับอนุญาตให้เข้าถึงตำแหน่ง");
         throw Exception('Permission denied');
       }
     }

@@ -170,7 +170,6 @@ class _RiderMapToCusPageState extends State<RiderMapToCusPage> {
       // 4️⃣ เริ่มติดตามตำแหน่งจาก GPS และอัปเดต Firebase
       _startTracking();
     } catch (e) {
-      Fluttertoast.showToast(msg: "เกิดข้อผิดพลาด: $e");
       setState(() => isLoading = false);
     }
   }
