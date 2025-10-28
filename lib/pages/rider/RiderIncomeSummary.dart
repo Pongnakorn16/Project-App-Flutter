@@ -23,6 +23,9 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
   List<CusOrderGetResponse> ordersList = [];
   List<CusOrderGetResponse> filteredOrders = [];
   double totalIncome = 0.0;
+  int selectedMonth = DateTime.now().month; // สำหรับรายวัน
+  int selectedYearForDay = DateTime.now().year; // สำหรับรายวัน
+  int selectedYearForMonth = DateTime.now().year; // สำหรับรายเดือน
 
   int selectedFilterIndex = 0; // 0=วัน, 1=เดือน, 2=ปี
   Map<String, double> chartData = {};
@@ -94,17 +97,109 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
   }
 
   void _applyFilter() {
-    final List<CusOrderGetResponse> result = ordersList.where((o) {
-      return o.ordRidIncome != null && (o.ordStatus ?? -1) >= 2;
+    List<CusOrderGetResponse> result = ordersList.where((o) {
+      if (o.ordRidIncome == null || (o.ordStatus ?? -1) < 2) return false;
+
+      if (selectedFilterIndex == 0) {
+        // รายวัน: กรองตามเดือนและปี
+        return o.ordDate.year == selectedYearForDay &&
+            o.ordDate.month == selectedMonth;
+      } else if (selectedFilterIndex == 1) {
+        // รายเดือน: กรองตามปี
+        return o.ordDate.year == selectedYearForMonth;
+      }
+      return true; // รายปี
     }).toList();
 
     totalIncome = result.fold(0.0, (sum, o) => sum + (o.ordRidIncome ?? 0.0));
-
     _calculateChartData(result);
 
     setState(() {
       filteredOrders = result;
     });
+  }
+
+  Widget _buildFilterDropdowns() {
+    final dropdownTextStyle = TextStyle(color: Colors.white);
+    final dropdownBgColor = Color.fromARGB(255, 19, 19, 19); // เขียวเข้ม
+
+    if (selectedFilterIndex == 0) {
+      // รายวัน
+      return Row(
+        children: [
+          DropdownButton<int>(
+            value: selectedMonth,
+            items: List.generate(12, (index) {
+              int month = index + 1;
+              return DropdownMenuItem(
+                value: month,
+                child: Text(_getThaiMonthName(month), style: dropdownTextStyle),
+              );
+            }),
+            onChanged: (val) {
+              if (val != null) {
+                setState(() {
+                  selectedMonth = val;
+                  _applyFilter();
+                });
+              }
+            },
+            dropdownColor: dropdownBgColor,
+            underline: SizedBox(), // เอาเส้นล่างออก
+            iconEnabledColor: Colors.white, // ลูกศร dropdown เป็นสีขาว
+          ),
+          SizedBox(width: 12),
+          DropdownButton<int>(
+            value: selectedYearForDay,
+            items: availableYears.map((year) {
+              return DropdownMenuItem(
+                value: year,
+                child: Text('${year + 543}', style: dropdownTextStyle),
+              );
+            }).toList(),
+            onChanged: (val) {
+              if (val != null) {
+                setState(() {
+                  selectedYearForDay = val;
+                  _applyFilter();
+                });
+              }
+            },
+            dropdownColor: dropdownBgColor,
+            underline: SizedBox(),
+            iconEnabledColor: Colors.white,
+          ),
+        ],
+      );
+    } else if (selectedFilterIndex == 1) {
+      // รายเดือน
+      return Row(
+        children: [
+          DropdownButton<int>(
+            value: selectedYearForMonth,
+            items: availableYears.map((year) {
+              return DropdownMenuItem(
+                value: year,
+                child: Text('${year + 543}', style: dropdownTextStyle),
+              );
+            }).toList(),
+            onChanged: (val) {
+              if (val != null) {
+                setState(() {
+                  selectedYearForMonth = val;
+                  _applyFilter();
+                });
+              }
+            },
+            dropdownColor: dropdownBgColor,
+            underline: SizedBox(),
+            iconEnabledColor: Colors.white,
+          ),
+        ],
+      );
+    } else {
+      return SizedBox(); // รายปีไม่ต้องเลือกอะไร
+    }
   }
 
   void _calculateChartData(List<CusOrderGetResponse> orders) {
@@ -239,8 +334,8 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
     double interval = (maxY / 5).ceilToDouble();
     maxY = interval * 6; // ให้มี space บนสุด
 
-    // กำหนดความกว้างทั้งหมดของกราฟตามจำนวนแท่ง
-    double chartWidth = labels.length * 50.0; // ปรับ 50 ได้ตามจำนวน
+    // กำหนดความกว้างทั้งหมดของกราฟตามจำนวนแท่ง (ลดจาก 50 เป็น 35)
+    double chartWidth = labels.length * 35.0;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -252,7 +347,7 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
         padding: EdgeInsets.all(16),
         child: BarChart(
           BarChartData(
-            alignment: BarChartAlignment.spaceBetween,
+            alignment: BarChartAlignment.spaceEvenly,
             maxY: maxY,
             minY: 0,
             barTouchData: BarTouchData(
@@ -355,10 +450,13 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
                 barRods: [
                   BarChartRodData(
                     toY: value,
-                    width: 16,
+                    width: 20, // เพิ่มจาก 16 เป็น 20
                     borderRadius: BorderRadius.circular(6),
                     gradient: LinearGradient(
-                      colors: [Color(0xFF00C853), Color(0xFFB9F6CA)],
+                      colors: [
+                        Color(0xFF00C853),
+                        Color.fromARGB(255, 32, 138, 62)
+                      ],
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
                     ),
@@ -427,8 +525,8 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
                                 gradient: sel
                                     ? LinearGradient(
                                         colors: [
-                                            Color(0xFF8E43E7),
-                                            Color(0xFFFF6FB5)
+                                            Color(0xFF00C853),
+                                            Color.fromARGB(255, 32, 138, 62)
                                           ],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight)
@@ -459,13 +557,16 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
                     ),
                     SizedBox(height: 16),
 
-                    // Total Income Card
+                    // Total Income Card พร้อม dropdown
                     Container(
                       width: double.infinity,
                       padding: EdgeInsets.all(18),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                            colors: [Color(0xFF8E43E7), Color(0xFFFF6FB5)],
+                            colors: [
+                              Color(0xFF00C853),
+                              Color.fromARGB(255, 32, 138, 62)
+                            ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight),
                         borderRadius: BorderRadius.circular(14),
@@ -473,24 +574,39 @@ class _RiderIncomeSummaryPageState extends State<RiderIncomeSummaryPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('ยอดรวมรายได้',
-                              style: TextStyle(
-                                  color: Colors.white70, fontSize: 14)),
+                          Row(
+                            children: [
+                              Text(
+                                'ยอดรวมรายได้',
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 14),
+                              ),
+                              Spacer(), // ดัน dropdown ไปขวา
+                              Container(
+                                width: 160, // กำหนดความกว้าง dropdown
+                                child: _buildFilterDropdowns(),
+                              ),
+                            ],
+                          ),
                           SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(_fmtCurrency(totalIncome),
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.bold)),
+                              Text(
+                                _fmtCurrency(totalIncome),
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold),
+                              ),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  Text('${filteredOrders.length} รายการ',
-                                      style: TextStyle(
-                                          color: Colors.white70, fontSize: 13)),
+                                  Text(
+                                    '${filteredOrders.length} รายการ',
+                                    style: TextStyle(
+                                        color: Colors.white70, fontSize: 13),
+                                  ),
                                 ],
                               ),
                             ],
