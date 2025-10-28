@@ -904,7 +904,7 @@ class _HomePageState extends State<ResProfilePage> {
 
     if (phoneCtl.text.length != 10) {
       Fluttertoast.showToast(
-        msg: "เบอร์โทรศัพท์ต้องมี 10 ตัวเลข",
+        msg: "เบอร์โทรศัพท์ต้องมี 10 หลัก",
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.CENTER,
         timeInSecForIosWeb: 1,
