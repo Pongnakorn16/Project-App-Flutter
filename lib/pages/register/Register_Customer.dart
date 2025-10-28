@@ -75,7 +75,7 @@ class _RegisterCustomerState extends State<RegisterCustomer> {
                         Expanded(
                           // ✅ ป้องกัน overflow
                           child: Text(
-                            'Create "Customer" Account',
+                            'สมัครสมาชิก \nเป็นลูกค้า',
                             textAlign:
                                 TextAlign.center, // ✅ จัดข้อความให้อยู่กึ่งกลาง
                             style: TextStyle(
@@ -116,19 +116,19 @@ class _RegisterCustomerState extends State<RegisterCustomer> {
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 16),
-                                child: Text('Customer',
+                                child: Text('ลูกค้า',
                                     style: TextStyle(fontSize: 16)),
                               ),
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 16),
-                                child: Text('Restaurant',
+                                child: Text('ร้านอาหาร',
                                     style: TextStyle(fontSize: 16)),
                               ),
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 16),
-                                child: Text('Rider',
+                                child: Text('ไรเดอร์',
                                     style: TextStyle(fontSize: 16)),
                               ),
                             ],
@@ -154,7 +154,7 @@ class _RegisterCustomerState extends State<RegisterCustomer> {
                                 borderSide: BorderSide(width: 1),
                               ),
                               prefixIcon: Icon(Icons.email_outlined),
-                              hintText: 'Email',
+                              hintText: 'อีเมล',
                             ),
                           ),
                         ),
@@ -171,7 +171,7 @@ class _RegisterCustomerState extends State<RegisterCustomer> {
                                 borderSide: BorderSide(width: 1),
                               ),
                               prefixIcon: Icon(Icons.person),
-                              hintText: 'Name',
+                              hintText: 'ชื่อ',
                             ),
                           ),
                         ),
@@ -189,7 +189,7 @@ class _RegisterCustomerState extends State<RegisterCustomer> {
                                 borderSide: BorderSide(width: 1),
                               ),
                               prefixIcon: Icon(Icons.lock),
-                              hintText: 'Password',
+                              hintText: 'รหัสผ่าน',
                             ),
                           ),
                         ),
@@ -207,7 +207,7 @@ class _RegisterCustomerState extends State<RegisterCustomer> {
                                 borderSide: BorderSide(width: 1),
                               ),
                               prefixIcon: Icon(Icons.lock),
-                              hintText: 'Confirm Password',
+                              hintText: 'กรอกรหัสผ่านอีกครั้ง',
                             ),
                           ),
                         ),
@@ -224,7 +224,7 @@ class _RegisterCustomerState extends State<RegisterCustomer> {
                                 borderSide: BorderSide(width: 1),
                               ),
                               prefixIcon: Icon(Icons.phone), // ไอคอนด้านหน้า
-                              hintText: 'Phone',
+                              hintText: 'เบอร์โทรศัพท์',
                             ),
                           ),
                         ),
@@ -244,7 +244,7 @@ class _RegisterCustomerState extends State<RegisterCustomer> {
                                       WidgetStateProperty.all(Colors.white),
                                 ),
                                 child: const Text(
-                                  'Create Account',
+                                  'สร้างบัญชี',
                                   style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w400),
@@ -258,7 +258,7 @@ class _RegisterCustomerState extends State<RegisterCustomer> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text('If you have an account'),
+                              Text('ถ้าคุณเป็นสมาชิกอยู่แล้ว'),
                               TextButton(
                                 onPressed: login,
                                 style: ButtonStyle(
@@ -267,7 +267,7 @@ class _RegisterCustomerState extends State<RegisterCustomer> {
                                   ),
                                 ),
                                 child: const Text(
-                                  'Sign in',
+                                  'หน้าเข้าสู่ระบบ',
                                   style: TextStyle(fontWeight: FontWeight.w400),
                                 ),
                               ),

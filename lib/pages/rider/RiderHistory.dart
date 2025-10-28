@@ -90,13 +90,14 @@ class _RiderHistoryPageState extends State<RiderHistoryPage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => ResOrderPage(
+                                builder: (context) => RiderOrderPage(
                                   mergedMenus: order.orlOrderDetail,
                                   deliveryFee: order.ordDevPrice,
                                   order_id: order.ordId,
-                                  order_status: order.ordStatus,
+                                  res_id: order.resId,
                                   cus_id: order.cusId,
-                                  previousPage: 'ResOrderPage',
+                                  order_status: order.ordStatus,
+                                  previousPage: 'RiderOrderPage',
                                 ),
                               ),
                             );

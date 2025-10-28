@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
@@ -8,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mobile_miniproject_app/config/config.dart';
 import 'package:mobile_miniproject_app/models/response/CusAddressGetRes.dart';
+import 'package:mobile_miniproject_app/models/response/ResInfoGetRes.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerHome.dart';
 import 'package:mobile_miniproject_app/pages/customer/CustomerProfile.dart';
 import 'package:mobile_miniproject_app/pages/customer/TopUp.dart';
@@ -20,128 +22,270 @@ class RiderOrderPage extends StatefulWidget {
   final List<dynamic> mergedMenus;
   final int deliveryFee;
   final int order_id;
+  final int res_id;
+  final int cus_id;
   final int order_status;
   final String? previousPage;
 
-  const RiderOrderPage(
-      {Key? key,
-      required this.mergedMenus,
-      required this.deliveryFee,
-      required this.order_id,
-      required this.order_status,
-      this.previousPage})
-      : super(key: key);
+  const RiderOrderPage({
+    Key? key,
+    required this.mergedMenus,
+    required this.deliveryFee,
+    required this.order_id,
+    required this.res_id,
+    required this.cus_id,
+    required this.order_status,
+    this.previousPage,
+  }) : super(key: key);
 
   @override
   State<RiderOrderPage> createState() => _HomePageState();
 }
 
-// Main OrderPage State
 class _HomePageState extends State<RiderOrderPage> {
-  int _currentStep = 0; // เปลี่ยนจาก -1 เป็น 0
+  int _currentStep = 0;
   late Timer _timer;
   String url = '';
   bool isLoading = true;
-  String? _address; // เก็บที่อยู่ร้าน
-  String? _selectedCustomerAddress;
+  String? _restaurantAddress; // ที่อยู่ร้านที่จะแสดง
+  String? _customerAddress; // ที่อยู่ลูกค้าที่จะแสดง
 
-  @override
   @override
   void initState() {
     super.initState();
-    Configuration.getConfig().then((value) {
-      url = value['apiEndpoint'];
-      LoadCusAdd();
-      if (widget.order_status != -1) {
-        _currentStep = widget.order_status;
-      }
-      _getAddressFromCoordinates();
-
-      final myOrderId = "order${widget.order_id}";
-      log(myOrderId +
-          "aXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxx");
-
-      final cus_id = context.read<ShareData>().user_info_send.uid;
-      OrderNotificationService().listenOrderChanges(context, cus_id,
-          (orderId, newStep) {
-        if (!mounted) return;
-        setState(() {
-          _currentStep = newStep; // อัปเดต Progress Bar และสถานะ
-        });
-      });
-
-      setState(() {});
-    });
-
-    // Timer สำหรับ progress bar เฉพาะสถานะแรก
-    _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (!mounted) return;
-      if (_currentStep != 0) {
-        timer.cancel(); // หยุด timer เมื่อสถานะเปลี่ยน
-      }
-    });
+    _initialize();
   }
 
-  void _getAddressFromCoordinates() async {
-    final matchedRestaurant = context.read<ShareData>().res_info;
-
-    final coords = matchedRestaurant.res_coordinate.split(',');
-    final double lat = double.parse(coords[0]);
-    final double lng = double.parse(coords[1]);
-
+  Future<void> _initialize() async {
     try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
-      if (placemarks.isNotEmpty) {
-        final place = placemarks.first;
-        setState(() {
-          _address =
-              "${(place.subLocality ?? '').trim()} ${(place.locality ?? '').trim()} ${(place.administrativeArea ?? '').trim()} ${(place.postalCode ?? '').trim()}";
+      // โหลด config
+      final config = await Configuration.getConfig();
+      if (mounted) {
+        url = config['apiEndpoint'];
+      }
+
+      // โหลดข้อมูลที่อยู่และเปรียบเทียบ
+      await _loadAndCompareAddresses();
+
+      // ตั้งค่า current step
+      if (mounted && widget.order_status != -1) {
+        _currentStep = widget.order_status;
+      }
+
+      // เริ่ม timer
+      if (mounted) {
+        _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
+          if (!mounted) {
+            timer.cancel();
+            return;
+          }
+          if (_currentStep != 0) {
+            timer.cancel();
+          }
         });
       }
     } catch (e) {
-      print("Error in geocoding: $e");
-      setState(() {
-        _address = "ไม่พบที่อยู่";
-      });
+      log('❌ Initialization error: $e');
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: "เกิดข้อผิดพลาดในการโหลดข้อมูล",
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
-  void _showAddressDialog(List<CusAddressGetResponse> addresses) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("เลือกที่อยู่"),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: addresses.length,
-              itemBuilder: (context, index) {
-                final addr = addresses[index];
-                final fullAddress = "${addr.ca_address} ${addr.ca_detail}";
-                return ListTile(
-                  title: Text(fullAddress),
-                  onTap: () {
-                    setState(() {
-                      _selectedCustomerAddress = fullAddress;
-                      context.read<ShareData>().selected_address_index = index;
-                    });
-                    Navigator.pop(context);
-                  },
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              child: const Text("ยกเลิก"),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
+  /// โหลดและเปรียบเทียบที่อยู่จาก Firebase และ SQL
+  Future<void> _loadAndCompareAddresses() async {
+    if (!mounted) return;
+
+    try {
+      // 1️⃣ โหลดพิกัดจาก Firebase
+      String? firebaseCusCoordinate;
+      String? firebaseResCoordinate;
+
+      final orderDoc = await FirebaseFirestore.instance
+          .collection('BP_Order_detail')
+          .doc('order${widget.order_id}')
+          .get();
+
+      if (orderDoc.exists) {
+        firebaseCusCoordinate = orderDoc.data()?['Cus_coordinate']?.toString();
+        firebaseResCoordinate = orderDoc.data()?['Res_coordinate']?.toString();
+        log("✅ Firebase Cus_coordinate = $firebaseCusCoordinate");
+        log("✅ Firebase Res_coordinate = $firebaseResCoordinate");
+      }
+
+      // 2️⃣ โหลดที่อยู่ลูกค้าจาก SQL และเปรียบเทียบ
+      await _loadCustomerAddress(firebaseCusCoordinate);
+
+      // 3️⃣ โหลดที่อยู่ร้านจาก SQL และเปรียบเทียบ
+      await _loadRestaurantAddress(firebaseResCoordinate);
+    } catch (e) {
+      log("❌ LoadAndCompare Error: $e");
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: "เกิดข้อผิดพลาดในการโหลดที่อยู่",
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
         );
-      },
-    );
+      }
+    }
+  }
+
+  /// โหลดและเปรียบเทียบที่อยู่ลูกค้า
+  Future<void> _loadCustomerAddress(String? firebaseCusCoordinate) async {
+    if (!mounted) return;
+
+    try {
+      // โหลดที่อยู่ลูกค้าจาก SQL
+      final cusRes = await http.get(
+        Uri.parse("$url/db/loadCusAdd/${widget.cus_id}"),
+      );
+
+      if (cusRes.statusCode == 200 && mounted) {
+        final List<dynamic> jsonResponse = json.decode(cusRes.body);
+        final cusAddressList =
+            jsonResponse.map((e) => CusAddressGetResponse.fromJson(e)).toList();
+
+        context.read<ShareData>().customer_addresses = cusAddressList;
+
+        if (firebaseCusCoordinate != null && firebaseCusCoordinate.isNotEmpty) {
+          // เทียบพิกัดลูกค้า
+          final matchedCusAddress = cusAddressList.firstWhere(
+            (item) => item.ca_coordinate.trim() == firebaseCusCoordinate.trim(),
+            orElse: () => CusAddressGetResponse(
+              ca_id: 0,
+              ca_coordinate: '',
+              ca_address: '',
+              ca_detail: '',
+            ),
+          );
+
+          if (matchedCusAddress.ca_id != 0) {
+            // ✅ พิกัดตรง → ใช้ที่อยู่จาก SQL
+            _customerAddress =
+                "${matchedCusAddress.ca_address}, ${matchedCusAddress.ca_detail}";
+            context.read<ShareData>().final_cus_add = _customerAddress!;
+
+            // เก็บ index ของที่อยู่ที่ตรงกัน
+            final matchedIndex = cusAddressList.indexOf(matchedCusAddress);
+            context.read<ShareData>().selected_address_index = matchedIndex;
+
+            log("✅ ที่อยู่ลูกค้าตรง: $_customerAddress");
+          } else {
+            // ❌ พิกัดไม่ตรง → แปลงพิกัดจาก Firebase เป็นที่อยู่
+            final convertedAddress =
+                await _getAddressFromLatLng(firebaseCusCoordinate);
+            _customerAddress = "ที่อยู่เดิม: $convertedAddress";
+            context.read<ShareData>().final_cus_add = _customerAddress!;
+            context.read<ShareData>().selected_address_index =
+                0; // ใช้ index แรก
+            log("⚠️ ที่อยู่ลูกค้าไม่ตรง → แปลงเป็น: $_customerAddress");
+          }
+        } else if (cusAddressList.isNotEmpty) {
+          // ไม่มีพิกัดจาก Firebase → ใช้ที่อยู่แรกจาก SQL
+          final firstAddress = cusAddressList.first;
+          _customerAddress =
+              "${firstAddress.ca_address}, ${firstAddress.ca_detail}";
+          context.read<ShareData>().final_cus_add = _customerAddress!;
+          context.read<ShareData>().selected_address_index = 0;
+        } else {
+          _customerAddress = "ไม่พบที่อยู่ลูกค้า";
+          context.read<ShareData>().final_cus_add = _customerAddress!;
+        }
+      }
+    } catch (e) {
+      log("❌ LoadCustomerAddress Error: $e");
+      _customerAddress = "เกิดข้อผิดพลาดในการโหลดที่อยู่ลูกค้า";
+    }
+  }
+
+  /// โหลดและเปรียบเทียบที่อยู่ร้าน
+  Future<void> _loadRestaurantAddress(String? firebaseResCoordinate) async {
+    if (!mounted) return;
+
+    try {
+      // โหลดข้อมูลร้านจาก SQL
+      final resInfo = await http.get(
+        Uri.parse("$url/db/loadResInfo/${widget.res_id}"),
+      );
+
+      if (resInfo.statusCode == 200 && mounted) {
+        final List<ResInfoResponse> list = (json.decode(resInfo.body) as List)
+            .map((e) => ResInfoResponse.fromJson(e))
+            .toList();
+
+        if (list.isNotEmpty) {
+          final resData = list.first;
+          context.read<ShareData>().res_info = resData;
+
+          log("✅ โหลดข้อมูลร้านสำเร็จ: ${resData.res_name}");
+
+          if (firebaseResCoordinate != null &&
+              firebaseResCoordinate.isNotEmpty) {
+            // เทียบพิกัดร้าน
+            if (resData.res_coordinate.trim() == firebaseResCoordinate.trim()) {
+              // ✅ พิกัดตรง → แปลงพิกัดปัจจุบันเป็นที่อยู่
+              _restaurantAddress =
+                  await _getAddressFromLatLng(resData.res_coordinate);
+              context.read<ShareData>().final_res_add = _restaurantAddress!;
+              log("✅ ที่อยู่ร้านตรง: $_restaurantAddress");
+            } else {
+              // ❌ พิกัดไม่ตรง → แปลงพิกัดจาก Firebase เป็นที่อยู่
+              final convertedAddress =
+                  await _getAddressFromLatLng(firebaseResCoordinate);
+              _restaurantAddress = "ที่อยู่เดิม: $convertedAddress";
+              context.read<ShareData>().final_res_add = _restaurantAddress!;
+              log("⚠️ ที่อยู่ร้านไม่ตรง → แปลงเป็น: $_restaurantAddress");
+            }
+          } else {
+            // ไม่มีพิกัดจาก Firebase → ใช้พิกัดจาก SQL
+            _restaurantAddress =
+                await _getAddressFromLatLng(resData.res_coordinate);
+            context.read<ShareData>().final_res_add = _restaurantAddress!;
+          }
+        }
+      }
+    } catch (e) {
+      log("❌ LoadRestaurantAddress Error: $e");
+      _restaurantAddress = "เกิดข้อผิดพลาดในการโหลดที่อยู่ร้าน";
+    }
+  }
+
+  /// แปลงพิกัด (lat,lng) เป็นที่อยู่
+  Future<String> _getAddressFromLatLng(String latlng) async {
+    try {
+      final parts = latlng.split(',');
+      if (parts.length != 2) return "รูปแบบพิกัดไม่ถูกต้อง";
+
+      final lat = double.parse(parts[0].trim());
+      final lng = double.parse(parts[1].trim());
+
+      final placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isNotEmpty) {
+        final p = placemarks.first;
+        final address = [
+          p.subLocality,
+          p.locality,
+          p.administrativeArea,
+          p.postalCode,
+        ].where((s) => s != null && s.isNotEmpty).join(' ');
+
+        return address.isNotEmpty ? address : "ไม่สามารถระบุที่อยู่ได้";
+      }
+      return "ไม่พบที่อยู่";
+    } catch (e) {
+      log("❌ GetAddressFromLatLng Error: $e");
+      return "ไม่สามารถแปลงพิกัดได้";
+    }
   }
 
   @override
@@ -150,19 +294,15 @@ class _HomePageState extends State<RiderOrderPage> {
     super.dispose();
   }
 
-  // เพิ่ม method สำหรับจัดการปุ่มกลับ
   void _handleBackButton() {
     if (widget.previousPage == 'CusAllOrderPage') {
-      // กลับไปหน้า CusAllOrderPage
       Navigator.pop(context);
     } else if (widget.previousPage == 'Cart') {
-      // กลับไปหน้า CustomerHomePage
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => CustomerHomePage()),
       );
     } else {
-      // default กลับไปหน้าก่อนหน้า
       Navigator.pop(context);
     }
   }
@@ -175,17 +315,14 @@ class _HomePageState extends State<RiderOrderPage> {
       );
     }
 
-    final customerAdd = context.watch<ShareData>().customer_addresses;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("ข้อมูลออเดอร์"),
-        automaticallyImplyLeading:
-            widget.previousPage != null, // แสดงปุ่มกลับเมื่อมี previousPage
+        automaticallyImplyLeading: widget.previousPage != null,
         leading: widget.previousPage != null
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: () => _handleBackButton(),
+                onPressed: _handleBackButton,
               )
             : null,
       ),
@@ -194,9 +331,9 @@ class _HomePageState extends State<RiderOrderPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            buildAddressSection(customerAdd),
+            _buildAddressSection(),
             const SizedBox(height: 20),
-            buildOrderSummary(),
+            _buildOrderSummary(),
             const SizedBox(height: 20),
           ],
         ),
@@ -204,35 +341,10 @@ class _HomePageState extends State<RiderOrderPage> {
     );
   }
 
-  Widget _buildStatusIcon(IconData icon, String label, bool active) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        CircleAvatar(
-          radius: 22,
-          backgroundColor:
-              active ? Color.fromARGB(255, 157, 9, 255) : Colors.grey[300],
-          child: Icon(icon, color: Colors.white, size: 28),
-        ),
-        const SizedBox(height: 6),
-        SizedBox(
-          width: 80,
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              color: active ? Color.fromARGB(255, 248, 191, 2) : Colors.grey,
-              fontWeight: active ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        )
-      ],
-    );
-  }
+  Widget _buildAddressSection() {
+    final restaurantAddress = _restaurantAddress ?? "กำลังโหลดที่อยู่ร้าน...";
+    final customerAddress = _customerAddress ?? "กำลังโหลดที่อยู่ลูกค้า...";
 
-  Widget buildAddressSection(List<CusAddressGetResponse> customerAdd) {
-    final restaurantAddress = _address ?? "กำลังโหลดที่อยู่ร้าน...";
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -246,14 +358,28 @@ class _HomePageState extends State<RiderOrderPage> {
               children: [
                 const Icon(Icons.location_on_sharp, color: Colors.red),
                 const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("ตำแหน่งร้าน",
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "ตำแหน่งร้าน",
                         style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
-                    Text(restaurantAddress),
-                  ],
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        restaurantAddress,
+                        style: TextStyle(
+                          color: restaurantAddress.contains("ที่อยู่เดิม")
+                              ? Colors.orange
+                              : Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -268,24 +394,34 @@ class _HomePageState extends State<RiderOrderPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("ตำแหน่งลูกค้า",
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
-                      Text(customerAdd.isNotEmpty
-                          ? "${customerAdd[context.read<ShareData>().selected_address_index].ca_address} ${customerAdd[context.read<ShareData>().selected_address_index].ca_detail}"
-                          : "กำลังโหลดที่อยู่ลูกค้า..."),
+                      const Text(
+                        "ตำแหน่งลูกค้า",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        customerAddress,
+                        style: TextStyle(
+                          color: customerAddress.contains("ที่อยู่เดิม")
+                              ? Colors.orange
+                              : Colors.black87,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget buildOrderSummary() {
+  Widget _buildOrderSummary() {
     double finalPrice = 0;
 
     List<Widget> menuWidgets = widget.mergedMenus.map((menu) {
@@ -304,10 +440,13 @@ class _HomePageState extends State<RiderOrderPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Expanded(child: Text("${menu["menu_name"]} x$count")),
-              Text("${totalPrice.toStringAsFixed(0)} บาท"),
-            ]),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(child: Text("${menu["menu_name"]} x$count")),
+                Text("${totalPrice.toStringAsFixed(0)} บาท"),
+              ],
+            ),
             if (options.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(left: 16, top: 4),
@@ -337,53 +476,38 @@ class _HomePageState extends State<RiderOrderPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("สรุปรายการอาหาร",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text(
+              "สรุปรายการอาหาร",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 10),
             ...menuWidgets,
             const Divider(),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              const Text("ค่าส่ง",
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              Text("${widget.deliveryFee.toStringAsFixed(0)} บาท",
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-            ]),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              const Text("รวมทั้งหมด",
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("ค่าส่ง",
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  "${widget.deliveryFee.toStringAsFixed(0)} บาท",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("รวมทั้งหมด",
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(
                   "${(finalPrice + widget.deliveryFee).toStringAsFixed(0)} บาท",
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-            ])
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
-  }
-
-  void LoadCusAdd() async {
-    int userId = context.read<ShareData>().user_info_send.uid;
-    try {
-      context.read<ShareData>().customer_addresses = [];
-      final res_Add = await http.get(Uri.parse("$url/db/loadCusAdd/$userId"));
-      if (res_Add.statusCode == 200) {
-        final List<dynamic> jsonResponse = json.decode(res_Add.body);
-        final List<CusAddressGetResponse> res_addList =
-            jsonResponse.map((e) => CusAddressGetResponse.fromJson(e)).toList();
-        if (res_addList.isNotEmpty) {
-          context.read<ShareData>().customer_addresses = res_addList;
-        }
-      }
-    } catch (e) {
-      log("LoadCusHome Error: $e");
-      Fluttertoast.showToast(
-          msg: "เกิดข้อผิดพลาด โปรดลองใหม่",
-          backgroundColor: Colors.red,
-          textColor: Colors.white);
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
   }
 }

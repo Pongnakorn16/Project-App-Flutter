@@ -81,10 +81,6 @@ class _ProfilePageState extends State<RiderProfilePage> {
     loadData = loadProfileData();
     _pageController = PageController();
     final cus_id = context.read<ShareData>().user_info_send.uid;
-    OrderNotificationService().listenOrderChanges(context, cus_id,
-        (orderId, newStep) {
-      if (!mounted) return;
-    });
   }
 
   @override

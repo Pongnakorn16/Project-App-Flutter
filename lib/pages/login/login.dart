@@ -69,7 +69,7 @@ class _LoginPageState extends State<LoginPage> {
                 Padding(
                   padding: const EdgeInsets.only(top: 100),
                   child: const Text(
-                    'Log in',
+                    'เข้าสู่ระบบ',
                     style: TextStyle(
                       fontSize: 30,
                       fontWeight: FontWeight.w600,
@@ -78,12 +78,16 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(30.0),
-                  child: const Text(
-                    'By signing in you are agreeing \n our Term and privacy policy',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Color.fromARGB(255, 52, 51, 52),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 30.0, vertical: 10),
+                  child: const Center(
+                    child: Text(
+                      'การเข้าสู่ระบบถือว่าคุณยอมรับ\nข้อตกลงและนโยบายความเป็นส่วนตัว',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color.fromARGB(255, 52, 51, 52),
+                      ),
                     ),
                   ),
                 ),
@@ -103,9 +107,8 @@ class _LoginPageState extends State<LoginPage> {
                               borderRadius: BorderRadius.circular(30.0),
                               borderSide: BorderSide(width: 1),
                             ),
-                            prefixIcon: Icon(
-                                Icons.email), // ใส่ไอคอนโทรศัพท์ที่ด้านซ้าย
-                            hintText: 'Email', // ใส่ placeholder
+                            prefixIcon: Icon(Icons.email), //
+                            hintText: 'อีเมล', //
                           ),
                         ),
                       ),
@@ -123,7 +126,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             prefixIcon:
                                 Icon(Icons.lock), // ใส่ไอคอนโทรศัพท์ที่ด้านซ้าย
-                            hintText: 'Password', // ใส่ placeholder
+                            hintText: 'รหัสผ่าน', // ใส่ placeholder
                           ),
                         ),
                       ),
@@ -198,7 +201,7 @@ class _LoginPageState extends State<LoginPage> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('Do not have an account?'),
+                            Text('ยังไม่ได้สมัครสมาชิกหรอ?'),
                             TextButton(
                               onPressed: register,
                               style: ButtonStyle(
@@ -207,7 +210,7 @@ class _LoginPageState extends State<LoginPage> {
                                     WidgetStateProperty.all(Color(0xFF562364)),
                               ),
                               child: const Text(
-                                'Register Now',
+                                'สมัครสมาชิก',
                                 style: TextStyle(fontWeight: FontWeight.w400),
                               ),
                             ),

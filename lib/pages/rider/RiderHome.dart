@@ -588,6 +588,8 @@ class _RiderHomePageState extends State<RiderHomePage>
                                       mergedMenus: order.orlOrderDetail,
                                       deliveryFee: order.ordDevPrice,
                                       order_id: order.ordId,
+                                      res_id: order.resId,
+                                      cus_id: order.cusId,
                                       order_status: order.ordStatus,
                                       previousPage: 'RiderOrderPage',
                                     ),
